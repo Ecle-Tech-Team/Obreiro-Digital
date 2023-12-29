@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import '@fontsource/poppins';
+@import '@fontsource/nunito';
+
+:root {
+  --foreground-rgb: 245, 245, 245;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 0, 0, 0;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background-color: #F5F5F5;
+}
+
+.text1 {
+  font-family: var(--font-poppinsBold);
+}
+
+.text2 {
+  font-family: var(--font-nunito);
+}
+
+.text3 {
+  font-family: var(--font-poppinsSemiBold);
+}
