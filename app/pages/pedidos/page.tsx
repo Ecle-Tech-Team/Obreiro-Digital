@@ -28,6 +28,64 @@ export default function pedidos() {
   // const [data_entrega, setDataEntrega] = useState<string>('');
   // const [motivo_recusa, setMotivoRecusa] = useState<string>('');
   
+  const [totalPedidos, setTotalPedidos] = useState<number>(0);
+  const [pedidosEntregues, setPedidosEntregues] = useState<number>(0);
+  const [pedidosEmAndamento, setPedidosEmAndamento] = useState<number>(0);
+  const [pedidosRecusados, setPedidosRecusados] = useState<number>(0);
+  
+
+  useEffect(() => {
+    const fetchTotalPedidos = async () => {
+      try {
+        const response = await api.get('/pedido/count/total');
+        setTotalPedidos(response.data);
+      } catch (error) {
+        console.error('Erro ao buscar total de pedidos:', error);
+      }
+    }
+
+    fetchTotalPedidos();
+  }, []);
+
+  useEffect(() => {
+    const fetchPedidosEntregues = async () => {
+      try {
+        const response = await api.get('/pedido/count/entregue');
+        setPedidosEntregues(response.data);
+      } catch (error) {
+        console.error('Erro ao buscar pedidos entregues:', error);
+      }
+    }
+
+    fetchPedidosEntregues();
+  }, []);
+
+  useEffect(() => {
+    const fetchPedidosEmAndamento = async () => {
+      try {
+        const response = await api.get('pedido/count/em-andamento');
+        setPedidosEmAndamento(response.data);
+      } catch (error) {
+        console.error('Erro ao buscar pedidos em andamento:', error);
+      }
+    }
+
+    fetchPedidosEmAndamento();
+  }, []);
+
+  useEffect(() => {
+    const fetchPedidosRecusados = async() => {
+      try {
+        const response = await api.get('pedido/count/recusados');
+        setPedidosRecusados(response.data);
+      } catch (error) {
+        console.error('Erro ao buscar pedidos em andamento:', error);
+      }
+    }
+
+    fetchPedidosRecusados();
+  }, []);
+
   interface Pedidos {
     id_pedido: number;
     nome_produto: string;
@@ -288,7 +346,7 @@ export default function pedidos() {
                 <h3 className='text-white text1 text-3xl mr-6 mt-2'>Pedidos</h3>
               </div>
               <div className="flex mt-2">
-                <p className='text-white text2 text-xl'>3</p>
+                <p className='text-white text2 text-xl'>{totalPedidos}</p>
               </div>
             </div>
 
@@ -298,7 +356,7 @@ export default function pedidos() {
                 <h3 className='text-black text1 text-3xl mr-6 mt-2'>Em Andamento</h3>
               </div>
               <div className="flex mt-2">
-                <p className='text-black text2 text-xl'>2</p>
+                <p className='text-black text2 text-xl'>{pedidosEmAndamento}</p>
               </div>
             </div>
 
@@ -308,17 +366,17 @@ export default function pedidos() {
                 <h3 className='text-black text1 text-3xl mr-6 mt-2'>Recusados</h3>
               </div>
               <div className="flex mt-2">
-                <p className='text-black text2 text-xl'>0</p>
+                <p className='text-black text2 text-xl'>{pedidosRecusados}</p>
               </div>
             </div>
 
             <div className='bg-white py-5 pl-8 w-[32vh] rounded-xl shadow-xl ml-[4.5vh]'>
               <div>
                 <Image src={concluido} width={60} height={40} alt=''/>
-                <h3 className='text-black text1 text-3xl mr-6 mt-2'>Concluídos</h3>
+                <h3 className='text-black text1 text-3xl mr-6 mt-2'>Entregues</h3>
               </div>
               <div className="flex mt-2">
-                <p className='text-black text2 text-xl'>1</p>
+                <p className='text-black text2 text-xl'>{pedidosEntregues}</p>
               </div>
             </div>
           </div>

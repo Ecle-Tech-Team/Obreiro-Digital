@@ -1,5 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
+import api from '@/app/api/api'
 import MenuLateral from '@/app/components/menuLateral/menuLateral'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -12,9 +13,128 @@ import pedidos from '@/public/icons/pedidos.svg'
 import on from '@/public/icons/on-black.svg'
 import off from '@/public/icons/off-black.svg'
 
+interface Saldo {
+  id_saldo: number;
+  saldo: number;
+}
+
 export default function inicio() {
+
+  const [totalPedidos, setTotalPedidos] = useState<number>(0);
+  const [pedidosEntregues, setPedidosEntregues] = useState<number>(0);
+  const [pedidosEmAndamento, setPedidosEmAndamento] = useState<number>(0);
+  const [pedidosRecusados, setPedidosRecusados] = useState<number>(0);
+    
+  useEffect(() => {
+    const fetchTotalPedidos = async () => {
+      try {
+        const response = await api.get('/pedido/count/total');
+        setTotalPedidos(response.data);
+      } catch (error) {
+        console.error('Erro ao buscar total de pedidos:', error);
+      }
+    }
+
+    fetchTotalPedidos();
+  }, []);
+
+  useEffect(() => {
+    const fetchPedidosEntregues = async () => {
+      try {
+        const response = await api.get('/pedido/count/entregue');
+        setPedidosEntregues(response.data);
+      } catch (error) {
+        console.error('Erro ao buscar pedidos entregues:', error);
+      }
+    }
+
+    fetchPedidosEntregues();
+  }, []);
+
+  useEffect(() => {
+    const fetchPedidosEmAndamento = async () => {
+      try {
+        const response = await api.get('pedido/count/em-andamento');
+        setPedidosEmAndamento(response.data);
+      } catch (error) {
+        console.error('Erro ao buscar pedidos em andamento:', error);
+      }
+    }
+
+    fetchPedidosEmAndamento();
+  }, []);
+
+  useEffect(() => {
+    const fetchPedidosRecusados = async() => {
+      try {
+        const response = await api.get('pedido/count/recusados');
+        setPedidosRecusados(response.data);
+      } catch (error) {
+        console.error('Erro ao buscar pedidos em andamento:', error);
+      }
+    }
+
+    fetchPedidosRecusados();
+  }, []);
+
+  const [totalMembros, setTotalMembros] = useState<number>(0);
+  const [totalEventos, setTotalEventos] = useState<number>(0);
+  const [totalVisitantes, setTotalVisitantes] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchMembros = async() => {
+      try {
+        const response = await api.get('membro/count');
+        setTotalMembros(response.data);
+      } catch (error) {
+        console.error('Erro ao buscar membros:', error);
+      }
+    }
+
+    fetchMembros();
+  }, []);
+
+  useEffect(() => {
+    const fetchEventos = async() => {
+      try {
+        const response = await api.get('evento/count');
+        setTotalEventos(response.data);
+      } catch (error) {
+        console.error('Erro ao buscar eventos:', error);
+      }
+    }
+
+    fetchEventos();
+  }, []);
+
+  useEffect(() => {
+    const fetchVisitantes = async() => {
+      try {
+        const response = await api.get('visitante/count');
+        setTotalVisitantes(response.data);
+      } catch (error) {
+        console.error('Erro ao buscar visitantes:', error);
+      }
+    }
+
+    fetchVisitantes();
+  }, []);
   
   const [saldoVisivel, setSaldoVisivel] = useState(false);
+  const [saldoAtual, setSaldo] = useState<Saldo | null>(null);
+  
+  useEffect(() => {
+    const fetchSaldo = async () => {
+      try {
+        const response = await api.get('/financas/saldo');        
+        setSaldo(response.data)
+      } catch (error) {
+        console.error('Error fetching saldo:', error);
+      }
+    };
+
+    fetchSaldo();
+  }, [])
   
   const [nome, setNome] = useState('');
   const [cargo, setCargo] = useState('');
@@ -50,7 +170,7 @@ export default function inicio() {
                   <div className='ml-10 my-5 flex'>
                     <div>
                       <p className='text2 text-azul text-xl'>Membros Totais</p>
-                      <p className='text2 text-black text-xl'>123</p>
+                      <p className='text2 text-black text-xl'>{totalMembros}</p>
                     </div>
                     <Link className='relative left-24 h-8 flex self-center' href={'/../../pages/membros'}>
                       <Image src={arrow} width={50} height={50} alt=''/>
@@ -68,7 +188,7 @@ export default function inicio() {
                   <div className='ml-10 my-5 flex'>
                     <div>
                       <p className='text2 text-azul text-xl'>Eventos Totais</p>
-                      <p className='text2 text-black text-xl'>123</p>
+                      <p className='text2 text-black text-xl'>{totalEventos}</p>
                     </div>
                     <Link className='relative left-28 h-8 flex self-center' href={'/../../pages/eventos'}>
                       <Image src={arrow} width={50} height={50} alt=''/>
@@ -89,26 +209,14 @@ export default function inicio() {
                     <div className='ml-10 my-5 flex'>
                       <div>
                         <p className='text2 text-azul text-xl'>Saldo Total</p>
-                        {saldoVisivel ? (
-                          <div className='flex'>
-                            <p className='text2 text-black text-xl'>1.000,00</p>
-                            <button
-                              className='ml-2'
-                              type="button"
-                              onClick={() => setSaldoVisivel(false)}
-                            >
-                              <Image src={on} width={30} height={30} alt=''/>
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            className='ml-2'
-                            type="button"
-                            onClick={() => setSaldoVisivel(true)}
-                          >
-                            <Image src={off} width={30} height={30} alt=''/>
+                        <div className='flex'>
+                          {saldoVisivel && saldoAtual &&  (
+                            <p className='text2 text-black text-xl'>R$ {saldoAtual.saldo}</p>
+                          )}
+                          <button className='ml-3 mr-6' onClick={() => setSaldoVisivel(!saldoVisivel)}>
+                            <Image src={saldoVisivel ? on : off} width={30} height={30} alt=''/>
                           </button>
-                        )}
+                        </div>                                              
                       </div>
                       <Link className='relative left-32 h-8 flex self-center' href={'/../../pages/financeiro'}>
                         <Image src={arrow} width={50} height={50} alt=''/>
@@ -126,7 +234,7 @@ export default function inicio() {
                     <div className='ml-10 mt-7 mb-5 flex'>
                       <div>
                         <p className='text2 text-azul text-xl'>Visitantes Totais</p>
-                        <p className='text2 text-black text-xl'>123</p>
+                        <p className='text2 text-black text-xl'>{totalVisitantes}</p>
                       </div>
                       <Link className='relative left-24 h-8 flex self-center' href={'/../../pages/visitantes'}>
                         <Image src={arrow} width={50} height={50} alt=''/>
@@ -147,22 +255,22 @@ export default function inicio() {
                     </div>
                     <div className='ml-10 my-6 flex flex-col'>
                       <div className='mt-3'>
-                        <p className='text2 text-verde text-xl'>Concluídos</p>
-                        <p className='text2 text-black text-xl'>1</p>
+                        <p className='text2 text-verde text-xl'>Entregues</p>
+                        <p className='text2 text-black text-xl'>{pedidosEntregues}</p>
                       </div>
                       <div className='mt-7'>
                         <p className='text2 text-amarelo text-xl'>Em Andamento</p>
-                        <p className='text2 text-black text-xl'>2</p>
+                        <p className='text2 text-black text-xl'>{pedidosEmAndamento}</p>
                       </div>
                       <div className='mt-7'>
-                        <p className='text2 text-vermelho text-xl'>Expirados</p>
-                        <p className='text2 text-black text-xl'>0</p>
+                        <p className='text2 text-vermelho text-xl'>Recusados</p>
+                        <p className='text2 text-black text-xl'>{pedidosRecusados}</p>
                       </div>
                     </div>
                     <div className='ml-10 my-14 flex'>
                       <div>
                         <p className='text2 text-azul text-xl'>Pedidos Totais</p>
-                        <p className='text2 text-black text-xl'>3</p>
+                        <p className='text2 text-black text-xl'>{totalPedidos}</p>
                       </div>
                       <Link className='relative left-32 h-8 flex self-center' href={'/../../pages/pedidos'}>
                         <Image src={arrow} width={50} height={50} alt=''/>
