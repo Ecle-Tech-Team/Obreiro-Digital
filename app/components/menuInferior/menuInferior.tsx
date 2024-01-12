@@ -16,25 +16,25 @@ export default function MenuInferior() {
     <main>
       <div className='flex bg-azul py-4 justify-center absolute bottom-0 w-full'>
         <div className='flex flex-row'>
-          <div className='px-3'>
+          <div className='px-6'>
             <Link href={'/../../pages/inicioMobile'}>
               <Image src={inicio} width={40} height={30} alt=''/>
             </Link>
           </div>
 
-          <div className='px-7'>
+          <div className='px-6'>
             <Link href={'/../../pages/eventosMobile'}>
               <Image src={evento} width={40} height={30} alt=''/>
             </Link>
           </div>
           
-          <div className='px-3'>
+          <div className='px-6'>
             <Link href={'/../../pages/visitantesMobile'}>
               <Image src={visitantes} width={65} height={30} alt=''/>
             </Link>
           </div>
 
-          <div className='px-3'>
+          <div className='px-6'>
             <Link href={'/../../pages/pedidosMobile'}>
               <Image src={pedidos} width={40} height={30} alt=''/>
             </Link>

@@ -53,7 +53,19 @@ export default function visitantesMobile() {
         const fetchVisitantes = async () => {
             try {
                 const response = await api.get('/visitante');
-                setVisitantes(response.data);
+                const sortedVisitantes = response.data.sort((a: { data_visita: string; }, b: { data_visita: string; }) => {
+                    const dateA = new Date(a.data_visita as string);
+                    const dateB = new Date(b.data_visita as string);                      
+                    return dateB.getTime() - dateA.getTime();
+                });               
+    
+                const visitantesWithAdjustedDate = sortedVisitantes.map((visitante: { data_visita: string | number | Date; }) => {
+                    const date = new Date(visitante.data_visita);
+                    date.setDate(date.getDate() + 1);
+                    return { ...visitante, data_visita: date.toISOString().split('T')[0] };
+                });
+    
+                setVisitantes(visitantesWithAdjustedDate);
             } catch (error) {
                 console.error('Error fetching visitantes:', error);
             }
@@ -188,20 +200,20 @@ export default function visitantesMobile() {
                 <div className='flex'>
                     <h1 className='text1 text-black text-3xl ml-4'>Visitantes</h1>
                     
-                    <button className='bg-azul text2 text-white py-1 px-4 rounded-lg ml-4' onClick={openModal}>Novo Visitante +</button>                    
+                    <button className='bg-azul text2 text-white py-1 px-4 rounded-lg sticky left-[29.5vh]' onClick={openModal}>Novo Visitante +</button>                    
                 </div>
             </div>
 
             <div className='flex justify-center'>
-                <div className='bg-white shadow-xl rounded-xl self-center mt-7 w-[40vh] h-[70vh]'>
+                <div className='bg-white shadow-xl rounded-xl self-center mt-7 w-[40vh] h-[70vh] overflow-y-auto'>
                 {visitantes.map((visitante) => (
                         <div key={visitante.id_visitante} className='flex p-4'>
                             <Image src={perfilVisitante} width={40} height={40} alt=''/>
                             <div className='ml-4'>
-                                <h4 className='text1 text-black text-lg'>{visitante.nome}</h4>
+                                <h4 className='text1 text-black text-lg leading-5'>{visitante.nome}</h4>
                                 <p className='text2 text-black relative bottom-1.5'>{visitante.congregacao}</p>
                             </div>
-                            <h4 className='flex self-center text2 text-black absolute left-[35vh]'>{format(new Date(visitante.data_visita), 'dd/MM')}</h4>
+                            <h4 className='flex self-center text2 text-black sticky left-[35vh]'>{format(new Date(visitante.data_visita), 'dd/MM')}</h4>
                         </div>
                     ))}
                 </div>

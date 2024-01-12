@@ -33,7 +33,19 @@ export default function pedidosMobile() {
     const fetchPedidos = async () => {
       try {
         const response = await api.get('/pedido');
-        setPedidos(response.data);
+        const sortedPedidos = response.data.sort((a: { data_pedido: string; }, b: { data_pedido: string; }) => {
+          const dateA = new Date(a.data_pedido as string);
+          const dateB = new Date(b.data_pedido as string); 
+          return dateB.getTime() - dateA.getTime();
+      });
+
+      const pedidosWithAdjustedDate = sortedPedidos.map((pedido: { data_pedido: string | number | Date }) => {
+        const date = new Date(pedido.data_pedido);
+        date.setDate(date.getDate() + 1);
+        return { ...pedido, data_pedido: date.toISOString().split('T')[0] };
+    });
+
+    setPedidos(pedidosWithAdjustedDate);
       } catch (error) {
         console.error('Error fetching pedidos:', error)
       }
@@ -130,19 +142,19 @@ export default function pedidosMobile() {
         <div className="flex">
           <h1 className='text1 text-black text-3xl ml-4'>Pedidos</h1>
 
-          <button className='bg-azul text2 text-white py-1 px-4 rounded-lg ml-[8vh]' onClick={openModal}>Novo Pedido +</button>
+          <button className='bg-azul text2 text-white py-1 px-4 rounded-lg sticky left-[31vh]' onClick={openModal}>Novo Pedido +</button>
         </div>
 
         <div className="flex justify-center">
-          <div className='bg-white shadow-xl rounded-xl self-center mt-7 w-[40vh] h-[70vh]'>
+          <div className='bg-white shadow-xl rounded-xl self-center mt-7 w-[40vh] h-[70vh] overflow-y-auto'>
             {pedidos.map((ped) => (
               <div key={ped.id_pedido} className='flex p-4'>
                 <Image src={cesta} width={40} height={40} alt=''/>
                 <div className="ml-4">
-                  <h4 className='text1 text-black text-lg'>{ped.nome_produto}</h4>
+                  <h4 className='text1 text-black text-lg leading-5'>{ped.nome_produto}</h4>
                   <p className='text2 text-black relative bottom-1.5'>{ped.categoria_produto}</p>
                 </div>
-                <h4 className='flex self-center text2 text-black absolute left-[35vh]'>{format(new Date(ped.data_pedido), 'dd/MM')}</h4>
+                <h4 className='flex self-center text2 text-black sticky left-[35vh]'>{format(new Date(ped.data_pedido), 'dd/MM')}</h4>
               </div>
             ))}
           </div>
