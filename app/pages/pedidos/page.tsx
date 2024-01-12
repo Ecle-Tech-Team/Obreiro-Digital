@@ -127,7 +127,7 @@ export default function pedidos() {
       setEditNomeProduto(pedidos.nome_produto);
       setEditCategoriaProduto(pedidos.categoria_produto);
       setEditQuantidade(pedidos.quantidade);
-      setEditDataPedido(pedidos.data_pedido);
+      setEditDataPedido(format(new Date(pedidos.data_pedido), 'yyyy-MM-dd'));
       setStatusPedido(pedidos.status_pedido);
       // setMotivoRecusa(pedidos.motivo_recusa);
       // setDataEntrega(pedidos.data_entrega);
@@ -148,6 +148,7 @@ export default function pedidos() {
       setCategoriaProduto(selectedPedidos.categoria_produto || '');
       setQuantidade(selectedPedidos.quantidade || 0);
       setDataPedido(selectedPedidos.data_pedido || '');
+      setStatusPedido(selectedPedidos.status_pedido || '');
     }
   }, [selectedPedidos]);
   

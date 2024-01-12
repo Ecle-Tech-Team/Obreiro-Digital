@@ -52,8 +52,8 @@ export default function departamentos() {
     } else if (type === 'edit' && departamento) {     
       setSelectedDepartamento(departamento); 
       setEditNome(departamento.nome);
-      setEditBirth(departamento.birth);     
-      setEditDataCongresso(departamento.data_congresso);      
+      setEditBirth(format(new Date(departamento.birth), 'yyyy-MM-dd'));     
+      setEditDataCongresso(format(new Date(departamento.data_congresso), 'yyyy-MM-dd'));      
     }
 
     setModalIsOpen(true);

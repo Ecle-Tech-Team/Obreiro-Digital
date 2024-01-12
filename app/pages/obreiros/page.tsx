@@ -3,10 +3,13 @@ import React, { useState, useEffect } from 'react'
 import { format } from 'date-fns';
 import MenuLateral from '@/app/components/menuLateral/menuLateral'
 import Link from 'next/link'
+import Image from 'next/image';
 import Modal from 'react-modal'
 import api from '../../api/api';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import on from '@/public/icons/on.svg'
+import off from '@/public/icons/off.svg'
 
 export default function obreiros() {
   
@@ -25,6 +28,8 @@ export default function obreiros() {
   const [editCargo, setEditCargo] = useState<string>('');
 
   const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
+
+  const [showPassword, setShowPassword] = useState(false);
 
   interface User {
     id_user: number;
@@ -67,8 +72,8 @@ export default function obreiros() {
       setEditCodMembro(user.cod_membro);
       setEditNome(user.nome);
       setEditEmail(user.email);
-      setEditSenha('');
-      setEditBirth(user.birth);
+      setEditSenha(user.senha);
+      setEditBirth(format(new Date(user.birth), 'yyyy-MM-dd'));
       setEditCargo(user.cargo);
     }
 
@@ -113,7 +118,7 @@ export default function obreiros() {
       setCodMembro(selectedUser.cod_membro || '');
       setNome(selectedUser.nome || '');
       setEmail(selectedUser.email || '');
-      setSenha('');
+      setSenha(selectedUser.senha || '');
       setBirth(selectedUser.birth || '');
       setCargo(selectedUser.cargo || '');
     }
@@ -346,7 +351,8 @@ export default function obreiros() {
                       className='px-4 py-3 rounded-lg text2 text-slate-500'
                       placeholder='Digite o Código...'
                       value={cod_membro}
-                      onChange={(e) => {setCodMembro(e.target.value)}}                     
+                      onChange={(e) => {setCodMembro(e.target.value)}}
+                      maxLength={16}                     
                       required 
                     />
 
@@ -360,7 +366,8 @@ export default function obreiros() {
                         className='px-4 py-3 rounded-lg text2 text-slate-500'
                         placeholder='Digite o Nome...'
                         value={nome}
-                        onChange={(e) => setNome (e.target.value)}                    
+                        onChange={(e) => setNome (e.target.value)}
+                        maxLength={150}                    
                         required 
                       />
                     </div> 
@@ -374,19 +381,31 @@ export default function obreiros() {
                         placeholder='Digite a Email...'
                         value={email}
                         onChange={(e) => setEmail (e.target.value)}
+                        maxLength={150}
+                        required
                       />
                     </div>
 
                     <div className='flex flex-col'>
                         <label className='text-white text1 text-xl mt-5 mb-1'>Senha</label>
 
-                        <input 
-                          type="password" 
-                          className='px-4 py-3 rounded-lg text2 text-slate-500'
-                          placeholder='Digite a Senha...'
-                          value={senha}
-                          onChange={(e) => setSenha (e.target.value)}
-                        />
+                        <div className="flex">
+                          <input 
+                            type={showPassword ? 'text' : 'password'}
+                            className='pl-4 py-3 rounded-lg text2 text-slate-500'
+                            placeholder='Digite a Senha...'
+                            value={senha}
+                            onChange={(e) => setSenha (e.target.value)}
+                            maxLength={16}
+                            />                            
+                            <button 
+                              type='button'
+                              className='ml-[1vh]'
+                              onClick={() => setShowPassword(!showPassword)}
+                            >
+                              <Image src={showPassword ? on : off} width={40} height={40} alt={showPassword ? 'Open' : 'Closed'}/>
+                            </button>                            
+                        </div>
                     </div>                   
 
                     <div className='flex'>
@@ -411,7 +430,7 @@ export default function obreiros() {
                           onChange={(e) => setCargo (e.target.value)}                 
                           required 
                         >   
-                          <option value="" disabled>Selecione</option>                             
+                          <option value="" disabled>Selecione o Cargo</option>                             
                           <option value="Pastor">Pastor</option>
                           <option value="Obreiro">Obreiro</option>
                         </select>
@@ -440,7 +459,8 @@ export default function obreiros() {
                       className='px-4 py-3 rounded-lg text2 text-slate-500'
                       placeholder='Digite o Código...'
                       value={editCodMembro}
-                      onChange={(e) => {setEditCodMembro(e.target.value)}}                     
+                      onChange={(e) => {setEditCodMembro(e.target.value)}}    
+                      maxLength={16}                 
                       required 
                     />
 
@@ -454,7 +474,8 @@ export default function obreiros() {
                         className='px-4 py-3 rounded-lg text2 text-slate-500'
                         placeholder='Digite o Nome...'
                         value={editNome}
-                        onChange={(e) => setEditNome (e.target.value)}                    
+                        onChange={(e) => setEditNome (e.target.value)} 
+                        maxLength={150}                   
                         required 
                       />
                     </div> 
@@ -468,19 +489,32 @@ export default function obreiros() {
                         placeholder='Digite a Email...'
                         value={editEmail}
                         onChange={(e) => setEditEmail (e.target.value)}
+                        maxLength={150}
+                        required
                       />
                     </div>
 
                     <div className='flex flex-col'>
                         <label className='text-white text1 text-xl mt-5 mb-1'>Senha</label>
+                        
+                        <div className="flex">
+                          <input 
+                            type={showPassword ? 'text' : 'password'}
+                            className='px-4 py-3 rounded-lg text2 text-slate-500'
+                            placeholder='Digite a Senha...'
+                            value={editSenha}
+                            onChange={(e) => setEditSenha (e.target.value)}
+                            maxLength={16}                        
+                          />
 
-                        <input 
-                          type="password" 
-                          className='px-4 py-3 rounded-lg text2 text-slate-500'
-                          placeholder='Digite a Senha...'
-                          value={editSenha}
-                          onChange={(e) => setEditSenha (e.target.value)}
-                        />
+                            <button 
+                              type='button'
+                              className='ml-[1vh]'
+                              onClick={() => setShowPassword(!showPassword)}
+                            >
+                              <Image src={showPassword ? on : off} width={40} height={40} alt={showPassword ? 'Open' : 'Closed'}/>
+                            </button>
+                        </div>
                     </div>                   
 
                     <div className='flex'>
@@ -505,7 +539,7 @@ export default function obreiros() {
                           onChange={(e) => setEditCargo (e.target.value)}                 
                           required 
                         >   
-                          <option value="" disabled>Selecione</option>                             
+                          <option value="" disabled>Selecione o Cargo</option>                             
                           <option value="Pastor">Pastor</option>
                           <option value="Obreiro">Obreiro</option>
                         </select>

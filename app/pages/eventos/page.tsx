@@ -66,9 +66,9 @@ export default function eventos() {
       setSelectedEvento(eventos);
       setEditNome(eventos.nome);
       setEditLocal(eventos.local);
-      setEditDataInicio(eventos.data_inicio);
+      setEditDataInicio(format(new Date(eventos.data_inicio), 'yyyy-MM-dd'));
       setEditHorarioInicio(eventos.horario_inicio);
-      setEditDataFim(eventos.data_fim);
+      setEditDataFim(format(new Date(eventos.data_fim), 'yyyy-MM-dd'));
       setEditHorarioFim(eventos.horario_fim)      
     }
     setModalIsOpen(true);
@@ -88,14 +88,12 @@ export default function eventos() {
   const [selectedEvento, setSelectedEvento] = useState<Eventos | null>(null);
 
   useEffect(() => {
-    if (selectedEvento) {
-      console.log('Data de Início:', selectedEvento.data_inicio);
-      console.log('Data de Fim:', selectedEvento.data_fim);
+    if (selectedEvento) {      
       setNome(selectedEvento.nome || '');
       setLocal(selectedEvento.local || '');
-      setEditDataInicio(format(new Date(selectedEvento.data_inicio), 'yyyy-MM-dd'));;      
+      setDataInicio(selectedEvento.data_inicio || '');      
       setHorarioInicio(selectedEvento.horario_inicio || '');
-      setEditDataFim(selectedEvento.data_fim ? format(new Date(selectedEvento.data_fim), 'yyyy-MM-dd') : '');
+      setDataFim(selectedEvento.data_fim || '');
       setHorarioFim(selectedEvento.horario_fim || '');
     }
   }, [selectedEvento]);
@@ -301,6 +299,7 @@ export default function eventos() {
                   placeholder='Digite o Nome...'
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
+                  maxLength={150}
                   required 
                 />
               </div>
@@ -314,6 +313,7 @@ export default function eventos() {
                   placeholder='Digite o Local...'
                   value={local}
                   onChange={(e) => setLocal(e.target.value)}
+                  maxLength={150}
                   required 
                 />
               </div>
@@ -397,6 +397,7 @@ export default function eventos() {
                 placeholder='Digite o Nome...'
                 value={editNome}
                 onChange={(e) => setEditNome(e.target.value)}
+                maxLength={150}
                 required 
               />
             </div>
@@ -410,6 +411,7 @@ export default function eventos() {
                 placeholder='Digite o Local...'
                 value={editLocal}
                 onChange={(e) => setEditLocal(e.target.value)}
+                maxLength={150}
                 required 
               />
             </div>

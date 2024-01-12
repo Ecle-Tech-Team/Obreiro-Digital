@@ -96,7 +96,7 @@ export default function financeiro() {
       setEditCategoria(financas.categoria);
       setEditValor(financas.valor);
       setEditDescricao(financas.descricao);
-      setEditData(financas.data)      
+      setEditData(format(new Date(financas.data), 'yyyy-MM-dd'));      
     }
     setModalIsOpen(true);
   };

@@ -224,7 +224,8 @@ export default function visitantesMobile() {
                             className='px-4 py-3 rounded-lg text2 text-slate-500'
                             placeholder='Digite o Nome...'
                             value={nome}
-                            onChange={(e) => setNome(e.target.value)}                    
+                            onChange={(e) => setNome(e.target.value)}   
+                            maxLength={150}                 
                             required 
                         />
                     </div>
@@ -285,6 +286,7 @@ export default function visitantesMobile() {
                             placeholder='Digite a Congregação...'
                             value={congregacao}
                             onChange={(e) => setCongregacao (e.target.value)}
+                            maxLength={200}
                         />
                     </div>
 
@@ -297,6 +299,7 @@ export default function visitantesMobile() {
                             placeholder='Digite o Ministério...'
                             value={ministerio}
                             onChange={(e) => setMinisterio (e.target.value)}
+                            maxLength={150}
                         />
                     </div>
 

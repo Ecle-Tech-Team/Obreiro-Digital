@@ -86,7 +86,7 @@ export default function membros() {
       setSelectedMember(membro);
       setEditCodMembro(membro.cod_membro);
       setEditNome(membro.nome);
-      setEditBirth(membro.birth);
+      setEditBirth(format(new Date(membro.birth), 'yyyy-MM-dd'));
       setEditNumero(membro.numero);
       setEditNovoConvertido(membro.novo_convertido)
       setEditNomeDepartamento(membro.depart)
@@ -368,6 +368,7 @@ export default function membros() {
                     placeholder='Digite o Código...'
                     value={cod_membro}
                     onChange={(e) => setCodMembro(e.target.value)}
+                    maxLength={16}
                     required 
                   />
                 </div>
@@ -381,6 +382,7 @@ export default function membros() {
                     placeholder='Digite o Nome...'
                     value={nome}
                     onChange={(e) => setNome(e.target.value)}
+                    maxLength={150}
                     required 
                   />
                 </div>
@@ -422,6 +424,7 @@ export default function membros() {
                     placeholder='Digite o Número...'
                     value={numero}
                     onChange={(e) => setNumero(e.target.value)}
+                    maxLength={25}
                     required 
                   />
                 </div>
@@ -434,7 +437,7 @@ export default function membros() {
                     value={nome_departamento}
                     onChange={(e) => setNomeDepartamento(Number(e.target.value))}  
                   > 
-                    <option value={0} disabled>Selecione um membro</option> 
+                    <option value={0} disabled>Selecione um departamento</option> 
                     {departamento.map((departamento) => (
                       <option key={departamento.id_departamento} value={departamento.id_departamento}>
                         {departamento.nome}
@@ -467,6 +470,7 @@ export default function membros() {
                     placeholder='Digite o Código...'
                     value={editCodMembro}
                     onChange={(e) => setEditCodMembro(e.target.value)}
+                    maxLength={16}
                     required 
                   />
                 </div>
@@ -480,6 +484,7 @@ export default function membros() {
                     placeholder='Digite o Nome...'
                     value={editNome}
                     onChange={(e) => setEditNome(e.target.value)}
+                    maxLength={150}
                     required 
                   />
                 </div>
@@ -521,6 +526,7 @@ export default function membros() {
                     placeholder='Digite o Número...'
                     value={editNumero}
                     onChange={(e) => setEditNumero(e.target.value)}
+                    maxLength={25}
                     required 
                   />
                 </div>

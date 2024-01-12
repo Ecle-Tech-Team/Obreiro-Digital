@@ -67,7 +67,7 @@ export default function estoque() {
       setEditNomeProduto(produto.nome_produto);
       setEditCategoria(produto.categoria);
       setEditQuantidade(produto.quantidade);
-      setEditValidade(produto.validade);
+      setEditValidade(format(new Date(produto.validade), 'yyyy-MM-dd'));
       setEditPrecoUnitario(produto.preco_unitario);
     }
 
@@ -355,7 +355,8 @@ export default function estoque() {
                     className='px-4 py-3 rounded-lg text2 text-slate-500'
                     placeholder='Digite o Código...'
                     value={nome_produto}
-                    onChange={(e) => {setNomeProduto(e.target.value)}}                     
+                    onChange={(e) => {setNomeProduto(e.target.value)}}   
+                    maxLength={150}                  
                     required 
                   />
                 </div>
@@ -451,7 +452,8 @@ export default function estoque() {
                     className='px-4 py-3 rounded-lg text2 text-slate-500'
                     placeholder='Digite o Código...'
                     value={editNomeProduto}
-                    onChange={(e) => {setEditNomeProduto(e.target.value)}}                     
+                    onChange={(e) => {setEditNomeProduto(e.target.value)}}   
+                    maxLength={150}                  
                     required 
                   />
                 </div>

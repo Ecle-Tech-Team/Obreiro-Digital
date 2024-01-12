@@ -166,6 +166,7 @@ export default function pedidosMobile() {
                     placeholder='Digite o Nome...'
                     value={nome_produto}
                     onChange={(e) => setNomeProduto(e.target.value)}
+                    maxLength={150}
                     required 
                   />
               </div>
