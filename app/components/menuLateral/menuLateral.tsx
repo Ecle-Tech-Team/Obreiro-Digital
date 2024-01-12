@@ -1,5 +1,6 @@
 'use client'
 import React, { useState, useEffect} from 'react'
+import { motion } from 'framer-motion';
 import Image from 'next/image'
 import Link from 'next/link'
 import logo from '@/public/images/icon.png'
@@ -24,7 +25,12 @@ export default function MenuLateral() {
   }, []);
 
   return (
-    <main className=''>
+    <motion.main
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 1 }}
+    >    
       <div className='ml-6'>
         <div className='flex mt-12'>
           <Image src={logo} width={75} height={50} alt=''/>
@@ -62,10 +68,10 @@ export default function MenuLateral() {
             <p className='ml-4 font-bold text-2xl text1'>Financeiro</p>
           </Link>
           
-          <Link className='flex mt-7 w-[17vh]' href={'/../../pages/relatorio'}>
+          {/* <Link className='flex mt-7 w-[17vh]' href={'/../../pages/relatorio'}>
             <Image src={relatorio} width={30} height={30} alt=''/>
             <p className='ml-4 font-bold text-2xl text1'>Relatório</p>
-          </Link>
+          </Link> */}
 
           <Link className='flex mt-7 w-[16vh]' href={'/../../pages/pedidos'}>
             <Image src={pedidos} width={30} height={30} alt=''/>
@@ -79,12 +85,12 @@ export default function MenuLateral() {
         </div>
 
         <div className='ml-5 mt-20 w-[25vh]'>
-          <Link className='flex mt-7' href={'/../../pages/configuracoes'}>
+          {/* <Link className='flex mt-7' href={'/../../pages/configuracoes'}>
             <Image src={config} width={30} height={30} alt=''/>
             <p className='ml-4 font-bold text-2xl text1'>Configurações</p>
-          </Link>
+          </Link> */}
         </div>  
       </div>
-    </main>
+    </motion.main>
   )
 }
