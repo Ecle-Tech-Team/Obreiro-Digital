@@ -161,7 +161,7 @@ export default function financeiro() {
     }
 
     try {
-      if (tipo === "" || categoria === "" || valor === "" || descricao === "" || data === "") {
+      if (tipo === "Selecione um Tipo" || categoria === "Selecione" || valor === "" || descricao === "" || data === "") {
         notifyWarn();
         return;
       } else {
@@ -378,7 +378,7 @@ export default function financeiro() {
                   value={tipo}
                   onChange={(e) => setTipo(e.target.value)}
                 >
-                  <option value="" disabled>Selecione um tipo</option>
+                  <option value="" disabled>Selecione um Tipo</option>
                   <option value="Entrada">Entrada</option>
                   <option value="Saída">Saída</option>
                 </select>
@@ -392,6 +392,7 @@ export default function financeiro() {
                   value={categoria}
                   onChange={(e) => setCategoria(e.target.value)}
                 >                  
+                  <option value="" disabled>Selecione</option>
                   <option value="OFerta Simples">OFerta Simples</option>
                   <option value="Oferta Especial">Oferta Especial</option>
                   <option value="Dízimo">Dízimo</option>
