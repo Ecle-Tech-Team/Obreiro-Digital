@@ -119,7 +119,7 @@ export default function Login() {
                 <p className='text-white text-xl text2 mt-2 flex justify-center mb-6'>Bem-vindo(a) de volta!</p>
               </div>
               <input 
-                className='px-4 py-3.5 w-[40vh] mb-3 text2 rounded-lg' 
+                className='px-4 py-3.5 w-[40vh] mb-3 text2 rounded-lg text-black' 
                 type="text" 
                 placeholder='Digite o Email...'
                 value={email}
@@ -128,7 +128,7 @@ export default function Login() {
               />
 
               <input 
-                className='px-4 py-3.5 w-[40vh] mb-3 text2 rounded-lg' 
+                className='px-4 py-3.5 w-[40vh] mb-3 text2 rounded-lg text-black' 
                 type={showPassword ? 'text' : 'password'} 
                 placeholder='Digite a Senha...'
                 value={senha}
@@ -148,7 +148,7 @@ export default function Login() {
                 </button>
               </div>
 
-              <button type='submit' className='border-2 rounded-lg h-12 mt-3 border-white text2 text-white' onClick={handleLogin}>Entrar</button>
+              <button type='submit' className='border-2 rounded-lg h-12 mt-3 border-white text2 text-white active:bg-white active:text-azul' onClick={handleLogin}>Entrar</button>
               <ToastContainer />
 
               <button className='flex justify-center text-lg text2 text-white mt-6'>Esqueci a senha</button>

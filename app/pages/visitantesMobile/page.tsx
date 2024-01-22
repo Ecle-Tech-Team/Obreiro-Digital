@@ -233,7 +233,7 @@ export default function visitantesMobile() {
 
                         <input 
                             type="text" 
-                            className='px-4 py-3 rounded-lg text2 text-slate-500'
+                            className='px-4 py-3 rounded-lg text2'
                             placeholder='Digite o Nome...'
                             value={nome}
                             onChange={(e) => setNome(e.target.value)}   
@@ -246,7 +246,7 @@ export default function visitantesMobile() {
                         <label className='text-white text1 text-lg mt-5 mb-1'>Convidado Por</label>
 
                         <select                              
-                            className='bg-white px-4 py-3 rounded-lg text2 text-slate-500'
+                            className='bg-white px-4 py-3 rounded-lg text2'
                             value={convidadoPor}
                             onChange={(e) => setConvidadoPor(Number(e.target.value))}                
                             required 
@@ -266,7 +266,7 @@ export default function visitantesMobile() {
                             <label className='text-white text1 text-lg mt-5 mb-1'>Cristão?</label>
 
                             <select                              
-                                className='bg-white px-4 py-3 rounded-lg text2 text-slate-500'
+                                className='bg-white px-4 py-3 rounded-lg text2'
                                 value={cristao}
                                 onChange={(e) => setCristao(e.target.value)}                 
                                 required 
@@ -282,7 +282,7 @@ export default function visitantesMobile() {
 
                             <input 
                                 type="date" 
-                                className='px-4 py-3 rounded-lg text2 text-slate-500'
+                                className='px-4 py-3 rounded-lg text2'
                                 value={dataVisita}
                                 onChange={(e) => setDataVisita (e.target.value)}
                                 required 
@@ -295,7 +295,7 @@ export default function visitantesMobile() {
 
                         <input 
                             type="text" 
-                            className='px-4 py-3 rounded-lg text2 text-slate-500'
+                            className='px-4 py-3 rounded-lg text2'
                             placeholder='Digite a Congregação...'
                             value={congregacao}
                             onChange={(e) => setCongregacao (e.target.value)}
@@ -308,7 +308,7 @@ export default function visitantesMobile() {
 
                         <input 
                             type="text" 
-                            className='px-4 py-3 rounded-lg text2 text-slate-500'
+                            className='px-4 py-3 rounded-lg text2 t'
                             placeholder='Digite o Ministério...'
                             value={ministerio}
                             onChange={(e) => setMinisterio (e.target.value)}
