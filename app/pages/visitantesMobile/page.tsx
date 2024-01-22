@@ -251,7 +251,8 @@ export default function visitantesMobile() {
                             onChange={(e) => setConvidadoPor(Number(e.target.value))}                
                             required 
                         >
-                            <option value={0} disabled>Selecione um membro</option>                            
+                            <option value={0} disabled>Selecione um membro</option>
+                            <option value={'Sem Membro'}>Sem Membro</option>                            
                             {membros.map((membro) => (
                                 <option key={membro.id_membro} value={membro.id_membro}>
                                     {membro.nome}
