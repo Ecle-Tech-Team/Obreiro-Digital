@@ -184,7 +184,7 @@ export default function membros() {
     }
 
     try{
-      if(cod_membro === "" || nome === "" || birth === "" || novo_convertido === "Selecione a Opção" || numero === "" || nome_departamento === 0) {
+      if(nome === "" || birth === "" || novo_convertido === "Selecione a Opção" || numero === "" || nome_departamento === 0) {
           notifyWarn();
           return;
       } else if (specialCharactersRegex.test(nome)) {
