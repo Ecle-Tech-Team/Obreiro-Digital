@@ -1,44 +1,79 @@
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import api from '@/app/api/api';
-import MenuLateral from '@/app/components/menuLateral/menuLateral'
+import MenuLateral from '@/app/components/menuLateral/menuLateral';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Modal from 'react-modal';
-import Link from 'next/link'
+import Link from 'next/link';
+
+interface Igreja {
+  id_igreja: number;
+  nome: string;
+};
+
+interface User {
+  id_user: number;
+  id_igreja: number;
+};
+
+interface Departamento {
+  id_departamento: number;
+  nome: string;
+  birth: string;
+  data_congresso: string;
+  id_igreja: number;
+};
 
 export default function departamentos() {  
   const [nome, setNome] = useState<string>('')
   const [birth, setBirth] = useState<string>('')
   const [data_congresso, setDataCongresso] = useState<string>('')
-   
+  const [nomeIgreja, setNomeIgreja] = useState<number>(0)
+
   const [editNome, setEditNome] = useState<string>('')
   const [editBirth, setEditBirth] = useState<string>('')
   const [editDataCongresso, setEditDataCongresso] = useState<string>('')
+  const [editNomeIgreja, setEditNomeIgreja] = useState<number>(0)
 
+  
   const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
-
-  interface Departamento {
-    id_departamento: number;
-    nome: string;
-    birth: string;
-    data_congresso: string;
-  }
-
-  const [departamentos, setDepartamentos] = useState<Departamento[]>([])
+  
+  const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const fetchDepartamentos = async () => {
-      try {
-        const response = await api.get('/departamento');
-        setDepartamentos(response.data);
+    const fetchUserData = async () => {
+      try {        
+        const userResponse = await api.get('/cadastro');
+        setUser(userResponse.data);
+        
+        if (userResponse.data && userResponse.data.id_igreja) {
+          const departamentoResponse = await api.get(`/departamento/${userResponse.data.id_igreja}`);
+          setDepartamentos(departamentoResponse.data);
+        }
       } catch (error) {
-        console.error('Error fetching users:', error);
+        console.error('Error fetching user data:', error);
       }
     };
 
-    fetchDepartamentos()
+    fetchUserData();
+  }, []);
+
+  const [igreja, setIgreja] = useState<Igreja[]>([]);
+
+  useEffect(() => {
+    const fetchIgrejas = async () => {
+      try {
+        const response = await api.get('/departamento/igreja');
+        setIgreja(response.data);
+      } catch (error) {
+        console.error('Error fetching igrejas:', error);
+      }
+    };
+
+    fetchIgrejas()
   }, []);
 
   const [modalIsOpen, setModalIsOpen] = useState(false);
@@ -49,11 +84,13 @@ export default function departamentos() {
       setNome('');      
       setBirth('');
       setDataCongresso('');
+      setNomeIgreja(0)
     } else if (type === 'edit' && departamento) {     
       setSelectedDepartamento(departamento); 
       setEditNome(departamento.nome);
       setEditBirth(format(new Date(departamento.birth), 'yyyy-MM-dd'));     
-      setEditDataCongresso(format(new Date(departamento.data_congresso), 'yyyy-MM-dd'));      
+      setEditDataCongresso(format(new Date(departamento.data_congresso), 'yyyy-MM-dd'));
+      setEditNomeIgreja(departamento.id_igreja)      
     }
 
     setModalIsOpen(true);
@@ -97,6 +134,7 @@ export default function departamentos() {
       setNome(selectedDepartamento.nome || '');
       setBirth(selectedDepartamento.birth || '');
       setDataCongresso(selectedDepartamento.data_congresso || '');
+      setNomeIgreja(selectedDepartamento.id_igreja || 0)
     };
   }, [selectedDepartamento]);
 
@@ -146,7 +184,7 @@ export default function departamentos() {
     };
     
     try{
-      if(nome === "" || birth === "" || data_congresso === "") {
+      if(nome === "" || birth === "" || data_congresso === "" || nomeIgreja === 0) {
         notifyWarn();
         return;
       } else if (specialCharactersRegex.test(nome)) {
@@ -160,6 +198,7 @@ export default function departamentos() {
           nome,          
           birth,
           data_congresso,
+          id_igreja: nomeIgreja
         };           
        
         const response = await api.post('/departamento', data)           
@@ -221,7 +260,7 @@ export default function departamentos() {
         return;
       }
   
-      if (!editNome || !editBirth || !editDataCongresso) {
+      if (!editNome || !editBirth || !editDataCongresso || !editNomeIgreja) {
         notifyWarn();
         return;
       }
@@ -229,7 +268,8 @@ export default function departamentos() {
       const data = {        
         nome: editNome,
         birth: editBirth,
-        data_congresso: editDataCongresso,        
+        data_congresso: editDataCongresso, 
+        nomeIgreja: editNomeIgreja       
       };  
       
       setDepartamentos((prevDepartamentos) =>
@@ -348,6 +388,27 @@ export default function departamentos() {
                       onChange={(e) => setDataCongresso (e.target.value)}                     
                     />
                   </div>  
+                </div>
+
+                <div className='flex flex-col'>
+                  <label className='text-white text1 text-xl mt-5 mb-1'>Igreja</label>
+
+                  <select                              
+                    className='bg-white px-4 py-3 rounded-lg text2 text-slate-500'
+                    value={nomeIgreja}
+                    onChange={(e) => setNomeIgreja(Number(e.target.value))}                 
+                    required 
+                  >   
+                    <option value={0} disabled>Selecione uma Igreja</option>
+                    {igreja.map((igreja) => (
+                      <option
+                        key={igreja.id_igreja}
+                        value={igreja.id_igreja}
+                      >
+                        {igreja.nome}
+                      </option>                      
+                    ))}                            
+                  </select>
                 </div>
 
                 <button className='border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
