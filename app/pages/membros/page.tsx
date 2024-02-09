@@ -8,9 +8,31 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Modal from 'react-modal';
 
+interface Igreja {
+  id_igreja: number;
+  nome: string;
+};
+
+interface User {
+  id_user: number;
+  id_igreja: number;
+};
+
 interface Departamento {
   id_departamento: number;
   nome: string;
+}
+
+interface Membro {
+  id_membro: number;
+  cod_membro: string;
+  nome: string;
+  birth: string;
+  novo_convertido: string;
+  numero: string;
+  nome_departamento: number;
+  nome_departamento_texto: string;
+  id_igreja: number;
 }
 
 export default function membros() {
@@ -20,6 +42,7 @@ export default function membros() {
   const [novo_convertido, setNovoConvertido] = useState<string>('')
   const [numero, setNumero] = useState<string>('')
   const [nome_departamento, setNomeDepartamento] = useState<number>(0);
+  const [nomeIgreja, setNomeIgreja] = useState<number>(0);
 
   const [editCodMembro, setEditCodMembro] = useState<string>('')
   const [editNome, setEditNome] = useState<string>('')
@@ -27,6 +50,7 @@ export default function membros() {
   const [editNovoConvertido, setEditNovoConvertido] = useState<string>('')
   const [editNumero, setEditNumero] = useState<string>('')
   const [editNomeDepartamento, setEditNomeDepartamento] = useState<number>(0);
+  const [editNomeIgreja, setEditNomeIgreja] = useState<number>(0);
 
   const [departamento, setDepartamento] = useState<Departamento[]>([])
 
@@ -42,32 +66,42 @@ export default function membros() {
 
     fetchDepartamentos()
   }, []);
-
-  interface Membro {
-    id_membro: number;
-    cod_membro: string;
-    nome: string;
-    birth: string;
-    novo_convertido: string;
-    numero: string;
-    depart: number;
-    nome_departamento: string;
-  }
-
+  
   const [membros, setMembro] = useState<Membro[]>([])
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const fetchMembers = async () => {
-      try {
-        const response = await api.get('/membro');
-        setMembro(response.data);
+    const fetchUserData = async () => {
+      try {        
+        const userResponse = await api.get('/cadastro');
+        setUser(userResponse.data);
+        
+        if (userResponse.data && userResponse.data.id_igreja) {
+          const membroResponse = await api.get(`/membro/membro/${userResponse.data.id_igreja}`);          
+          setMembro(membroResponse.data);
+        }
       } catch (error) {
-        console.error('Error fetching membros:', error);
+        console.error('Error fetching user data:', error);
       }
     };
 
-    fetchMembers()
-  }, []);    
+    fetchUserData();
+  }, []); 
+  
+  const [igreja, setIgreja] = useState<Igreja[]>([]);
+
+  useEffect(() => {
+    const fetchIgrejas = async () => {
+      try {
+        const response = await api.get('/membro/igreja');
+        setIgreja(response.data);
+      } catch (error) {
+        console.error('Error fetching igrejas:', error);
+      }
+    };
+
+    fetchIgrejas()
+  }, []);
 
   const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
 
@@ -82,14 +116,16 @@ export default function membros() {
       setNumero('');
       setNovoConvertido('');
       setNomeDepartamento(0);
+      setNomeIgreja(0);
     } else if (type === 'edit'&& membro) {
       setSelectedMember(membro);
       setEditCodMembro(membro.cod_membro);
       setEditNome(membro.nome);
       setEditBirth(format(new Date(membro.birth), 'yyyy-MM-dd'));
       setEditNumero(membro.numero);
-      setEditNovoConvertido(membro.novo_convertido)
-      setEditNomeDepartamento(membro.depart)
+      setEditNovoConvertido(membro.novo_convertido);
+      setEditNomeDepartamento(membro.nome_departamento);
+      setEditNomeIgreja(membro.id_igreja);
     }
     setModalIsOpen(true);
   };
@@ -134,7 +170,8 @@ export default function membros() {
       setBirth(selectedMember.birth || '');
       setNumero(selectedMember.numero || '');
       setNovoConvertido(selectedMember.novo_convertido || '');
-      setNomeDepartamento(selectedMember.depart || 0);
+      setNomeDepartamento(selectedMember.nome_departamento || 0);
+      setNomeIgreja(selectedMember.id_igreja || 0);
     }
   }, [selectedMember])
 
@@ -184,7 +221,7 @@ export default function membros() {
     }
 
     try{
-      if(nome === "" || birth === "" || novo_convertido === "Selecione a Opção" || numero === "" || nome_departamento === 0) {
+      if(nome === "" || birth === "" || novo_convertido === "Selecione a Opção" || numero === "" || nome_departamento === 0 || nomeIgreja === 0) {
           notifyWarn();
           return;
       } else if (specialCharactersRegex.test(nome)) {
@@ -200,7 +237,8 @@ export default function membros() {
           birth,
           novo_convertido,
           numero,
-          depart: nome_departamento,
+          nome_departamento: nome_departamento,
+          id_igreja: nomeIgreja
         }
 
         const response = await api.post('/membro', data)
@@ -262,7 +300,7 @@ export default function membros() {
         return;
       }
   
-      if (!editCodMembro || !editNome || !editBirth || !editNumero || !editNovoConvertido || !editNomeDepartamento) {
+      if (!editCodMembro || !editNome || !editBirth || !editNumero || !editNovoConvertido || !editNomeDepartamento || !editNomeIgreja) {
         notifyWarn();
         return;
       }
@@ -273,7 +311,8 @@ export default function membros() {
         birth: editBirth,
         numero: editNumero,
         novo_convertido: editNovoConvertido,
-        nome_departamento: editNovoConvertido
+        nome_departamento: editNovoConvertido,
+        nomeIgreja: editNomeIgreja
       };  
       
       
@@ -335,7 +374,7 @@ export default function membros() {
                     </tr>
                   </thead>
                   <tbody>
-                    {membros.map((members) => (                    
+                    {membros.map((members) => (                                          
                       <tr key={members.id_membro} onClick={() => members && openModal('edit', members)} className='cursor-pointer hover:bg-slate-200'>
                         <td className='text-center text2 text-xl py-3'>{members.cod_membro}</td>
                         <td className='text-center text2 text-xl'>{members.nome}</td>
@@ -364,7 +403,7 @@ export default function membros() {
 
                   <input 
                     type="text" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
+                    className='px-4 py-3 rounded-lg text2 text-black'
                     placeholder='Digite o Código...'
                     value={cod_membro}
                     onChange={(e) => setCodMembro(e.target.value)}
@@ -378,7 +417,7 @@ export default function membros() {
 
                   <input 
                     type="text" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
+                    className='px-4 py-3 rounded-lg text2 text-black'
                     placeholder='Digite o Nome...'
                     value={nome}
                     onChange={(e) => setNome(e.target.value)}
@@ -393,7 +432,7 @@ export default function membros() {
 
                     <input 
                       type="date" 
-                      className='px-4 py-3 rounded-lg text2 text-slate-500'
+                      className='px-4 py-3 rounded-lg text2 text-black'
                       placeholder='Selecione a Data...'
                       value={birth}
                       onChange={(e) => setBirth(e.target.value)}
@@ -405,7 +444,7 @@ export default function membros() {
                     <label className='text-white text1 text-xl mt-5 mt mb-1'>Novo Convertido</label>
 
                     <select 
-                      className='px-4 py-3 rounded-lg text2 bg-white text-slate-500' 
+                      className='px-4 py-3 rounded-lg text2 bg-white text-black' 
                       value={novo_convertido}
                       onChange={(e) => setNovoConvertido(e.target.value)}
                     >
@@ -420,7 +459,7 @@ export default function membros() {
 
                   <input                     
                     type="text" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
+                    className='px-4 py-3 rounded-lg text2 text-black'
                     placeholder='Digite o Número...'
                     value={numero}
                     onChange={(e) => setNumero(e.target.value)}
@@ -429,23 +468,45 @@ export default function membros() {
                   />
                 </div>
 
-                <div className='flex flex-col'>
-                  <label className='text-white text1 text-xl mt-5 mb-1'>Departamento</label>
+                <div className="flex">
+                  <div className='flex flex-col'>
+                    <label className='text-white text1 text-xl mt-5 mb-1'>Departamento</label>
 
-                  <select 
-                    className='px-4 py-3 rounded-lg text2 bg-white text-slate-500'
-                    value={nome_departamento}
-                    onChange={(e) => setNomeDepartamento(Number(e.target.value))}  
-                  > 
-                    <option value={0} disabled>Selecione um departamento</option> 
-                    {departamento.map((departamento) => (
-                      <option key={departamento.id_departamento} value={departamento.id_departamento}>
-                        {departamento.nome}
+                    <select 
+                      className='px-4 py-3 rounded-lg text2 bg-white text-black'
+                      value={nome_departamento}
+                      onChange={(e) => setNomeDepartamento(Number(e.target.value))}  
+                    > 
+                      <option value={0} disabled>Selecione um departamento</option> 
+                      {departamento.map((departamento) => (
+                        <option key={departamento.id_departamento} value={departamento.id_departamento}>
+                          {departamento.nome}
+                        </option>                      
+                      ))}                    
+                    </select>
+                  </div>
+
+                  <div className='flex flex-col ml-5'>
+                  <label className='text-white text1 text-xl mt-5 mb-1'>Igreja</label>
+
+                  <select                              
+                    className='bg-white px-4 py-3 rounded-lg text2 text-black'
+                    value={nomeIgreja}
+                    onChange={(e) => setNomeIgreja(Number(e.target.value))}                 
+                    required 
+                  >   
+                    <option value={0} disabled>Selecione uma Igreja</option>
+                    {igreja.map((igreja) => (
+                      <option
+                        key={igreja.id_igreja}
+                        value={igreja.id_igreja}
+                      >
+                        {igreja.nome}
                       </option>                      
-                    ))}                    
+                    ))}                            
                   </select>
                 </div>
-
+                </div>
                 <div className='flex flex-col'>                  
                   <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
                 </div>
@@ -466,7 +527,7 @@ export default function membros() {
 
                   <input 
                     type="text" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
+                    className='px-4 py-3 rounded-lg text2 text-black'
                     placeholder='Digite o Código...'
                     value={editCodMembro}
                     onChange={(e) => setEditCodMembro(e.target.value)}
@@ -480,7 +541,7 @@ export default function membros() {
 
                   <input 
                     type="text" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
+                    className='px-4 py-3 rounded-lg text2 text-black'
                     placeholder='Digite o Nome...'
                     value={editNome}
                     onChange={(e) => setEditNome(e.target.value)}
@@ -495,7 +556,7 @@ export default function membros() {
 
                     <input 
                       type="date" 
-                      className='px-4 py-3 rounded-lg text2 text-slate-500'
+                      className='px-4 py-3 rounded-lg text2 text-black'
                       placeholder='Selecione a Data...'
                       value={editBirth}
                       onChange={(e) => setEditBirth(e.target.value)}
@@ -507,7 +568,7 @@ export default function membros() {
                     <label className='text-white text1 text-xl mt-5 mt mb-1'>Novo Convertido</label>
 
                     <select 
-                      className='px-4 py-3 rounded-lg text2 bg-white text-slate-500' 
+                      className='px-4 py-3 rounded-lg text2 bg-white text-black' 
                       value={editNovoConvertido}
                       onChange={(e) => setEditNovoConvertido(e.target.value)}
                     >
@@ -522,7 +583,7 @@ export default function membros() {
 
                   <input                    
                     type="text" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
+                    className='px-4 py-3 rounded-lg text2 text-black'
                     placeholder='Digite o Número...'
                     value={editNumero}
                     onChange={(e) => setEditNumero(e.target.value)}
@@ -535,7 +596,7 @@ export default function membros() {
                   <label className='text-white text1 text-xl mt-5 mb-1'>Departamento</label>
 
                   <select 
-                    className='px-4 py-3 rounded-lg text2 bg-white text-slate-500'
+                    className='px-4 py-3 rounded-lg text2 bg-white text-black'
                     value={editNomeDepartamento}
                     onChange={(e) => setEditNomeDepartamento(Number(e.target.value))}  
                   >
