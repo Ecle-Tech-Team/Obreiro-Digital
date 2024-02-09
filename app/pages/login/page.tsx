@@ -1,6 +1,7 @@
 'use client'
 import React from 'react'
 import Image from 'next/image'
+import Link from 'next/link';
 import api from '../../api/api';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -118,23 +119,32 @@ export default function Login() {
                 <h1 className='text-white text-4xl mt-10 text1 flex justify-center'>Login</h1>
                 <p className='text-white text-xl text2 mt-2 flex justify-center mb-6'>Bem-vindo(a) de volta!</p>
               </div>
-              <input 
-                className='px-4 py-3.5 w-[40vh] mb-3 text2 rounded-lg text-black' 
-                type="text" 
-                placeholder='Digite o Email...'
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-              />
 
-              <input 
-                className='px-4 py-3.5 w-[40vh] mb-3 text2 rounded-lg text-black' 
-                type={showPassword ? 'text' : 'password'} 
-                placeholder='Digite a Senha...'
-                value={senha}
-                onChange={e => setSenha(e.target.value)}
-                required 
-              />
+              <div className='flex flex-col'>
+                <label className='text-white text1 text-xl mt-2 mb-1'>Email</label>
+
+                <input 
+                  className='px-4 py-3.5 w-[40vh] mb-3 text2 rounded-lg text-black' 
+                  type="text" 
+                  placeholder='Digite o Email...'
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className='flex flex-col'>
+                <label className='text-white text1 text-xl mb-1'>Senha</label>
+
+                <input 
+                  className='px-4 py-3.5 w-[40vh] mb-3 text2 rounded-lg text-black' 
+                  type={showPassword ? 'text' : 'password'} 
+                  placeholder='Digite a Senha...'
+                  value={senha}
+                  onChange={e => setSenha(e.target.value)}
+                  required 
+                />
+              </div>
 
               <div className='flex justify-center'>
                 <input className='w-5' type="checkbox" name="" id="" />
@@ -152,6 +162,10 @@ export default function Login() {
               <ToastContainer />
 
               <button className='flex justify-center text-lg text2 text-white mt-6'>Esqueci a senha</button>
+              
+              <div className='flex justify-center mt-6'>
+                <p className='text-lg text2 text-white'>Novo por aqui?<Link href={'/../../pages/cadastroIgreja'} className='text1 ml-1'>Cadastro</Link></p>
+              </div>
             </div>
           </div>
         </div>
