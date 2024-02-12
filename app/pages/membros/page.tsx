@@ -30,8 +30,7 @@ interface Membro {
   birth: string;
   novo_convertido: string;
   numero: string;
-  nome_departamento: number;
-  nome_departamento_texto: string;
+  nome_departamento: number;  
   id_igreja: number;
 }
 
@@ -93,7 +92,7 @@ export default function membros() {
   useEffect(() => {
     const fetchIgrejas = async () => {
       try {
-        const response = await api.get('/membro/igreja');
+        const response = await api.get('/membro/membro/igreja');
         setIgreja(response.data);
       } catch (error) {
         console.error('Error fetching igrejas:', error);
@@ -300,7 +299,7 @@ export default function membros() {
         return;
       }
   
-      if (!editCodMembro || !editNome || !editBirth || !editNumero || !editNovoConvertido || !editNomeDepartamento || !editNomeIgreja) {
+      if (!editCodMembro || !editNome || !editBirth || !editNumero || !editNovoConvertido || !editNomeDepartamento) {
         notifyWarn();
         return;
       }
@@ -311,13 +310,12 @@ export default function membros() {
         birth: editBirth,
         numero: editNumero,
         novo_convertido: editNovoConvertido,
-        nome_departamento: editNovoConvertido,
-        nomeIgreja: editNomeIgreja
+        nome_departamento: editNovoConvertido,        
       };  
       
       
   
-      const response = await api.put(`/membro/${membro?.id_membro}`, data);
+      const response = await api.put(`/membro/membro/${membro.id_membro}`, data);
   
       notifySuccess();
   
@@ -368,9 +366,9 @@ export default function membros() {
                   <thead className='sticky top-0'>
                     <tr className='bg-azul text-white rounded-xl'>
                       <th className='text1 text-white text-2xl px-24 py-2 '>Cód. Membro</th>
-                      <th className='text1 text-white text-2xl px-20 py-2'>Nome</th>
-                      <th className='text1 text-white text-2xl px-20 py-2'>Departamento</th>
-                      <th className='text1 text-white text-2xl px-20 py-2'>Data de Nascimento</th>                      
+                      <th className='text1 text-white text-2xl px-24 py-2'>Nome</th>
+                      <th className='text1 text-white text-2xl px-[9.5vh] py-2'>Numero</th>
+                      <th className='text1 text-white text-2xl px-24 py-2'>Data de Nascimento</th>                      
                     </tr>
                   </thead>
                   <tbody>
@@ -378,7 +376,7 @@ export default function membros() {
                       <tr key={members.id_membro} onClick={() => members && openModal('edit', members)} className='cursor-pointer hover:bg-slate-200'>
                         <td className='text-center text2 text-xl py-3'>{members.cod_membro}</td>
                         <td className='text-center text2 text-xl'>{members.nome}</td>
-                        <td className='text-center text2 text-xl'>{members.nome_departamento}</td>
+                        <td className='text-center text2 text-xl'>{members.numero}</td>
                         <td className='text-center text2 text-xl'>{format(new Date(members.birth), 'dd/MM/yyyy')}</td>
                       </tr>
                     ))}
