@@ -30,7 +30,7 @@ interface Membro {
   birth: string;
   novo_convertido: string;
   numero: string;
-  nome_departamento: number;  
+  id_departamento: number;  
   id_igreja: number;
 }
 
@@ -76,7 +76,7 @@ export default function membros() {
         setUser(userResponse.data);
         
         if (userResponse.data && userResponse.data.id_igreja) {
-          const membroResponse = await api.get(`/membro/membro/${userResponse.data.id_igreja}`);          
+          const membroResponse = await api.get(`/membro/igreja/${userResponse.data.id_igreja}`);          
           setMembro(membroResponse.data);
         }
       } catch (error) {
@@ -116,14 +116,14 @@ export default function membros() {
       setNovoConvertido('');
       setNomeDepartamento(0);
       setNomeIgreja(0);
-    } else if (type === 'edit'&& membro) {
+    } else if (type === 'edit' && membro) {
       setSelectedMember(membro);
       setEditCodMembro(membro.cod_membro);
       setEditNome(membro.nome);
       setEditBirth(format(new Date(membro.birth), 'yyyy-MM-dd'));
       setEditNumero(membro.numero);
       setEditNovoConvertido(membro.novo_convertido);
-      setEditNomeDepartamento(membro.nome_departamento);
+      setEditNomeDepartamento(membro.id_departamento);
       setEditNomeIgreja(membro.id_igreja);
     }
     setModalIsOpen(true);
@@ -169,7 +169,7 @@ export default function membros() {
       setBirth(selectedMember.birth || '');
       setNumero(selectedMember.numero || '');
       setNovoConvertido(selectedMember.novo_convertido || '');
-      setNomeDepartamento(selectedMember.nome_departamento || 0);
+      setNomeDepartamento(selectedMember.id_departamento || 0);
       setNomeIgreja(selectedMember.id_igreja || 0);
     }
   }, [selectedMember])
@@ -236,7 +236,7 @@ export default function membros() {
           birth,
           novo_convertido,
           numero,
-          nome_departamento: nome_departamento,
+          id_departamento: nome_departamento,
           id_igreja: nomeIgreja
         }
 
@@ -299,7 +299,8 @@ export default function membros() {
         return;
       }
   
-      if (!editCodMembro || !editNome || !editBirth || !editNumero || !editNovoConvertido || !editNomeDepartamento) {
+      if (!editCodMembro || !editNome || !editBirth || !editNumero || !editNovoConvertido || !editNomeDepartamento || !editNomeIgreja) {
+        console.error('Erro ao atualizar o membro:', membro);
         notifyWarn();
         return;
       }
@@ -310,16 +311,20 @@ export default function membros() {
         birth: editBirth,
         numero: editNumero,
         novo_convertido: editNovoConvertido,
-        nome_departamento: editNovoConvertido,        
+        id_departamento: editNomeDepartamento,
+        id_igreja: editNomeIgreja        
       };  
       
-      
+      console.log('Dados enviados para atualização:', data);
   
-      const response = await api.put(`/membro/membro/${membro.id_membro}`, data);
+      const response = await api.put(`/membro/${membro.id_membro}/${membro.id_igreja}`, data);
   
       notifySuccess();
   
-      closeModal();
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+
       setSelectedMember(null);
     } catch (error) {
       console.error('Error updating member:', error);
@@ -461,7 +466,7 @@ export default function membros() {
                     placeholder='Digite o Número...'
                     value={numero}
                     onChange={(e) => setNumero(e.target.value)}
-                    maxLength={25}
+                    maxLength={11}
                     required 
                   />
                 </div>
@@ -485,26 +490,27 @@ export default function membros() {
                   </div>
 
                   <div className='flex flex-col ml-5'>
-                  <label className='text-white text1 text-xl mt-5 mb-1'>Igreja</label>
+                    <label className='text-white text1 text-xl mt-5 mb-1'>Igreja</label>
 
-                  <select                              
-                    className='bg-white px-4 py-3 rounded-lg text2 text-black'
-                    value={nomeIgreja}
-                    onChange={(e) => setNomeIgreja(Number(e.target.value))}                 
-                    required 
-                  >   
-                    <option value={0} disabled>Selecione uma Igreja</option>
-                    {igreja.map((igreja) => (
-                      <option
-                        key={igreja.id_igreja}
-                        value={igreja.id_igreja}
-                      >
-                        {igreja.nome}
+                    <select                              
+                      className='bg-white px-4 py-3 rounded-lg text2 text-black'
+                      value={nomeIgreja}
+                      onChange={(e) => setNomeIgreja(Number(e.target.value))}                 
+                      required 
+                    >   
+                      <option value={0} disabled>Selecione uma Igreja</option>
+                      {igreja.map((igreja) => (
+                        <option
+                          key={igreja.id_igreja}
+                          value={igreja.id_igreja}
+                        >
+                          {igreja.nome}
                       </option>                      
-                    ))}                            
-                  </select>
+                      ))}                            
+                    </select>
+                  </div>
                 </div>
-                </div>
+                
                 <div className='flex flex-col'>                  
                   <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
                 </div>
