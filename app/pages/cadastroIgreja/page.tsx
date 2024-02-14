@@ -28,12 +28,46 @@ export default function cadastroIgreja() {
     const [modalIsOpen, setModalIsOpen] = useState(false);
     
     const openModal = () => {
-        setModalIsOpen(true);
+        if (nome === "" || nome === null || cnpj === "" || cnpj === null || data_fundacao === "" || data_fundacao === null || ministerio === "" || ministerio === null || setor === "" || setor === null || cep === "" || cep === null || endereco === "" || endereco === null || bairro === "" || bairro === null || cidade === "" || cidade === null) {
+            toast.warn('Preencha todos os campos!', {
+                position: "top-center",
+                autoClose: 1500,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+                theme: "colored",
+            });
+        } else {
+            setModalIsOpen(true);
+        }
     };
     
     const closeModal = () => {
         setModalIsOpen(false);
     };
+
+    async function ConsultCep (cep: string) {
+        try {
+            const response = await api.post(`/cep/${cep}`);
+
+            setEndereco(response.data.street);
+            setBairro(response.data.neighborhood);
+            setCidade(response.data.city);
+        } catch (error) {
+            toast.error('CEP invalido!', {
+                position: "top-center",
+                autoClose: 1500,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+                theme: "colored",
+            });
+        }
+    }
 
     async function handleRegister(event: React.FormEvent){
         event.preventDefault()
@@ -218,8 +252,15 @@ export default function cadastroIgreja() {
                                         type="text" 
                                         placeholder='Digite o CEP...'
                                         value={cep}
-                                        onChange={e => setCep(e.target.value)}
-                                        maxLength={16}
+                                        onChange={(e) =>{
+                                            const cep = e.target.value;
+
+                                            if (cep.length === 8) {
+                                                ConsultCep(cep);
+                                            }
+                                            setCep(cep);
+                                        }}
+                                        maxLength={8}
                                         required
                                     />
                                 </div>
