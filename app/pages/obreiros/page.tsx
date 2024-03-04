@@ -11,14 +11,31 @@ import 'react-toastify/dist/ReactToastify.css';
 import on from '@/public/icons/on.svg'
 import off from '@/public/icons/off.svg'
 
+interface Igreja {
+  id_igreja: number;
+  nome: string;
+};
+
+interface User {
+  id_user: number;
+  cod_membro: string;
+  nome: string;
+  email: string;
+  senha: string;
+  birth: string;
+  cargo: string;
+  id_igreja: number;
+};
+
 export default function obreiros() {
   
-  const [cod_membro, setCodMembro] = useState<string>('')
-  const [nome, setNome] = useState<string>('')
-  const [email, setEmail] = useState<string>('')
-  const [senha, setSenha] = useState<string>('')
-  const [birth, setBirth] = useState<string>('')
-  const [cargo, setCargo] = useState<string>('')
+  const [cod_membro, setCodMembro] = useState<string>('');
+  const [nome, setNome] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [senha, setSenha] = useState<string>('');
+  const [birth, setBirth] = useState<string>('');
+  const [cargo, setCargo] = useState<string>('');
+  const [nomeIgreja, setNomeIgreja] = useState<number>(0);
 
   const [editCodMembro, setEditCodMembro] = useState<string>('');
   const [editNome, setEditNome] = useState<string>('');
@@ -26,34 +43,36 @@ export default function obreiros() {
   const [editSenha, setEditSenha] = useState<string>('');
   const [editBirth, setEditBirth] = useState<string>('');
   const [editCargo, setEditCargo] = useState<string>('');
+  const [editNomeIgreja, setEditNomeIgreja] = useState<number>(0);
 
   const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
 
   const [showPassword, setShowPassword] = useState(false);
-
-  interface User {
-    id_user: number;
-    cod_membro: string;
-    nome: string;
-    email: string;
-    senha: string;
-    birth: string;
-    cargo: string
-  }
-
+ 
   const [users, setUsers] = useState<User[]>([])
+  
+  useEffect(() =>{
+    const igreja = sessionStorage.getItem("igreja");
+    async function fetchUsers () {
+      const response = await api.get(`/cadastro/obreiros/${igreja}`);
+      setUsers(response.data);
+    }
+    fetchUsers();
+  }, []);
+    
+  const [igreja, setIgreja] = useState<Igreja[]>([]);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-        try {
-            const response = await api.get('/cadastro');
-            setUsers(response.data);
-        } catch (error) {
-            console.error('Error fetching users:', error);
-        }
+    const fetchIgrejas = async () => {
+      try {
+        const response = await api.get('/cadastro/cadastro/igreja');
+        setIgreja(response.data);
+      } catch (error) {
+        console.error('Error fetching igrejas:', error);
+      }
     };
 
-    fetchUsers();
+    fetchIgrejas()
   }, []);
 
   const [modalIsOpen, setModalIsOpen] = useState(false);
@@ -67,6 +86,7 @@ export default function obreiros() {
       setSenha('');
       setBirth('');
       setCargo('');
+      setNomeIgreja(0);
     } else if (type === 'edit' && user) {     
       setSelectedUser(user); 
       setEditCodMembro(user.cod_membro);
@@ -75,6 +95,7 @@ export default function obreiros() {
       setEditSenha(user.senha);
       setEditBirth(format(new Date(user.birth), 'yyyy-MM-dd'));
       setEditCargo(user.cargo);
+      setEditNomeIgreja(user.id_igreja);
     }
 
     setModalIsOpen(true);
@@ -121,6 +142,7 @@ export default function obreiros() {
       setSenha(selectedUser.senha || '');
       setBirth(selectedUser.birth || '');
       setCargo(selectedUser.cargo || '');
+      setNomeIgreja(selectedUser.id_igreja || 0);
     }
   }, [selectedUser]);
 
@@ -172,7 +194,7 @@ export default function obreiros() {
     }
     
     try{
-      if(cod_membro === "" || nome === "" || email === "" || senha === "" ||  birth === "" || cargo === "") {
+      if(cod_membro === "" || nome === "" || email === "" || senha === "" ||  birth === "" || cargo === "" || nomeIgreja === 0) {
           notifyWarn();
           return;
       } else if (specialCharactersRegex.test(nome)) {
@@ -189,6 +211,7 @@ export default function obreiros() {
           senha,
           birth,
           cargo,
+          id_igreja: nomeIgreja
         }           
        
         const response = await api.post('/cadastro', data)           
@@ -250,7 +273,7 @@ export default function obreiros() {
         return;
       }
   
-      if (!editCodMembro || !editNome || !editEmail || !editBirth || !editCargo) {
+      if (!editCodMembro || !editNome || !editEmail || !editBirth || !editCargo || !editNomeIgreja) {
         notifyWarn();
         return;
       }
@@ -262,13 +285,14 @@ export default function obreiros() {
         senha: editSenha,
         birth: editBirth,
         cargo: editCargo,
+        nomeIgreja: editNomeIgreja
       };  
       
       setUsers((prevUsers) =>
         prevUsers.map((u) => (u.id_user === user.id_user ? { ...u, ...data } : u))
       );
   
-      const response = await api.put(`/cadastro/${user.id_user}`, data);
+      const response = await api.put(`/cadastro/${user.id_user}/${user.id_igreja}`, data);
   
       notifySuccess();
   
@@ -305,32 +329,34 @@ export default function obreiros() {
 
             <div className='ml-[20vh]'>
               <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] left-[50vh] h-[72vh] max-h-[72vh] overflow-y-auto">
-                {users.length === 0 ? (
-                  <p className="text-center text-black text1 text-4xl mt-5 text-gray-4">Nenhum obreiro encontrado.</p>
-                ): (
-                  <table className='text-black'>
-                    <thead className='sticky top-0'>
-                      <tr className='bg-azul text-white rounded-xl'>
-                        <th className='text1 text-white text-2xl px-[7vh] py-2 '>Cód. Membro</th>
-                        <th className='text1 text-white text-2xl px-[9vh] py-2'>Nome</th>                      
-                        <th className='text1 text-white text-2xl px-[7vh] py-2'>Data de Nascimento</th>                      
-                        <th className='text1 text-white text-2xl px-[8vh] py-2'>Email</th>                      
-                        <th className='text1 text-white text-2xl px-[7vh] py-2'>Cargo</th>                      
+              {Array.isArray(users) && users.length > 0 ? (
+              <table className='text-black'>
+                <thead className='sticky top-0'>
+                  <tr className='bg-azul text-white rounded-xl'>
+                    <th className='text1 text-white text-2xl px-[7vh] py-2 '>Cód. Membro</th>
+                    <th className='text1 text-white text-2xl px-[9vh] py-2'>Nome</th>                      
+                    <th className='text1 text-white text-2xl px-[7vh] py-2'>Data de Nascimento</th>                      
+                    <th className='text1 text-white text-2xl px-[8vh] py-2'>Email</th>                      
+                    <th className='text1 text-white text-2xl px-[7vh] py-2'>Cargo</th>                      
+                  </tr>
+                </thead>
+                {<tbody>
+                  {users.map((obreiro) => {                                         
+                    return (
+                      <tr key={obreiro.id_user} onClick={() => openModal('edit', obreiro)} className="cursor-pointer hover:bg-slate-200">
+                        <td className="text-center text2 text-xl py-3">{obreiro.cod_membro}</td>
+                        <td className="text-center text2 text-xl">{obreiro.nome}</td>
+                        <td className="text-center text2 text-xl">{format(new Date(obreiro.birth), 'dd/MM/yyyy')}</td>
+                        <td className="text-center text2 text-xl">{obreiro.email}</td>
+                        <td className="text-center text2 text-xl">{obreiro.cargo}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {users.map((obreiros) => (
-                        <tr key={obreiros.id_user} onClick={() => openModal('edit', obreiros)} className='cursor-pointer hover:bg-slate-200'>
-                          <td className='text-center text2 text-xl py-3'>{obreiros.cod_membro}</td>
-                          <td className='text-center text2 text-xl'>{obreiros.nome}</td>                      
-                          <td className='text-center text2 text-xl'>{format(new Date(obreiros.birth), 'dd/MM/yyyy')}</td>
-                          <td className='text-center text2 text-xl'>{obreiros.email}</td>
-                          <td className='text-center text2 text-xl'>{obreiros.cargo}</td>
-                        </tr>
-                      ))}        
-                    </tbody>
-                </table>
-                )} 
+                    );
+                  })}   
+                </tbody>}
+              </table>
+            ) : (
+              <p className="text-center text-black text1 text-4xl mt-5 text-gray-4">Nenhum obreiro encontrado.</p>
+            )} 
               </div>
             </div>
 

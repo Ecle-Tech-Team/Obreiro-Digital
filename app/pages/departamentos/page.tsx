@@ -13,11 +13,6 @@ interface Igreja {
   nome: string;
 };
 
-interface User {
-  id_user: number;
-  id_igreja: number;
-};
-
 interface Departamento {
   id_departamento: number;
   nome: string;
@@ -41,24 +36,14 @@ export default function departamentos() {
   const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
   
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {        
-        const userResponse = await api.get('/cadastro');
-        setUser(userResponse.data);
-        
-        if (userResponse.data && userResponse.data.id_igreja) {
-          const departamentoResponse = await api.get(`/departamento/${userResponse.data.id_igreja}`);
-          setDepartamentos(departamentoResponse.data);
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
-
-    fetchUserData();
+  
+  useEffect(() =>{
+    const igreja = sessionStorage.getItem("igreja");
+    async function fetchUsers () {
+      const response = await api.get(`/departamento/${igreja}`);
+      setDepartamentos(response.data);
+    }
+    fetchUsers();
   }, []);
 
   const [igreja, setIgreja] = useState<Igreja[]>([]);
