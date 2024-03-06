@@ -8,6 +8,27 @@ import api from '../../api/api';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+interface Igreja {
+  id_igreja: number;
+  nome: string;
+};
+
+interface User {
+  id_user: number;
+  id_igreja: number;
+};
+
+interface Estoque {
+  id_produto: number,
+  cod_produto: string, 
+  categoria: string, 
+  nome_produto: string, 
+  quantidade: number, 
+  validade: string, 
+  preco_unitario: number,
+  id_igreja: number
+};
+
 export default function estoque() {
   const [cod_produto, setCodProduto] = useState<string>('');
   const [nome_produto, setNomeProduto] = useState<string>('');
@@ -15,6 +36,7 @@ export default function estoque() {
   const [quantidade, setQuantidade] = useState<number>(0);
   const [validade, setValidade] = useState<string>('');
   const [preco_unitario, setPrecoUnitario] = useState<number>(0);
+  const [nomeIgreja, setNomeIgreja] = useState<number>(0);
 
   const [editCodProduto, setEditCodProduto] = useState<string>('');
   const [editNomeProduto, setEditNomeProduto] = useState<string>('');
@@ -22,32 +44,45 @@ export default function estoque() {
   const [editQuantidade, setEditQuantidade] = useState<number>(0);
   const [editValidade, setEditValidade] = useState<string>('');
   const [editPrecoUnitario, setEditPrecoUnitario] = useState<number>(0);
+  const [editNomeIgreja, setEditNomeIgreja] = useState<number>(0);
 
   const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
 
-  interface Estoque {
-    id_produto: number,
-    cod_produto: string, 
-    categoria: string, 
-    nome_produto: string, 
-    quantidade: number, 
-    validade: string, 
-    preco_unitario: number,
-  };
-
   const [produtos, setProdutos] = useState<Estoque[]>([]);
 
+  const [user, setUser] = useState<User | null>(null);
+
   useEffect(() => {
-    const fetchEstoque = async () => {
-      try {
-        const response = await api.get('/estoque');
-        setProdutos(response.data);
+    const fetchUserData = async () => {
+      try {        
+        const userResponse = await api.get('/cadastro');
+        setUser(userResponse.data);
+
+        if (userResponse.data && userResponse.data.id_igreja) {
+          const produtoResponse = await api.get(`/estoque/${userResponse.data.id_igreja}`);
+          setProdutos(produtoResponse.data);
+        }
       } catch (error) {
-        console.error('Error fetching Estoque:', error);
+        console.error('Error fetching user data:', error);
       }
     };
 
-    fetchEstoque();
+    fetchUserData();
+  }, []);
+
+  const [igreja, setIgreja] = useState<Igreja[]>([]);
+
+  useEffect(() => {
+    const fetchIgrejas = async () => {
+      try {
+        const response = await api.get('/departamento/igreja');
+        setIgreja(response.data);
+      } catch (error) {
+        console.error('Error fetching igrejas:', error);
+      }
+    };
+
+    fetchIgrejas()
   }, []);
 
   const [modalIsOpen, setModalIsOpen] = useState(false);
@@ -61,6 +96,7 @@ export default function estoque() {
       setQuantidade(0);
       setValidade('');
       setPrecoUnitario(0);
+      setNomeIgreja(0);
     } else if (type === 'edit' && produto) {     
       setSelectedProduto(produto); 
       setEditCodProduto(produto.cod_produto);
@@ -69,6 +105,7 @@ export default function estoque() {
       setEditQuantidade(produto.quantidade);
       setEditValidade(format(new Date(produto.validade), 'yyyy-MM-dd'));
       setEditPrecoUnitario(produto.preco_unitario);
+      setEditNomeIgreja(produto.id_igreja);
     }
 
     setModalIsOpen(true);
@@ -115,6 +152,7 @@ export default function estoque() {
       setQuantidade(selectedProduto.quantidade || 0);
       setValidade(selectedProduto.validade || '');
       setPrecoUnitario(selectedProduto.preco_unitario || 0);
+      setNomeIgreja(selectedProduto.id_igreja || 0);
     }
   }, [selectedProduto]);
 
@@ -164,7 +202,7 @@ export default function estoque() {
     };
 
     try {
-      if(cod_produto === "" || nome_produto === "" || categoria === "" || validade === "" ) {
+      if(cod_produto === "" || nome_produto === "" || categoria === "" || validade === "" || preco_unitario === 0 || nomeIgreja === 0) {
         notifyWarn();
           return;
       } else if (specialCharactersRegex.test(nome_produto)) {
@@ -180,7 +218,8 @@ export default function estoque() {
           categoria,
           quantidade,
           validade,
-          preco_unitario
+          preco_unitario,
+          id_igreja: nomeIgreja
         };
 
         const response = await api.post('/estoque', data);
@@ -242,7 +281,7 @@ export default function estoque() {
         return;
       }
 
-      if (!editCodProduto || !editNomeProduto || !editCategoria || !editQuantidade || !editValidade || !editPrecoUnitario) {
+      if (!editCodProduto || !editNomeProduto || !editCategoria || !editQuantidade || !editValidade || !editPrecoUnitario || !editNomeIgreja) {
         notifyWarn();
         return;
       }
@@ -253,14 +292,15 @@ export default function estoque() {
         categoria: editCategoria,
         quantidade: editQuantidade,
         validade: editValidade,
-        preco_unitario: editPrecoUnitario
+        preco_unitario: editPrecoUnitario,
+        nomeIgreja:editNomeIgreja
       };
 
       setProdutos((prevProdutos) =>
         prevProdutos.map((p) => (p.id_produto === produto.id_produto ? { ...p, ...data } : p))
       );
 
-      const response = await api.put(`/estoque/${produto.id_produto}`, data);
+      const response = await api.put(`/estoque/${produto.id_produto}/${produto.id_igreja}`, data);
       notifySuccess();
   
       closeModal();
@@ -339,7 +379,7 @@ export default function estoque() {
 
                   <input 
                     type="text" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
+                    className='px-4 py-3 rounded-lg text2 text-black'
                     placeholder='Digite o Código...'
                     value={cod_produto}
                     onChange={(e) => {setCodProduto(e.target.value)}}                     
@@ -352,7 +392,7 @@ export default function estoque() {
 
                   <input 
                     type="text" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
+                    className='px-4 py-3 rounded-lg text2 text-black'
                     placeholder='Digite o Código...'
                     value={nome_produto}
                     onChange={(e) => {setNomeProduto(e.target.value)}}   
@@ -365,7 +405,7 @@ export default function estoque() {
                   <label className='text-white text1 text-xl mt-5 mb-1'>Categoria</label>
 
                   <select                              
-                    className='bg-white px-4 py-3 rounded-lg text2 text-slate-500'
+                    className='bg-white px-4 py-3 rounded-lg text2 text-black'
                     value={categoria}
                     onChange={(e) => setCategoria (e.target.value)}                 
                     required 
@@ -383,7 +423,7 @@ export default function estoque() {
 
                     <input 
                       type="number" 
-                      className='px-4 py-3 rounded-lg text2 text-slate-500'
+                      className='px-4 py-3 rounded-lg text2 text-black'
                       placeholder='Digite a Quantidade...'
                       value={quantidade}
                       onChange={(e) => setQuantidade (Number(e.target.value))}                    
@@ -396,7 +436,7 @@ export default function estoque() {
 
                     <input 
                       type="number" 
-                      className='px-4 py-3 rounded-lg text2 text-slate-500'
+                      className='px-4 py-3 rounded-lg text2 text-black'
                       placeholder='Digite o Preço Unitário...'
                       value={preco_unitario}
                       onChange={(e) => setPrecoUnitario (Number(e.target.value))}                    
@@ -410,12 +450,33 @@ export default function estoque() {
 
                   <input 
                     type="date" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
+                    className='px-4 py-3 rounded-lg text2 text-black'
                     placeholder='Digite o Preço Unitário...'
                     value={validade}
                     onChange={(e) => setValidade (e.target.value)}                    
                     required 
                   />
+                </div>
+
+                <div className='flex flex-col'>
+                  <label className='text-white text1 text-xl mt-5 mb-1'>Igreja</label>
+
+                  <select                              
+                    className='bg-white px-4 py-3 rounded-lg text2 text-black'
+                    value={nomeIgreja}
+                    onChange={(e) => setNomeIgreja(Number(e.target.value))}                 
+                    required 
+                  >   
+                    <option value={0} disabled>Selecione uma Igreja</option>
+                    {igreja.map((igreja) => (
+                      <option
+                        key={igreja.id_igreja}
+                        value={igreja.id_igreja}
+                      >
+                        {igreja.nome}
+                      </option>                      
+                    ))}                            
+                  </select>
                 </div>
                 
                 <button className='border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
@@ -436,7 +497,7 @@ export default function estoque() {
 
                   <input 
                     type="text" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
+                    className='px-4 py-3 rounded-lg text2 text-black'
                     placeholder='Digite o Código...'
                     value={editCodProduto}
                     onChange={(e) => {setEditCodProduto(e.target.value)}}                     
@@ -449,7 +510,7 @@ export default function estoque() {
 
                   <input 
                     type="text" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
+                    className='px-4 py-3 rounded-lg text2 text-black'
                     placeholder='Digite o Código...'
                     value={editNomeProduto}
                     onChange={(e) => {setEditNomeProduto(e.target.value)}}   
@@ -462,7 +523,7 @@ export default function estoque() {
                   <label className='text-white text1 text-xl mt-5 mb-1'>Categoria</label>
 
                   <select                              
-                    className='bg-white px-4 py-3 rounded-lg text2 text-slate-500'
+                    className='bg-white px-4 py-3 rounded-lg text2 text-black'
                     value={editCategoria}
                     onChange={(e) => setEditCategoria (e.target.value)}                 
                     required 
@@ -480,7 +541,7 @@ export default function estoque() {
 
                     <input 
                       type="number" 
-                      className='px-4 py-3 rounded-lg text2 text-slate-500'
+                      className='px-4 py-3 rounded-lg text2 text-black'
                       placeholder='Digite a Quantidade...'
                       value={editQuantidade}
                       onChange={(e) => setEditQuantidade (Number(e.target.value))}                    
@@ -493,7 +554,7 @@ export default function estoque() {
 
                     <input 
                       type="number" 
-                      className='px-4 py-3 rounded-lg text2 text-slate-500'
+                      className='px-4 py-3 rounded-lg text2 text-black'
                       placeholder='Digite o Preço Unitário...'
                       value={editPrecoUnitario}
                       onChange={(e) => setEditPrecoUnitario (Number(e.target.value))}                    
@@ -507,7 +568,7 @@ export default function estoque() {
 
                   <input 
                     type="date" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
+                    className='px-4 py-3 rounded-lg text2 text-black'
                     placeholder='Digite o Preço Unitário...'
                     value={editValidade}
                     onChange={(e) => setEditValidade (e.target.value)}                    
