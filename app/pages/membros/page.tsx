@@ -29,6 +29,11 @@ interface Membro {
   id_igreja: number;
 }
 
+interface User {
+  id_user: number;
+  id_igreja: number;
+};
+
 export default function membros() {
   const [cod_membro, setCodMembro] = useState<string>('')
   const [nome, setNome] = useState<string>('')
@@ -63,14 +68,25 @@ export default function membros() {
   
   const [membros, setMembro] = useState<Membro[]>([])
   
-  useEffect(() =>{
-    const igreja = sessionStorage.getItem("igreja");
-    async function fetchUsers () {
-      const response = await api.get(`/membro/igreja/${igreja}`);
-      setMembro(response.data);
-    }
-    fetchUsers();
-  }, []);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {        
+        const userResponse = await api.get('/cadastro');
+        setUser(userResponse.data);
+
+        if (userResponse.data && userResponse.data.id_igreja) {
+          const membroResponse = await api.get(`/membro/igreja/${userResponse.data.id_igreja}`);          
+          setMembro(membroResponse.data);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []); 
   
   const [igreja, setIgreja] = useState<Igreja[]>([]);
 

@@ -10,6 +10,27 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Modal from 'react-modal';
 
+interface Igreja {
+  id_igreja: number;
+  nome: string;
+};
+
+interface User {
+  id_user: number;
+  id_igreja: number;
+};
+
+interface Eventos {
+  id_evento: number;
+  nome: string;
+  data_inicio: string; 
+  horario_inicio: string;
+  data_fim: string;
+  horario_fim: string; 
+  local: string;
+  id_igreja: number
+};
+
 export default function eventos() {
   const [nome, setNome] = useState<string>('');
   const [local, setLocal] = useState<string>('');
@@ -17,6 +38,7 @@ export default function eventos() {
   const [horario_inicio, setHorarioInicio] = useState<string>('');
   const [data_fim, setDataFim] = useState<string>('');
   const [horario_fim, setHorarioFim] = useState<string>('');
+  const [nomeIgreja, setNomeIgreja] = useState<number>(0)
 
   const [editNome, setEditNome] = useState<string>('');
   const [editLocal, setEditLocal] = useState<string>('');
@@ -24,30 +46,43 @@ export default function eventos() {
   const [editHorarioInicio, setEditHorarioInicio] = useState<string>('');
   const [editDataFim, setEditDataFim] = useState<string>('');
   const [editHorarioFim, setEditHorarioFim] = useState<string>('');
-
-  interface Eventos {
-    id_evento: number;
-    nome: string;
-    data_inicio: string; 
-    horario_inicio: string;
-    data_fim: string;
-    horario_fim: string; 
-    local: string;
-  };
+  const [editNomeIgreja, setEditNomeIgreja] = useState<number>(0)
 
   const [eventos, setEventos] = useState<Eventos[]>([]);
 
-  useEffect(() => {
-      const fetchEventos = async () => {
-        try {
-            const response = await api.get('/evento');
-            setEventos(response.data);
-        } catch (error) {
-            console.error('Error fetching evento:', error);
-        }
-      };
+  const [user, setUser] = useState<User | null>(null);
 
-      fetchEventos();
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {        
+        const userResponse = await api.get('/cadastro');
+        setUser(userResponse.data);
+
+        if (userResponse.data && userResponse.data.id_igreja) {
+          const eventoResponse = await api.get(`/evento/${userResponse.data.id_igreja}`);
+          setEventos(eventoResponse.data);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const [igreja, setIgreja] = useState<Igreja[]>([]);
+
+  useEffect(() => {
+    const fetchIgrejas = async () => {
+      try {
+        const response = await api.get('/departamento/igreja');
+        setIgreja(response.data);
+      } catch (error) {
+        console.error('Error fetching igrejas:', error);
+      }
+    };
+
+    fetchIgrejas()
   }, []);
 
   const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
@@ -61,7 +96,8 @@ export default function eventos() {
       setDataInicio('');
       setHorarioInicio('');
       setDataFim('');
-      setHorarioFim('');          
+      setHorarioFim(''); 
+      setNomeIgreja(0)         
     } else if (type === 'edit' && eventos) {
       setSelectedEvento(eventos);
       setEditNome(eventos.nome);
@@ -69,7 +105,8 @@ export default function eventos() {
       setEditDataInicio(format(new Date(eventos.data_inicio), 'yyyy-MM-dd'));
       setEditHorarioInicio(eventos.horario_inicio);
       setEditDataFim(format(new Date(eventos.data_fim), 'yyyy-MM-dd'));
-      setEditHorarioFim(eventos.horario_fim)      
+      setEditHorarioFim(eventos.horario_fim)   
+      setEditNomeIgreja(eventos.id_igreja);   
     }
     setModalIsOpen(true);
   };
@@ -83,6 +120,7 @@ export default function eventos() {
     setEditHorarioInicio('');
     setEditDataFim('');
     setEditHorarioFim('');
+    setEditNomeIgreja(0)
   };
 
   const [selectedEvento, setSelectedEvento] = useState<Eventos | null>(null);
@@ -95,6 +133,7 @@ export default function eventos() {
       setHorarioInicio(selectedEvento.horario_inicio || '');
       setDataFim(selectedEvento.data_fim || '');
       setHorarioFim(selectedEvento.horario_fim || '');
+      setNomeIgreja(selectedEvento.id_igreja || 0)
     }
   }, [selectedEvento]);
 
@@ -141,7 +180,7 @@ export default function eventos() {
     };
 
     try {
-      if (nome === "" || local === "" || data_inicio === "" || horario_inicio === "" || data_fim === "" || horario_fim === "") {
+      if (nome === "" || local === "" || data_inicio === "" || horario_inicio === "" || data_fim === "" || horario_fim === "" || nomeIgreja === 0) {
         notifyWarn();
         return;
       } else {
@@ -151,7 +190,8 @@ export default function eventos() {
           data_inicio,
           horario_inicio,
           data_fim,
-          horario_fim
+          horario_fim,
+          id_igreja: nomeIgreja
         };
 
         const response = await api.post('/evento', dados);
@@ -213,7 +253,7 @@ export default function eventos() {
         return;
       };
 
-      if (!editNome || !editLocal || !editDataInicio || !editHorarioInicio || !data_fim || !horario_fim) {
+      if (!editNome || !editLocal || !editDataInicio || !editHorarioInicio || !data_fim || !horario_fim || !editNomeIgreja) {
         notifyWarn();
         return;
       };
@@ -224,8 +264,13 @@ export default function eventos() {
         data_inicio: editDataInicio,
         horario_inicio: editHorarioInicio,
         data_fim: editDataFim,
-        horario_fim: editHorarioFim
+        horario_fim: editHorarioFim,
+        nomeIgreja: editNomeIgreja
       };
+
+      setEventos((prevEventos) =>
+        prevEventos.map((u) => (u.id_evento === eventos.id_evento ? { ...u, ...dados } : u))
+      );
 
       const response = await api.put(`/evento/${eventos.id_evento}`, dados);
 
@@ -371,7 +416,28 @@ export default function eventos() {
                     onChange={(e) => setHorarioFim(e.target.value)}
                     required 
                   />
-                </div>
+                </div>  
+              </div>
+
+              <div className='flex flex-col'>
+                <label className='text-white text1 text-xl mt-5 mb-1'>Igreja Realizadora</label>
+
+                <select 
+                  className='bg-white px-4 py-3 rounded-lg text2 text-slate-500'
+                  value={nomeIgreja}
+                  onChange={(e) => setNomeIgreja(Number(e.target.value))}                 
+                  required 
+                >
+                  <option value={0} disabled>Selecione uma Igreja</option>
+                    {igreja.map((igreja) => (
+                      <option
+                        key={igreja.id_igreja}
+                        value={igreja.id_igreja}
+                      >
+                        {igreja.nome}
+                      </option>                      
+                    ))}     
+                </select>
               </div>
 
               <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>

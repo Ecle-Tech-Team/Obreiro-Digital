@@ -21,6 +21,10 @@ interface Departamento {
   id_igreja: number;
 };
 
+interface User {
+  id_user: number;
+  id_igreja: number;
+};
 export default function departamentos() {  
   const [nome, setNome] = useState<string>('')
   const [birth, setBirth] = useState<string>('')
@@ -37,13 +41,24 @@ export default function departamentos() {
   
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   
-  useEffect(() =>{
-    const igreja = sessionStorage.getItem("igreja");
-    async function fetchUsers () {
-      const response = await api.get(`/departamento/${igreja}`);
-      setDepartamentos(response.data);
-    }
-    fetchUsers();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {        
+        const userResponse = await api.get('/cadastro');
+        setUser(userResponse.data);
+
+        if (userResponse.data && userResponse.data.id_igreja) {
+          const departamentoResponse = await api.get(`/departamento/${userResponse.data.id_igreja}`);
+          setDepartamentos(departamentoResponse.data);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
   }, []);
 
   const [igreja, setIgreja] = useState<Igreja[]>([]);
