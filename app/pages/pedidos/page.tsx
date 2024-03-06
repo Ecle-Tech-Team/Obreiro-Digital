@@ -13,17 +13,41 @@ import emAndamento from '@/public/icons/em_andamento.svg';
 import recusado from '@/public/icons/recusado.svg';
 import concluido from '@/public/icons/concluido.svg';
 
+interface Igreja {
+  id_igreja: number;
+  nome: string;
+};
+
+interface User {
+  id_user: number;
+  id_igreja: number;
+};
+
+interface Pedidos {
+  id_pedido: number;
+  nome_produto: string;
+  categoria_produto: string;
+  quantidade: number;
+  data_pedido: string;
+  status_pedido: string;
+  data_entrega: string;
+  motivo_recusa: string;
+  id_igreja: number;
+};
+
 export default function pedidos() {
   const [nome_produto, setNomeProduto] = useState<string>('');
   const [categoria_produto, setCategoriaProduto] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(0);
   const [data_pedido, setDataPedido] = useState<string>('');
+  const [nomeIgreja, setNomeIgreja] = useState<number>(0);
 
   const [editNomeProduto, setEditNomeProduto] = useState<string>('');
   const [editCategoriaProduto, setEditCategoriaProduto] = useState<string>('');
   const [editQuantidade, setEditQuantidade] = useState<number>(0);
   const [editDataPedido, setEditDataPedido] = useState<string>('');
-  
+  const [editNomeIgreja, setEditNomeIgreja] = useState<number>(0);
+
   const [status_pedido, setStatusPedido] = useState<string>('');
   // const [data_entrega, setDataEntrega] = useState<string>('');
   // const [motivo_recusa, setMotivoRecusa] = useState<string>('');
@@ -37,7 +61,8 @@ export default function pedidos() {
   useEffect(() => {
     const fetchTotalPedidos = async () => {
       try {
-        const response = await api.get('/pedido/count/total');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`/pedido/count/total/${userResponse.data.id_igreja}`);
         setTotalPedidos(response.data);
       } catch (error) {
         console.error('Erro ao buscar total de pedidos:', error);
@@ -50,7 +75,8 @@ export default function pedidos() {
   useEffect(() => {
     const fetchPedidosEntregues = async () => {
       try {
-        const response = await api.get('/pedido/count/entregue');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`/pedido/count/entregue/${userResponse.data.id_igreja}`);
         setPedidosEntregues(response.data);
       } catch (error) {
         console.error('Erro ao buscar pedidos entregues:', error);
@@ -63,7 +89,8 @@ export default function pedidos() {
   useEffect(() => {
     const fetchPedidosEmAndamento = async () => {
       try {
-        const response = await api.get('pedido/count/em-andamento');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`pedido/count/em-andamento/${userResponse.data.id_igreja}`);
         setPedidosEmAndamento(response.data);
       } catch (error) {
         console.error('Erro ao buscar pedidos em andamento:', error);
@@ -76,7 +103,8 @@ export default function pedidos() {
   useEffect(() => {
     const fetchPedidosRecusados = async() => {
       try {
-        const response = await api.get('pedido/count/recusados');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`pedido/count/recusados/${userResponse.data.id_igreja}`);
         setPedidosRecusados(response.data);
       } catch (error) {
         console.error('Erro ao buscar pedidos em andamento:', error);
@@ -84,32 +112,43 @@ export default function pedidos() {
     }
 
     fetchPedidosRecusados();
-  }, []);
-
-  interface Pedidos {
-    id_pedido: number;
-    nome_produto: string;
-    categoria_produto: string;
-    quantidade: number;
-    data_pedido: string;
-    status_pedido: string;
-    data_entrega: string;
-    motivo_recusa: string;
-  };
+  }, []); 
 
   const [pedidos, setPedidos] = useState<Pedidos[]>([]);
 
+  const [user, setUser] = useState<User | null>(null);
+
   useEffect(() => {
-    const fetchPedidos = async () => {
-      try {
-        const response = await api.get('/pedido');
-        setPedidos(response.data);
+    const fetchUserData = async () => {
+      try {        
+        const userResponse = await api.get('/cadastro');
+        setUser(userResponse.data);
+
+        if (userResponse.data && userResponse.data.id_igreja) {
+          const pedidoResponse = await api.get(`/pedido/${userResponse.data.id_igreja}`);
+          setPedidos(pedidoResponse.data);
+        }
       } catch (error) {
-        console.error('Error fetching pedidos:', error)
+        console.error('Error fetching user data:', error);
       }
     };
 
-    fetchPedidos();
+    fetchUserData();
+  }, []);
+
+  const [igreja, setIgreja] = useState<Igreja[]>([]);
+
+  useEffect(() => {
+    const fetchIgrejas = async () => {
+      try {
+        const response = await api.get('/pedido/igreja');
+        setIgreja(response.data);
+      } catch (error) {
+        console.error('Error fetching igrejas:', error);
+      }
+    };
+
+    fetchIgrejas()
   }, []);
 
   const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
@@ -122,6 +161,7 @@ export default function pedidos() {
       setCategoriaProduto('');
       setQuantidade(0);
       setDataPedido('');
+      setNomeIgreja(0);
     } else if (type === 'edit' && pedidos) {
       setSelectedPedidos(pedidos);
       setEditNomeProduto(pedidos.nome_produto);
@@ -129,6 +169,7 @@ export default function pedidos() {
       setEditQuantidade(pedidos.quantidade);
       setEditDataPedido(format(new Date(pedidos.data_pedido), 'yyyy-MM-dd'));
       setStatusPedido(pedidos.status_pedido);
+      setEditNomeIgreja(pedidos.id_igreja);
       // setMotivoRecusa(pedidos.motivo_recusa);
       // setDataEntrega(pedidos.data_entrega);
     }
@@ -149,6 +190,7 @@ export default function pedidos() {
       setQuantidade(selectedPedidos.quantidade || 0);
       setDataPedido(selectedPedidos.data_pedido || '');
       setStatusPedido(selectedPedidos.status_pedido || '');
+      setNomeIgreja(selectedPedidos.id_igreja || 0);
     }
   }, [selectedPedidos]);
   
@@ -195,7 +237,7 @@ export default function pedidos() {
     };
 
     try {
-      if(nome_produto === "" || categoria_produto === "" || quantidade === 0 || data_pedido === "") {
+      if(nome_produto === "" || categoria_produto === "" || quantidade === 0 || data_pedido === "" || nomeIgreja === 0) {
         notifyWarn();
         return;
       } else {
@@ -203,7 +245,8 @@ export default function pedidos() {
           nome_produto,
           categoria_produto,
           quantidade,
-          data_pedido
+          data_pedido,
+          id_igreja: nomeIgreja
         };
 
         const response = await api.post('/pedido', data);
@@ -291,7 +334,7 @@ export default function pedidos() {
         return;
       }
 
-      if (!editNomeProduto || !editCategoriaProduto || !editQuantidade || !editDataPedido || !status_pedido) {
+      if (!editNomeProduto || !editCategoriaProduto || !editQuantidade || !editDataPedido || !status_pedido || !editNomeIgreja) {
         notifyWarn();
         return;
       }
@@ -302,11 +345,16 @@ export default function pedidos() {
         quantidade: editQuantidade,
         data_pedido: editDataPedido,
         status_pedido,
+        nomeIgreja: editNomeIgreja
         // data_entrega,
         // motivo_recusa
       }
 
-      const response = await api.put(`/pedido/${pedidos?.id_pedido}`, dados);
+      setPedidos((prevPedidos) =>
+        prevPedidos.map((u) => (u.id_pedido === pedidos.id_pedido ? { ...u, ...dados } : u))
+      );
+
+      const response = await api.put(`/pedido/${pedidos?.id_pedido}/${pedidos?.id_igreja}`, dados);
 
       notifySuccess();
 
@@ -482,6 +530,27 @@ export default function pedidos() {
                       required 
                     />
                   </div>
+                </div>
+
+                <div className='flex flex-col mr-5'>
+                  <label className='text-white text1 text-xl mt-5 mb-1'>Igreja</label>
+
+                  <select                    
+                    className='px-4 py-3 rounded-lg text2 bg-white text-slate-500'
+                    value={nomeIgreja}
+                    onChange={(e) => setNomeIgreja(Number(e.target.value))}                 
+                    required 
+                  >
+                    <option value={0} disabled>Selecione uma Igreja</option>
+                    {igreja.map((igreja) => (
+                      <option
+                        key={igreja.id_igreja}
+                        value={igreja.id_igreja}
+                      >
+                        {igreja.nome}
+                      </option>                      
+                    ))}    
+                  </select>                    
                 </div>
 
                 <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>

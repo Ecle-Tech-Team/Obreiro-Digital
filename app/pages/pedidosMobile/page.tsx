@@ -10,29 +10,61 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import cesta from '@/public/icons/cesta.svg';
 
+interface Igreja {
+  id_igreja: number;
+  nome: string;
+};
+
+interface User {
+  id_user: number;
+  id_igreja: number;
+};
+
+interface Pedidos {
+  id_pedido: number;
+  nome_produto: string;
+  categoria_produto: string;
+  quantidade: number;
+  data_pedido: string;
+  status_pedido: string;
+  data_entrega: string;
+  motivo_recusa: string;
+  id_igreja: number;
+};
+
 export default function pedidosMobile() {
   const [nome_produto, setNomeProduto] = useState<string>('');
   const [categoria_produto, setCategoriaProduto] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(0);
   const [data_pedido, setDataPedido] = useState<string>('');
-
-  interface Pedidos {
-    id_pedido: number;
-    nome_produto: string;
-    categoria_produto: string;
-    quantidade: number;
-    data_pedido: string;
-    status_pedido: string;
-    data_entrega: string;
-    motivo_recusa: string;
-  };
+  const [nomeIgreja, setNomeIgreja] = useState<number>(0);
 
   const [pedidos, setPedidos] = useState<Pedidos[]>([]);
+
+  const [user, setUser] = useState<User | null>(null);
+    useEffect(() => {
+        const fetchUserData = async () => {
+          try {        
+            const userResponse = await api.get('/cadastro');
+            setUser(userResponse.data);
+    
+            if (userResponse.data && userResponse.data.id_igreja) {
+              const pedidoResponse = await api.get(`/pedido/${userResponse.data.id_igreja}`);
+              setPedidos(pedidoResponse.data);
+            }
+          } catch (error) {
+            console.error('Error fetching user data:', error);
+          }
+        };
+    
+        fetchUserData();
+      }, []);
 
   useEffect(() => {
     const fetchPedidos = async () => {
       try {
-        const response = await api.get('/pedido');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`/pedido/${userResponse.data.id_igreja}`)
         const sortedPedidos = response.data.sort((a: { data_pedido: string; }, b: { data_pedido: string; }) => {
           const dateA = new Date(a.data_pedido as string);
           const dateB = new Date(b.data_pedido as string); 
@@ -53,6 +85,21 @@ export default function pedidosMobile() {
 
     fetchPedidos();
   }, []);
+
+  const [igreja, setIgreja] = useState<Igreja[]>([]);
+
+    useEffect(() => {
+        const fetchIgrejas = async () => {
+        try {
+            const response = await api.get('/visitante/igreja');
+            setIgreja(response.data);
+        } catch (error) {
+            console.error('Error fetching igrejas:', error);
+        }
+        };
+
+        fetchIgrejas()
+    }, []);
 
   const [modalIsOpen, setModalIsOpen] = useState(false);
     
@@ -107,7 +154,7 @@ export default function pedidosMobile() {
     };
 
     try {
-      if(nome_produto === "" || categoria_produto === "" || quantidade === 0 || data_pedido === "") {
+      if(nome_produto === "" || categoria_produto === "" || quantidade === 0 || data_pedido === "" || nomeIgreja === 0) {
         notifyWarn();
         return;
       } else {
@@ -115,7 +162,8 @@ export default function pedidosMobile() {
           nome_produto,
           categoria_produto,
           quantidade,
-          data_pedido
+          data_pedido,
+          id_igreja: nomeIgreja
         };
 
         const response = await api.post('/pedido', data);
@@ -227,6 +275,27 @@ export default function pedidosMobile() {
                   onChange={(e) => setDataPedido(e.target.value)}
                   required 
                 />
+            </div>
+
+            <div className='flex flex-col'>
+              <label className='text-white text1 text-lg mt-5 mb-1'>Igreja</label>
+
+              <select                              
+                className='px-4 py-3 rounded-lg text2 text-black'                            
+                value={nomeIgreja}
+                onChange={(e) => setNomeIgreja(Number(e.target.value))}
+                required
+              >
+                <option value={0} disabled>Selecione uma Igreja</option>
+                  {igreja.map((igreja) => (
+                    <option
+                      key={igreja.id_igreja}
+                      value={igreja.id_igreja}
+                    >     
+                      {igreja.nome}
+                    </option>                      
+                  ))}     
+              </select>
             </div>
 
             <button className='border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
