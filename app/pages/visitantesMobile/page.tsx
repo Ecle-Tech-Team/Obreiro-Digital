@@ -14,9 +14,24 @@ import perfilVisitante from '@/public/images/Visitante 1.svg'
 interface Membro {
     id_membro: number;
     nome: string;
+};
+
+interface Igreja {
+    id_igreja: number;
+    nome: string;
+};
+
+interface User {
+    id_user: number;
+    id_igreja: number;
+  };
+
+  interface Visitante {
+    id_visitante: number;
+    nome: string;
+    congregacao: string;
+    data_visita: string; 
 }
-
-
 export default function visitantesMobile() {
     
     const [nome, setNome] = useState<string>('')
@@ -25,6 +40,7 @@ export default function visitantesMobile() {
     const [congregacao, setCongregacao] = useState<string>('')
     const [ministerio, setMinisterio] = useState<string>('')
     const [convidadoPor, setConvidadoPor] = useState<number | string>(0);
+    const [nomeIgreja, setNomeIgreja] = useState<number>(0)
     
     const [membros, setMembros] = useState<Membro[]>([]); 
     
@@ -38,21 +54,34 @@ export default function visitantesMobile() {
         }
     };    
         fetchMembers();
-    }, []);
-
-    interface Visitante {
-        id_visitante: number;
-        nome: string;
-        congregacao: string;
-        data_visita: string; 
-    }
+    }, []);    
 
     const [visitantes, setVisitantes] = useState<Visitante[]>([]);
+
+    const [user, setUser] = useState<User | null>(null);
+    useEffect(() => {
+        const fetchUserData = async () => {
+          try {        
+            const userResponse = await api.get('/cadastro');
+            setUser(userResponse.data);
+    
+            if (userResponse.data && userResponse.data.id_igreja) {
+              const visitanteResponse = await api.get(`/visitante/${userResponse.data.id_igreja}`);
+              setVisitantes(visitanteResponse.data);
+            }
+          } catch (error) {
+            console.error('Error fetching user data:', error);
+          }
+        };
+    
+        fetchUserData();
+      }, []);
 
     useEffect(() => {
         const fetchVisitantes = async () => {
             try {
-                const response = await api.get('/visitante');
+                const userResponse = await api.get('/cadastro');
+                const response = await api.get(`/visitante/${userResponse.data.id_igreja}`)
                 const sortedVisitantes = response.data.sort((a: { data_visita: string; }, b: { data_visita: string; }) => {
                     const dateA = new Date(a.data_visita as string);
                     const dateB = new Date(b.data_visita as string);                      
@@ -72,6 +101,21 @@ export default function visitantesMobile() {
         };
     
         fetchVisitantes();
+    }, []);
+
+    const [igreja, setIgreja] = useState<Igreja[]>([]);
+
+    useEffect(() => {
+        const fetchIgrejas = async () => {
+        try {
+            const response = await api.get('/visitante/igreja');
+            setIgreja(response.data);
+        } catch (error) {
+            console.error('Error fetching igrejas:', error);
+        }
+        };
+
+        fetchIgrejas()
     }, []);
 
     const [modalIsOpen, setModalIsOpen] = useState(false);
@@ -156,7 +200,7 @@ export default function visitantesMobile() {
         }
     
         try{
-          if(nome === "" || (cristao === "Sim" && (congregacao === "" || ministerio === "")) || dataVisita === "" || convidadoPor === 0) {
+          if(nome === "" || (cristao === "Sim" && (congregacao === "" || ministerio === "")) || dataVisita === "" || convidadoPor === 0 || nomeIgreja === 0) {
               notifyWarn();
               return;
           } else if (specialCharactersRegex.test(nome)) {
@@ -173,6 +217,7 @@ export default function visitantesMobile() {
               congregacao,
               ministerio,
               convidado_por: convidadoPor,
+              id_igreja: nomeIgreja
             }           
            
             const response = await api.post('/visitante', data)           
@@ -233,7 +278,7 @@ export default function visitantesMobile() {
 
                         <input 
                             type="text" 
-                            className='px-4 py-3 rounded-lg text2'
+                            className='px-4 py-3 rounded-lg text2 text-black'
                             placeholder='Digite o Nome...'
                             value={nome}
                             onChange={(e) => setNome(e.target.value)}   
@@ -246,7 +291,7 @@ export default function visitantesMobile() {
                         <label className='text-white text1 text-lg mt-5 mb-1'>Convidado Por</label>
 
                         <select                              
-                            className='bg-white px-4 py-3 rounded-lg text2'
+                            className='bg-white px-4 py-3 rounded-lg text2 text-black'
                             value={convidadoPor}
                             onChange={(e) => setConvidadoPor(Number(e.target.value))}                
                             required 
@@ -266,7 +311,7 @@ export default function visitantesMobile() {
                             <label className='text-white text1 text-lg mt-5 mb-1'>Cristão?</label>
 
                             <select                              
-                                className='bg-white px-4 py-3 rounded-lg text2'
+                                className='bg-white px-4 py-3 rounded-lg text2 text-black'
                                 value={cristao}
                                 onChange={(e) => setCristao(e.target.value)}                 
                                 required 
@@ -282,7 +327,7 @@ export default function visitantesMobile() {
 
                             <input 
                                 type="date" 
-                                className='px-4 py-3 rounded-lg text2'
+                                className='px-4 py-3 rounded-lg text2 text-black'
                                 value={dataVisita}
                                 onChange={(e) => setDataVisita (e.target.value)}
                                 required 
@@ -295,7 +340,7 @@ export default function visitantesMobile() {
 
                         <input 
                             type="text" 
-                            className='px-4 py-3 rounded-lg text2'
+                            className='px-4 py-3 rounded-lg text2 text-black'
                             placeholder='Digite a Congregação...'
                             value={congregacao}
                             onChange={(e) => setCongregacao (e.target.value)}
@@ -308,12 +353,33 @@ export default function visitantesMobile() {
 
                         <input 
                             type="text" 
-                            className='px-4 py-3 rounded-lg text2 t'
+                            className='px-4 py-3 rounded-lg text2 text-black'
                             placeholder='Digite o Ministério...'
                             value={ministerio}
                             onChange={(e) => setMinisterio (e.target.value)}
                             maxLength={150}
                         />
+                    </div>
+
+                    <div className='flex flex-col'>
+                        <label className='text-white text1 text-lg mt-5 mb-1'>Igreja Realizadora</label>
+
+                        <select                              
+                            className='px-4 py-3 rounded-lg text2 text-black'                            
+                            value={nomeIgreja}
+                            onChange={(e) => setNomeIgreja(Number(e.target.value))}
+                            required
+                        >
+                            <option value={0} disabled>Selecione uma Igreja</option>
+                                {igreja.map((igreja) => (
+                                <option
+                                    key={igreja.id_igreja}
+                                    value={igreja.id_igreja}
+                                >
+                                    {igreja.nome}
+                                </option>                      
+                                ))}     
+                        </select>
                     </div>
 
                     <button className='border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>

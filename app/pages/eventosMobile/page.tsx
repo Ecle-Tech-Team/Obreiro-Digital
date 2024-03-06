@@ -10,38 +10,45 @@ import Modal from 'react-modal'
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+interface User {
+  id_user: number;
+  id_igreja: number;
+};
+
+interface Eventos {
+  id_evento: number;
+  nome: string;
+  data_inicio: string; 
+  horario_inicio: string;
+  data_fim: string;
+  horario_fim: string; 
+  local: string;
+  id_igreja: number
+};
+
 export default function eventosMobile() {
-  const [nome, setNome] = useState<string>('');
-  const [local, setLocal] = useState<string>('');
-  const [data_inicio, setDataInicio] = useState<string>('');
-  const [horario_inicio, setHorarioInicio] = useState<string>('');
-  const [data_fim, setDataFim] = useState<string>('');
-  const [horario_fim, setHorarioFim] = useState<string>('');
-
-  interface Eventos {
-    id_evento: number;
-    nome: string;
-    data_inicio: string; 
-    horario_inicio: string;
-    data_fim: string;
-    horario_fim: string; 
-    local: string;
-  };
-
   const [eventos, setEventos] = useState<Eventos[]>([]);
 
-  useEffect(() => {
-      const fetchEventos = async () => {
-        try {
-            const response = await api.get('/evento');
-            setEventos(response.data);
-        } catch (error) {
-            console.error('Error fetching evento:', error);
-        }
-      };
+  const [user, setUser] = useState<User | null>(null);
 
-      fetchEventos();
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {        
+        const userResponse = await api.get('/cadastro');
+        setUser(userResponse.data);
+
+        if (userResponse.data && userResponse.data.id_igreja) {
+          const eventoResponse = await api.get(`/evento/${userResponse.data.id_igreja}`);
+          setEventos(eventoResponse.data);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
   }, []);
+
 
   return (
     <main>
