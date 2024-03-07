@@ -20,7 +20,28 @@ import doacoes from '@/public/icons/doacoes.svg'
 interface Saldo {
   id_saldo: number;
   saldo: number;
-}
+  id_igreja: number;
+};
+
+interface Igreja {
+  id_igreja: number;
+  nome: string;
+};
+
+interface User {
+  id_user: number;
+  id_igreja: number;
+};
+
+interface Financas {
+  id_financas: number;
+  tipo: string;
+  categoria: string;
+  valor: string;
+  descricao: string;
+  data: string;
+  id_igreja: number;
+};
 
 export default function financeiro() {
   const [allVisible, setAllVisible] = useState(true);
@@ -33,20 +54,26 @@ export default function financeiro() {
   const [valor, setValor] = useState<string>('')
   const [descricao, setDescricao] = useState<string>('')
   const [data, setData] = useState<string>('')
+  const [nomeIgreja, setNomeIgreja] = useState<number>(0)
 
   const [editTipo, setEditTipo] = useState<string>('')
   const [editCategoria, setEditCategoria] = useState<string>('')
   const [editValor, setEditValor] = useState<string>('')
   const [editDescricao, setEditDescricao] = useState<string>('')
   const [editData, setEditData] = useState<string>('') 
-    
+  const [editNomeIgreja, setEditNomeIgreja] = useState<number>(0)
+
   const [saldoAtual, setSaldo] = useState<Saldo | null>(null);
   
   useEffect(() => {
     const fetchSaldo = async () => {
       try {
-        const response = await api.get('/financas/saldo');        
-        setSaldo(response.data)
+        const userResponse = await api.get('/cadastro');
+        setUser(userResponse.data);
+        if (userResponse.data && userResponse.data.id_igreja) {
+          const response = await api.get(`/financas/saldo/${userResponse.data.id_igreja}`);       
+          setSaldo(response.data)
+        }
       } catch (error) {
         console.error('Error fetching saldo:', error);
       }
@@ -54,30 +81,44 @@ export default function financeiro() {
 
     fetchSaldo();
   }, [])
-  
-  interface Financas {
-    id_financas: number;
-    tipo: string;
-    categoria: string;
-    valor: string;
-    descricao: string;
-    data: string;
-  }
 
   const [financas, setFinancas] = useState<Financas[]>([]);
 
+  const [user, setUser] = useState<User | null>(null);
+
   useEffect(() => {
-    const fetchFinancas = async () => {
-      try {
-        const response = await api.get('/financas/financas');
-        setFinancas(response.data);
+    const fetchUserData = async () => {
+      try {        
+        const userResponse = await api.get('/cadastro');
+        setUser(userResponse.data);
+        if (userResponse.data && userResponse.data.id_igreja) {
+          const idIgreja = userResponse.data.id_igreja;
+          const response = await api.get(`/financas/${idIgreja}`);
+          setFinancas(response.data);
+        }
       } catch (error) {
-        console.error('Error fetching finanças:', error)
+        console.error('Error fetching user data:', error);
       }
     };
 
-    fetchFinancas()
+    fetchUserData();
   }, []);
+
+  const [igreja, setIgreja] = useState<Igreja[]>([]);
+
+  useEffect(() => {
+    const fetchIgrejas = async () => {
+      try {
+        const response = await api.get('/departamento/igreja');
+        setIgreja(response.data);
+      } catch (error) {
+        console.error('Error fetching igrejas:', error);
+      }
+    };
+
+    fetchIgrejas()
+  }, []);
+
 
   const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
   const [modalIsOpen, setModalIsOpen] = useState(false);
@@ -89,7 +130,9 @@ export default function financeiro() {
       setCategoria('');
       setValor('');
       setDescricao('');
-      setData('');      
+      setData('');   
+      setNomeIgreja(0);   
+      setNomeIgreja(0);
     } else if (type === 'edit'&& financas) {
       setSelectedFinancas(financas);
       setEditTipo(financas.tipo);
@@ -97,6 +140,7 @@ export default function financeiro() {
       setEditValor(financas.valor);
       setEditDescricao(financas.descricao);
       setEditData(format(new Date(financas.data), 'yyyy-MM-dd'));      
+      setEditNomeIgreja(financas.id_igreja)
     }
     setModalIsOpen(true);
   };
@@ -114,7 +158,8 @@ export default function financeiro() {
       setCategoria(selectedFinancas.categoria || '');
       setValor(selectedFinancas.valor || '');
       setDescricao(selectedFinancas.descricao || '');
-      setData(selectedFinancas.data || '');      
+      setData(selectedFinancas.data || ''); 
+      setNomeIgreja(selectedFinancas.id_igreja || 0);    
     }
   }, [selectedFinancas]);
 
@@ -161,7 +206,7 @@ export default function financeiro() {
     }
 
     try {
-      if (tipo === "Selecione um Tipo" || categoria === "Selecione" || valor === "" || descricao === "" || data === "") {
+      if (tipo === "Selecione um Tipo" || categoria === "Selecione" || valor === "" || descricao === "" || data === "" || nomeIgreja === 0) {
         notifyWarn();
         return;
       } else {
@@ -170,7 +215,8 @@ export default function financeiro() {
           categoria,
           valor,
           descricao,
-          data
+          data,
+          id_igreja: nomeIgreja
         }
 
         const response = await api.post('/financas', dados)
@@ -232,7 +278,7 @@ export default function financeiro() {
         return;
       }
 
-      if (!editTipo || !editCategoria || !editValor || !editDescricao || !editData) {
+      if (!editTipo || !editCategoria || !editValor || !editDescricao || !editData || !editNomeIgreja) {
         notifyWarn();
         return;
       }
@@ -242,10 +288,11 @@ export default function financeiro() {
         categoria: editCategoria,
         valor: editValor,
         descricao: editDescricao,
-        data: editData
+        data: editData,
+        nomeIgreja: editNomeIgreja
       }
 
-      const response = await api.put(`/financas/${financas?.id_financas}`, dados);
+      const response = await api.put(`/financas/${financas?.id_financas}/${financas?.id_igreja}`, dados);
 
       notifySuccess();
   
@@ -302,33 +349,7 @@ export default function financeiro() {
                   <Image src={saldoVisivel ? onWhite : offWhite} width={30} height={30} alt=''/>
                 </button>
               </div>
-            </div>
-
-            <div className='bg-white py-5 pl-8 pr-20 rounded-xl shadow-xl ml-[6.5vh]'>
-              <div>
-                <Image src={gastos} width={60} height={60} alt=''/>
-                <h3 className='text-black text1 text-3xl mr-6 mt-2'>Gastos</h3>
-              </div>
-              <div className='flex mt-2'>
-                <p className='text-black text2 text-xl'>R$ 1.000,00</p>
-                <button className='ml-3 mr-6'>
-                  <Image src={onBlack} width={30} height={30} alt=''/>
-                </button>
-              </div>
-            </div>
-
-            <div className='bg-white py-5 pl-8 pr-20 rounded-xl shadow-xl ml-[6.5vh]'>
-              <div>
-                <Image src={entradas} width={60} height={60} alt=''/>
-                <h3 className='text-black text1 text-3xl mr-6 mt-2'>Entradas</h3>
-              </div>
-              <div className='flex mt-2'>
-                <p className='text-black text2 text-xl'>R$ 1.000,00</p>
-                <button className='ml-3 mr-6'>
-                  <Image src={onBlack} width={30} height={30} alt=''/>
-                </button>
-              </div>
-            </div>            
+            </div>                   
           </div>
 
           <div className='ml-[20vh]'>
@@ -440,6 +461,27 @@ export default function financeiro() {
                   onChange={(e) => setDescricao(e.target.value)}
                   required 
                   />
+              </div>
+
+              <div className='flex flex-col'>
+                <label className='text-white text1 text-xl mt-5 mb-1'>Igreja</label>
+
+                <select 
+                  className='bg-white px-4 py-3 rounded-lg text2 text-slate-500'
+                  value={nomeIgreja}
+                  onChange={(e) => setNomeIgreja(Number(e.target.value))}                 
+                  required 
+                >
+                  <option value={0} disabled>Selecione uma Igreja</option>
+                    {igreja.map((igreja) => (
+                      <option
+                        key={igreja.id_igreja}
+                        value={igreja.id_igreja}
+                      >
+                        {igreja.nome}
+                      </option>                      
+                    ))}     
+                </select>
               </div>
 
               <div className='flex flex-col'>                  
