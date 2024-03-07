@@ -16,19 +16,26 @@ import off from '@/public/icons/off-black.svg'
 interface Saldo {
   id_saldo: number;
   saldo: number;
+  id_igreja: number;
 }
 
-export default function inicio() {
+interface User {
+  id_user: number;
+  id_igreja: number;
+};
 
+export default function inicio() {
+  const [user, setUser] = useState<User | null>(null);
   const [totalPedidos, setTotalPedidos] = useState<number>(0);
   const [pedidosEntregues, setPedidosEntregues] = useState<number>(0);
   const [pedidosEmAndamento, setPedidosEmAndamento] = useState<number>(0);
   const [pedidosRecusados, setPedidosRecusados] = useState<number>(0);
-    
+  
   useEffect(() => {
     const fetchTotalPedidos = async () => {
       try {
-        const response = await api.get('/pedido/count/total');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`/pedido/count/total/${userResponse.data.id_igreja}`);
         setTotalPedidos(response.data);
       } catch (error) {
         console.error('Erro ao buscar total de pedidos:', error);
@@ -41,7 +48,8 @@ export default function inicio() {
   useEffect(() => {
     const fetchPedidosEntregues = async () => {
       try {
-        const response = await api.get('/pedido/count/entregue');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`/pedido/count/entregue/${userResponse.data.id_igreja}`);
         setPedidosEntregues(response.data);
       } catch (error) {
         console.error('Erro ao buscar pedidos entregues:', error);
@@ -54,7 +62,8 @@ export default function inicio() {
   useEffect(() => {
     const fetchPedidosEmAndamento = async () => {
       try {
-        const response = await api.get('pedido/count/em-andamento');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`pedido/count/em-andamento/${userResponse.data.id_igreja}`);
         setPedidosEmAndamento(response.data);
       } catch (error) {
         console.error('Erro ao buscar pedidos em andamento:', error);
@@ -67,7 +76,8 @@ export default function inicio() {
   useEffect(() => {
     const fetchPedidosRecusados = async() => {
       try {
-        const response = await api.get('pedido/count/recusados');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`pedido/count/recusados/${userResponse.data.id_igreja}`);
         setPedidosRecusados(response.data);
       } catch (error) {
         console.error('Erro ao buscar pedidos em andamento:', error);
@@ -75,7 +85,7 @@ export default function inicio() {
     }
 
     fetchPedidosRecusados();
-  }, []);
+  }, []); 
 
   const [totalMembros, setTotalMembros] = useState<number>(0);
   const [totalEventos, setTotalEventos] = useState<number>(0);
@@ -84,7 +94,8 @@ export default function inicio() {
   useEffect(() => {
     const fetchMembros = async() => {
       try {
-        const response = await api.get('membro/count');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`membro/count/${userResponse.data.id_igreja}`);
         setTotalMembros(response.data);
       } catch (error) {
         console.error('Erro ao buscar membros:', error);
@@ -97,7 +108,8 @@ export default function inicio() {
   useEffect(() => {
     const fetchEventos = async() => {
       try {
-        const response = await api.get('evento/count');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`evento/count/${userResponse.data.id_igreja}`);
         setTotalEventos(response.data);
       } catch (error) {
         console.error('Erro ao buscar eventos:', error);
@@ -110,7 +122,8 @@ export default function inicio() {
   useEffect(() => {
     const fetchVisitantes = async() => {
       try {
-        const response = await api.get('visitante/count');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`visitante/count/${userResponse.data.id_igreja}`);
         setTotalVisitantes(response.data);
       } catch (error) {
         console.error('Erro ao buscar visitantes:', error);
@@ -123,11 +136,16 @@ export default function inicio() {
   const [saldoVisivel, setSaldoVisivel] = useState(false);
   const [saldoAtual, setSaldo] = useState<Saldo | null>(null);
   
+
   useEffect(() => {
     const fetchSaldo = async () => {
       try {
-        const response = await api.get('/financas/saldo');        
-        setSaldo(response.data)
+        const userResponse = await api.get('/cadastro');
+        setUser(userResponse.data);
+        if (userResponse.data && userResponse.data.id_igreja) {
+          const response = await api.get(`/financas/saldo/${userResponse.data.id_igreja}`);       
+          setSaldo(response.data)
+        }
       } catch (error) {
         console.error('Error fetching saldo:', error);
       }
