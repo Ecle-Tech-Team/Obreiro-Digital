@@ -6,8 +6,9 @@ import MenuSuperior from '@/app/components/menuSuperior/menuSuperior'
 import eventos from '@/public/icons/evento.svg'
 import visitantes from '@/public/icons/visitantes.svg'
 import pedidos from '@/public/icons/pedidos.svg'
-import calendar from '@/public/icons/calendar.svg'
 import Image from 'next/image'
+import logo from '@/public/images/icon.png'
+import Link from 'next/link'
 
 export default function inicioMobile() {
   
@@ -19,7 +20,8 @@ export default function inicioMobile() {
   useEffect(() => {
     const fetchTotalPedidos = async () => {
       try {
-        const response = await api.get('/pedido/count/total');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`/pedido/count/total/${userResponse.data.id_igreja}`);
         setTotalPedidos(response.data);
       } catch (error) {
         console.error('Erro ao buscar total de pedidos:', error);
@@ -32,7 +34,8 @@ export default function inicioMobile() {
   useEffect(() => {
     const fetchPedidosEntregues = async () => {
       try {
-        const response = await api.get('/pedido/count/entregue');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`/pedido/count/entregue/${userResponse.data.id_igreja}`);
         setPedidosEntregues(response.data);
       } catch (error) {
         console.error('Erro ao buscar pedidos entregues:', error);
@@ -45,7 +48,8 @@ export default function inicioMobile() {
   useEffect(() => {
     const fetchPedidosEmAndamento = async () => {
       try {
-        const response = await api.get('pedido/count/em-andamento');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`pedido/count/em-andamento/${userResponse.data.id_igreja}`);
         setPedidosEmAndamento(response.data);
       } catch (error) {
         console.error('Erro ao buscar pedidos em andamento:', error);
@@ -58,7 +62,8 @@ export default function inicioMobile() {
   useEffect(() => {
     const fetchPedidosRecusados = async() => {
       try {
-        const response = await api.get('pedido/count/recusados');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`pedido/count/recusados/${userResponse.data.id_igreja}`);
         setPedidosRecusados(response.data);
       } catch (error) {
         console.error('Erro ao buscar pedidos em andamento:', error);
@@ -66,7 +71,7 @@ export default function inicioMobile() {
     }
 
     fetchPedidosRecusados();
-  }, []);
+  }, []); 
 
   const [totalEventos, setTotalEventos] = useState<number>(0);
   const [totalVisitantes, setTotalVisitantes] = useState<number>(0);
@@ -74,7 +79,8 @@ export default function inicioMobile() {
   useEffect(() => {
     const fetchEventos = async() => {
       try {
-        const response = await api.get('evento/count');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`evento/count/${userResponse.data.id_igreja}`);
         setTotalEventos(response.data);
       } catch (error) {
         console.error('Erro ao buscar eventos:', error);
@@ -87,7 +93,8 @@ export default function inicioMobile() {
   useEffect(() => {
     const fetchVisitantes = async() => {
       try {
-        const response = await api.get('visitante/count');
+        const userResponse = await api.get('/cadastro');
+        const response = await api.get(`visitante/count/${userResponse.data.id_igreja}`);
         setTotalVisitantes(response.data);
       } catch (error) {
         console.error('Erro ao buscar visitantes:', error);
@@ -172,6 +179,17 @@ export default function inicioMobile() {
                   <p className='text2 text-azul text-base'>Pedidos Totais</p>
                   <p className='text2 text-black text-base relative bottom-1'>{totalPedidos}</p>
                 </div>
+              </div>
+
+              <div className='bg-white shadow-xl w-[20vh] h-[37vh] rounded-xl py-2 ml-9 mt-6'>
+                <div className='ml-4 mt-3'>
+                  <Image src={logo} width={30} height={30} alt=''/>
+                  <h4 className='text3 text-xl text-black mt-1'>Acompanhe o <br/>Projeto</h4>
+                </div> 
+
+                <p className='text2 ml-4 mt-3 mb-6 text-black'>Siga-nos nas redes <br/>sociais e saiba mais<br/>sobre os próximos<br/>passos do Obreiro Digital!</p>
+
+                <Link className='bg-azul text2 text-lg text-white rounded-lg py-0.5 px-7 ml-4' href={'https://www.instagram.com/obreirodigital/'}>Acesse Já</Link>
               </div>
             </div>
           </div>
