@@ -13,11 +13,13 @@ import relatorio from '@/public/icons/relatorios.png'
 import pedidos from '@/public/icons/pedidos.png'
 import estoque from '@/public/icons/inventory_2_black_24dp.svg'
 import config from '@/public/icons/config.png'
+import hamburger from '@/public/icons/hamburguer.svg'
 
 export default function MenuLateral() {
 
   const [nome, setNome] = useState('');
   const [cargo, setCargo] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     setNome(sessionStorage.getItem('nome') || '');
@@ -30,42 +32,53 @@ export default function MenuLateral() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 1 }}
+      className=''
     >    
-      <div className='ml-6'>
-        <div className='flex mt-12'>
-          <Image src={logo} width={75} height={50} alt=''/>
-          <h2 className='ml-3 font-extrabold text-4xl text-black text1'>OBREIRO<br/>DIGITAL</h2>
+      <div className='ml-6 fixed inset-y-0 left-0 md:w-20 lg:w-64 overflow-y-hidden lg:sticky lg:h-screen'>
+        <div className="lg:hidden mt-12">
+          <button onClick={() => setMenuOpen(!menuOpen)} className="focus:outline-none">
+            <svg width="55" height="51" viewBox="0 0 45 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="45" height="41" rx="5" fill="#5271FF"/>
+              <line x1="9.94128" y1="10" x2="35.0589" y2="10" stroke="white" stroke-width="4" stroke-linecap="round"/>
+              <line x1="9.94128" y1="20" x2="35.0589" y2="20" stroke="white" stroke-width="4" stroke-linecap="round"/>
+              <line x1="9.94128" y1="30" x2="35.0589" y2="30" stroke="white" stroke-width="4" stroke-linecap="round"/>
+            </svg>
+          </button>
         </div>
 
-        <div className='mt-[8vh] flex'>
-          <Image src={perfilPastor} width={70} height={50} alt=''/>
-          <div className='ml-3 flex flex-col justify-center'>
+        <div className={`lg:ml-6 mt-14 ${menuOpen ? 'block' : 'hidden'} lg:block`}>
+          <Image src={logo} width={55} height={50} alt=''/>          
+        </div>
+
+        <div className={`lg:ml-6 mt-[8vh] flex ${menuOpen ? 'block' : 'hidden'} sm:flex-col md:flex-col lg:flex`}>
+          <Image src={perfilPastor} width={60} height={50} alt=''/>
+          <div className='flex flex-col justify-center mt-4'>
             <h2 className='font-bold text-black text-xl text1'>{nome}</h2>
             <h3 className='font-bold text-black text-lg text2'>{cargo}</h3>
           </div>  
         </div>
 
-        <div className='ml-5 mt-20'>
+        <div className={`ml-5 mt-7 sm:mt-12 md:mt-12 ${menuOpen ? 'block' : 'hidden'} lg:block`}>
           <Link className='flex w-[13vh]' href={'/../../pages/inicio'}>
             <Image src={inicio} width={30} height={30} alt=''/>
-            <p className='ml-4 font-bold text-2xl text1'>Início</p>
+            <p className='ml-4 font-bold text-2xl text1 sm:hidden md:hidden lg:block'>Início</p>
           </Link>
 
           <Link className='flex mt-7 w-[16vh]' href={'/../../pages/eventos'}>
             <Image src={evento} width={30} height={30} alt=''/>
-            <p className='ml-4 font-bold text-2xl text1'>Eventos</p>
+            <p className='ml-4 font-bold text-2xl text1 sm:hidden md:hidden lg:block'>Eventos</p>
           </Link>
         </div>
 
-        <div className='ml-5 mt-[7vh]'>
+        <div className={`ml-5 mt-[7vh] ${menuOpen ? 'block' : 'hidden'} lg:block`}>
           <Link className='flex mt-7 w-[18vh]' href={'/../../pages/membros'}>
             <Image src={membros} width={35} height={0} alt=''/>
-            <p className='ml-3 font-bold text-2xl text1'>Membros</p>
+            <p className='ml-3 font-bold text-2xl text1 sm:hidden md:hidden lg:block'>Membros</p>
           </Link>
           
           <Link className='flex mt-7 w-[19vh]' href={'/../../pages/financeiro'}>
             <Image src={financas} width={30} height={30} alt=''/>
-            <p className='ml-4 font-bold text-2xl text1'>Financeiro</p>
+            <p className='ml-4 font-bold text-2xl text1 sm:hidden md:hidden lg:block'>Financeiro</p>
           </Link>
           
           {/* <Link className='flex mt-7 w-[17vh]' href={'/../../pages/relatorio'}>
@@ -75,21 +88,23 @@ export default function MenuLateral() {
 
           <Link className='flex mt-7 w-[16vh]' href={'/../../pages/pedidos'}>
             <Image src={pedidos} width={30} height={30} alt=''/>
-            <p className='ml-4 font-bold text-2xl text1'>Pedidos</p>
+            <p className='ml-4 font-bold text-2xl text1 sm:hidden md:hidden lg:block'>Pedidos</p>
           </Link>
           
           <Link className='flex mt-7 w-[16vh]' href={'/../../pages/estoque'}>
             <Image src={estoque} width={35} height={30} alt=''/>
-            <p className='ml-3 font-bold text-2xl text1'>Estoque</p>
+            <p className='ml-3 font-bold text-2xl text1 sm:hidden md:hidden lg:block'>Estoque</p>
           </Link>
         </div>
 
-        <div className='ml-5 mt-20 w-[25vh]'>
+        <div className={`ml-5 mt-20 w-[25vh] ${menuOpen ? 'block' : 'hidden'} lg:block`}>
           {/* <Link className='flex mt-7' href={'/../../pages/configuracoes'}>
             <Image src={config} width={30} height={30} alt=''/>
             <p className='ml-4 font-bold text-2xl text1'>Configurações</p>
           </Link> */}
         </div>  
+        
+        
       </div>
     </motion.main>
   )
