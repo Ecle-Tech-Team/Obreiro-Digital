@@ -288,27 +288,27 @@ export default function eventos() {
     <main>
       <div className='flex'>
         <MenuLateral/>
-        <div className="ml-[20vh]">
+        <div className="sm:ml-[12vh] md:ml-[20vh] lg:ml-[5vh] mr-[10vh] mb-[5vh]">
           <div className='flex mt-12'>
             <Link href={'/../../pages/inicio'} className='text-cinza text-lg text3'>Início &#62;</Link>
             <Link href={'/../../pages/financeiro'} className='text-cinza text-lg text3 ml-2'>Eventos &#62;</Link>
           </div>
-
+          
           <div className="flex">
             <div className='mt-10'>
-              <h1 className='text-black text1 text-5xl'>Eventos</h1>
+              <h1 className='text-black text1 sm:mr-[2vh] md:mr-[28vh] sm:text-4xl md:text-4xl lg:text-5xl'>Eventos</h1>
             </div>
 
-            <div className='flex mt-10 ml-10 relative left-[86vh]'>
-              <p className='bg-azul px-10 py-2.5 text-white text2 text-3xl rounded-xl cursor-pointer' onClick={() => openModal('new')}>
+            <div className='flex mt-10 lg:ml-[60vh]'>
+              <p className='bg-azul flex sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] text-white text-center items-center justify-center text2 sm:text-2xl md:text-2xl lg:text-3xl rounded-xl cursor-pointer' onClick={() => openModal('new')}>
                 Novo Evento +
               </p>
             </div>
           </div>
 
           <div className=''>
-            <div className=" bg-white h-[75vh] max-h-[75vh] mt-10 shadow-xl p-8 rounded-xl overflow-y-scroll">
-              <div className="grid grid-cols-4 gap-[4.8vh]">              
+            <div className=" bg-white md:h-[70vh] lg:h-[70vh] max-h-[70vh] mt-10 shadow-xl p-8 sm:w-[36vh] md:w-[70vh] lg:w-[140vh] xl:w-[100vh] rounded-xl overflow-y-scroll mr-[10vh]">
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-3 gap-[4.8vh]">              
                 {eventos && eventos && eventos.map((evento) => (
                   <EventosCard
                     key={evento.id_evento}
