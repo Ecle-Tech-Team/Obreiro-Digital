@@ -1,12 +1,14 @@
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { format } from 'date-fns';
 import MenuLateral from '@/app/components/menuLateral/menuLateral'
 import Link from 'next/link'
+import Image from 'next/image';
 import api from '../../api/api';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Modal from 'react-modal';
+import seta from '@/public/icons/seta-down.svg'
 
 interface Igreja {
   id_igreja: number;
@@ -52,6 +54,26 @@ export default function membros() {
   const [editNomeIgreja, setEditNomeIgreja] = useState<number>(0);
 
   const [departamento, setDepartamento] = useState<Departamento[]>([])
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  const handleClickOutside = (event: MouseEvent) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      setIsDropdownOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchDepartamentos = async () => {
@@ -338,43 +360,46 @@ export default function membros() {
     <main>
       <div className='flex'>
         <MenuLateral/>
-        <div className='ml-[20vh]'>
+        <div className='sm:ml-[10vh] md:ml-[20vh] lg:ml-[5vh] mr-[10vh] mb-[5vh]'>
           <div className='flex mt-12'>
             <Link href={'/../../pages/inicio'} className='text-cinza text-lg text3'>Início &#62;</Link>
             <Link href={'/../../pages/membros'} className='text-cinza text-lg text3 ml-2'>Membros &#62;</Link>
           </div>
 
           <div className='flex'>
-            <div className='mt-10'>
-              <h1 className='text-black text1 text-5xl'>Membros</h1>
+            <div className='mt-10 relative sm:right-20 md:right-2' ref={dropdownRef}>
+              <button onClick={toggleDropdown} className='ml-2 flex'>
+                <h1 className='text-black text1 sm:mr-[2vh]  sm:text-4xl md:text-4xl lg:text-5xl'>Membros</h1>
+                <Image src={seta} width={24} height={24} alt='Arrow Icon' className={`${isDropdownOpen ? 'rotate-180' : ''} transition-transform`} />
+              </button>
+
+              {isDropdownOpen && (
+              <div className='mt-4 absolute bg-white shadow-lg rounded-lg z-50'>
+                <Link href={'/../../pages/obreiros'} className='block text2 text-xl p-3 rounded hover:bg-slate-200'>Obreiros</Link>
+                <Link href={'/../../pages/departamentos'} className='block text2 text-xl p-3 rounded hover:bg-slate-200'>Departamentos</Link>
+              </div>
+            )}
             </div>
 
-            <div className='flex relative left-[21vh]'>            
-              <div className='mt-10 ml-10 flex justify-center'>
-                <Link className='bg-azul px-10 py-2.5 text-white text2 text-3xl rounded-xl' href={'/../../pages/obreiros'}>Obreiros</Link>
-              </div>
 
+            <div className='flex relative sm:right-[10vh] md:left-[35vh] lg:left-[75vh]'>            
               <div className='mt-10 ml-10 flex justify-center'>
-                <Link className='bg-azul px-10 py-2.5 text-white text2 text-3xl rounded-xl' href={'/../../pages/departamentos'}>Departamentos</Link>
-              </div>
-
-              <div className='mt-10 ml-10 flex justify-center'>
-                <p className='bg-azul px-10 py-2.5 text-white text2 text-3xl rounded-xl cursor-pointer' onClick={() => openModal('new')}>Novo Membro +</p>
+                <p className='bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400' onClick={() => openModal('new')}>Novo Membro +</p>
               </div>
             </div>
 
-            <div className='ml-[20vh]'>
-              <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] left-[50vh] h-[72vh] max-h-[72vh] overflow-y-auto">
+            <div className='ml-[20vh] pr-2'>
+              <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] sm:left-[2vh] md:left-[20vh] lg:left-[35vh] h-[72vh] max-h-[72vh] overflow-y-auto overflow-x-auto">
                 {membros.length === 0 ? (
                   <p className="text-center text-black text1 text-4xl mt-5 text-gray-4">Nenhum membro encontrado.</p>
                 ) : (                                      
                 <table className='text-black'>
                   <thead className='sticky top-0'>
                     <tr className='bg-azul text-white rounded-xl'>
-                      <th className='text1 text-white text-2xl px-24 py-2 '>Cód. Membro</th>
-                      <th className='text1 text-white text-2xl px-24 py-2'>Nome</th>
-                      <th className='text1 text-white text-2xl px-[9.5vh] py-2'>Numero</th>
-                      <th className='text1 text-white text-2xl px-24 py-2'>Data de Nascimento</th>                      
+                      <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2 '>Cód. Membro</th>
+                      <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2'>Nome</th>
+                      <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[9.5vh] py-2'>Numero</th>
+                      <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2'>Data de Nascimento</th>                      
                     </tr>
                   </thead>
                   <tbody>
@@ -396,8 +421,7 @@ export default function membros() {
               className="text-white flex flex-col" 
               isOpen={modalIsOpen && modalType === 'new'} 
               onRequestClose={closeModal}
-              contentLabel="Novo Membro"
-            
+              contentLabel="Novo Membro"            
             > 
               <div className='flex flex-col justify-center self-center bg-azul p-10 mt-[15vh] rounded-lg shadow-xl'>
                 <h2 className='text-white text1 text-4xl flex justify-center'>Novo Membro</h2>
