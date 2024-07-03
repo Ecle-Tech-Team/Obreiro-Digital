@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import api from '@/app/api/api';
 import MenuLateral from '@/app/components/menuLateral/menuLateral';
@@ -7,6 +7,8 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Modal from 'react-modal';
 import Link from 'next/link';
+import Image from 'next/image';
+import seta from '@/public/icons/seta-down.svg'
 
 interface Igreja {
   id_igreja: number;
@@ -38,6 +40,26 @@ export default function departamentos() {
 
   
   const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  const handleClickOutside = (event: MouseEvent) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      setIsDropdownOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   
@@ -293,7 +315,7 @@ export default function departamentos() {
       <div className='flex'>
         <MenuLateral/>
 
-        <div className='ml-[20vh]'>
+        <div className='sm:ml-[10vh] md:ml-[20vh] lg:ml-[5vh] mr-[10vh] mb-[5vh]'>
           <div className='flex mt-12'>
             <Link href={'/../../pages/inicio'} className='text-cinza text-lg text3'>Início &#62;</Link>
             <Link href={'/../../pages/membros'} className='text-cinza text-lg text3 ml-2'>Membros &#62;</Link>
@@ -301,28 +323,38 @@ export default function departamentos() {
           </div>
 
           <div className='flex'>
-            <div className='mt-10'>
-              <h1 className='text-black text1 text-5xl'>Departamentos</h1>
+            <div className='mt-10 relative sm:right-20 md:right-2' ref={dropdownRef}>
+              <button onClick={toggleDropdown} className='ml-2 flex'>
+                <h1 className='text-black text1 sm:mr-[1vh]  sm:text-4xl md:text-4xl lg:text-5xl'>Departamentos</h1>
+                <Image src={seta} width={24} height={24} alt='Arrow Icon' className={`${isDropdownOpen ? 'rotate-180' : ''} transition-transform`} />
+              </button>
+
+              {isDropdownOpen && (
+              <div className='mt-4 absolute bg-white shadow-lg rounded-lg z-50'>
+                <Link href={'/../../pages/membros'} className='block text2 text-xl p-3 rounded hover:bg-slate-200'>Membros</Link>
+                <Link href={'/../../pages/obreiros'} className='block text2 text-xl p-3 rounded hover:bg-slate-200'>Obreiros</Link>
+              </div>
+            )}
             </div>
 
-            <div className='flex relative left-[57vh]'>              
+            <div className='flex relative sm:right-[10vh] md:left-[35vh] lg:left-[67vh]'>            
               <div className='mt-10 ml-10 flex justify-center'>
-                <p className='bg-azul px-10 py-2.5 text-white text2 text-3xl rounded-xl cursor-pointer' onClick={() => openModal('new')}>Novo Departamento +</p>
+                <p className='bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[25vh] md:w-[30vh] lg:w-[37vh] sm:ml-2 sm:text-xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400' onClick={() => openModal('new')}>Novo Departamento +</p>
               </div>
             </div>
 
             <div className='ml-[20vh]'>
-              <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] left-[50vh] h-[72vh] max-h-[72vh] overflow-y-auto">
+              <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] sm:left-[2vh] md:left-[20vh] lg:left-[35vh] h-[72vh] max-h-[72vh] overflow-y-auto overflow-x-auto">
                 {departamentos.length === 0 ? (
                   <p className="text-center text-black text1 text-4xl mt-5 text-gray-4">Nenhum departamento encontrado.</p>
                 ) : (                                
                   <table className='text-black'>
                     <thead className='sticky top-0'>
                       <tr className='bg-azul text-white rounded-xl'>
-                        <th className='text1 text-white text-2xl px-[8vh] py-2 '>Cód. Depart.</th>
-                        <th className='text1 text-white text-2xl px-[12.5vh] py-2'>Nome</th>
-                        <th className='text1 text-white text-2xl px-[7vh] py-2'>Data de Aniversário</th>                                             
-                        <th className='text1 text-white text-2xl px-[7vh] py-2'>Data do Congresso</th>                                                               
+                        <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2 '>Cód. Depart.</th>
+                        <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2'>Nome</th>
+                        <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2'>Data de Aniversário</th>                                             
+                        <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2'>Data do Congresso</th>                                                               
                       </tr>
                     </thead>
                     <tbody>
