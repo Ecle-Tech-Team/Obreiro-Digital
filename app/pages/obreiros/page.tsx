@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { format } from 'date-fns';
 import MenuLateral from '@/app/components/menuLateral/menuLateral'
 import Link from 'next/link'
@@ -8,6 +8,7 @@ import Modal from 'react-modal'
 import api from '../../api/api';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import seta from '@/public/icons/seta-down.svg'
 import on from '@/public/icons/on.svg'
 import off from '@/public/icons/off.svg'
 
@@ -48,16 +49,45 @@ export default function obreiros() {
   const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
 
   const [showPassword, setShowPassword] = useState(false);
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  const handleClickOutside = (event: MouseEvent) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      setIsDropdownOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
  
-  const [users, setUsers] = useState<User[]>([])
+  const [user, setUsers] = useState<User[]>([])
   
   useEffect(() =>{
-    const igreja = sessionStorage.getItem("igreja");
-    async function fetchUsers () {
-      const response = await api.get(`/cadastro/obreiros/${igreja}`);
-      setUsers(response.data);
+    const fetchUserData = async () => {
+      try {
+        const userResponse = await api.get('/cadastro');
+        setUsers(userResponse.data);
+
+        if (userResponse.data && userResponse.data.id_igreja) {
+          const membroResponse = await api.get(`/cadastro/obreiros/${userResponse.data.id_igreja}`);          
+          setUsers(membroResponse.data);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      };
     }
-    fetchUsers();
+
+    fetchUserData();    
   }, []);
     
   const [igreja, setIgreja] = useState<Igreja[]>([]);
@@ -309,7 +339,7 @@ export default function obreiros() {
     <main>
       <div className='flex'>
         <MenuLateral/>
-        <div className='ml-[20vh]'>
+        <div className='sm:ml-[10vh] md:ml-[20vh] lg:ml-[5vh] mr-[10vh] mb-[5vh]'>
           <div className='flex mt-12'>
             <Link href={'/../../pages/inicio'} className='text-cinza text-lg text3'>Início &#62;</Link>
             <Link href={'/../../pages/membros'} className='text-cinza text-lg text3 ml-2'>Membros &#62;</Link>
@@ -317,31 +347,43 @@ export default function obreiros() {
           </div>
 
           <div className='flex'>
-            <div className='mt-10'>
-              <h1 className='text-black text1 text-5xl'>Obreiros</h1>
-            </div>
-            
-            <div className='flex mt-10 ml-10 relative left-[86vh]'>
-              <p className='bg-azul px-10 py-2.5 text-white text2 text-3xl rounded-xl cursor-pointer' onClick={() => openModal('new')}>
-                Novo Obreiro +
-              </p>
+          <div className='mt-10 relative sm:right-20 md:right-2' ref={dropdownRef}>
+              <button onClick={toggleDropdown} className='ml-2 flex'>
+                <h1 className='text-black text1 sm:mr-[2vh]  sm:text-4xl md:text-4xl lg:text-5xl'>Obreiros</h1>
+                <Image src={seta} width={24} height={24} alt='Arrow Icon' className={`${isDropdownOpen ? 'rotate-180' : ''} transition-transform`} />
+              </button>
+
+              {isDropdownOpen && (
+              <div className='mt-4 absolute bg-white shadow-lg rounded-lg z-50'>
+                <Link href={'/../../pages/membros'} className='block text2 text-xl p-3 rounded hover:bg-slate-200'>Membros</Link>
+                <Link href={'/../../pages/departamentos'} className='block text2 text-xl p-3 rounded hover:bg-slate-200'>Departamentos</Link>
+              </div>
+            )}
             </div>
 
-            <div className='ml-[20vh]'>
-              <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] left-[50vh] h-[72vh] max-h-[72vh] overflow-y-auto">
-              {Array.isArray(users) && users.length > 0 ? (
+            <div className='flex relative sm:right-[10vh] md:left-[35vh] lg:left-[75vh]'>
+              <div className='flex mt-10 ml-10 justify-center'>
+                <p className='bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400' onClick={() => openModal('new')}>
+                  Novo Obreiro +
+                </p>
+              </div>
+            </div>
+
+            <div className='ml-[20vh] pr-2'>
+              <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] sm:left-[2vh] md:left-[20vh] lg:left-[35vh] h-[72vh] max-h-[72vh] overflow-y-auto overflow-x-auto">
+              {Array.isArray(user) && user.length > 0 ? (
               <table className='text-black'>
                 <thead className='sticky top-0'>
                   <tr className='bg-azul text-white rounded-xl'>
-                    <th className='text1 text-white text-2xl px-[7vh] py-2 '>Cód. Membro</th>
-                    <th className='text1 text-white text-2xl px-[9vh] py-2'>Nome</th>                      
-                    <th className='text1 text-white text-2xl px-[7vh] py-2'>Data de Nascimento</th>                      
-                    <th className='text1 text-white text-2xl px-[8vh] py-2'>Email</th>                      
-                    <th className='text1 text-white text-2xl px-[7vh] py-2'>Cargo</th>                      
+                    <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[7.1vh] py-2 '>Cód. Membro</th>
+                    <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[7.3vh] py-2'>Nome</th>                      
+                    <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[7.1vh] py-2'>Data de Nascimento</th>                      
+                    <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[7.1vh] py-2'>Email</th>                      
+                    <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[7.1vh] py-2'>Cargo</th>                      
                   </tr>
                 </thead>
                 {<tbody>
-                  {users.map((obreiro) => {                                         
+                  {user.map((obreiro) => {                                         
                     return (
                       <tr key={obreiro.id_user} onClick={() => openModal('edit', obreiro)} className="cursor-pointer hover:bg-slate-200">
                         <td className="text-center text2 text-xl py-3">{obreiro.cod_membro}</td>
@@ -366,7 +408,7 @@ export default function obreiros() {
               onRequestClose={closeModal}
               contentLabel="Novo Obreiro"
             >             
-              <div className='flex flex-col justify-center self-center bg-azul p-10 mt-[15vh] rounded-lg shadow-xl'>
+              <div className='flex flex-col justify-center self-center bg-azul p-10 mt-[10vh] rounded-lg shadow-xl'>
                 <h2 className='text-white text1 text-4xl flex justify-center'>Novo Obreiro</h2>
 
                   <div className='flex flex-col'>
@@ -460,8 +502,29 @@ export default function obreiros() {
                           <option value="Pastor">Pastor</option>
                           <option value="Obreiro">Obreiro</option>
                         </select>
-                      </div>                                              
-                    </div>                   
+                      </div>                                                                    
+                    </div> 
+
+                    <div className='flex flex-col'>
+                    <label className='text-white text1 text-xl mt-5 mb-1'>Igreja</label>
+
+                    <select                              
+                      className='bg-white px-4 py-3 rounded-lg text2 text-black'
+                      value={nomeIgreja}
+                      onChange={(e) => setNomeIgreja(Number(e.target.value))}                 
+                      required 
+                    >   
+                      <option value={0} disabled>Selecione uma Igreja</option>
+                      {igreja.map((igreja) => (
+                        <option
+                          key={igreja.id_igreja}
+                          value={igreja.id_igreja}
+                        >
+                          {igreja.nome}
+                      </option>                      
+                      ))}                            
+                    </select>
+                  </div>                  
 
                     <button className='border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
 
