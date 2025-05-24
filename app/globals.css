@@ -35,3 +35,13 @@ body {
 .text3 {
   font-family: var(--font-poppinsSemiBold);
 }
+
+/* Garante que o modal fique sobre outros elementos */
+.react-modal-overlay {
+  z-index: 1000;
+}
+
+/* Estilos para o conteúdo do modal */
+.react-modal-content {
+  z-index: 1001;
+}

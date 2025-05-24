@@ -9,6 +9,8 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Modal from 'react-modal';
 import seta from '@/public/icons/seta-down.svg'
+import close from '@/public/icons/close.svg';
+import lixo from '@/public/icons/delete.svg';
 
 interface Igreja {
   id_igreja: number;
@@ -55,8 +57,45 @@ export default function membros() {
 
   const [departamento, setDepartamento] = useState<Departamento[]>([])
 
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<number | null>(null);
+
+  const handleDeleteClick = (id_membro: number) => {
+    setMemberToDelete(id_membro);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!memberToDelete) return;
+
+    try {
+      await api.delete(`/membro/${memberToDelete}`);
+      const notifyDelete = () => {
+      toast.success('Membro deletado com sucesso!', {
+        position: "top-center",
+        autoClose: 1500,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+        });
+    }
+     
+      setMembro(membros.filter(m => m.id_membro !== memberToDelete));
+      notifyDelete();
+    } catch (error) {
+      toast.error('Erro ao remover membro.');
+    } finally {
+      setIsDeleteModalOpen(false);
+      setMemberToDelete(null);
+    }
+  };
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
 
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
@@ -391,7 +430,7 @@ export default function membros() {
             <div className='ml-[20vh] pr-2'>
               <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] sm:left-[2vh] md:left-[20vh] lg:left-[35vh] h-[72vh] max-h-[72vh] overflow-y-auto overflow-x-auto">
                 {membros.length === 0 ? (
-                  <p className="text-center text-black text1 text-4xl mt-5 text-gray-4">Nenhum membro encontrado.</p>
+                  <p className="text-center text-black text1 text-4xl mt-5 text-gray-4 px-[40.5vh]">Nenhum membro encontrado.</p>
                 ) : (                                      
                 <table className='text-black'>
                   <thead className='sticky top-0'>
@@ -399,7 +438,8 @@ export default function membros() {
                       <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2 '>Cód. Membro</th>
                       <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2'>Nome</th>
                       <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[9.5vh] py-2'>Numero</th>
-                      <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2'>Data de Nascimento</th>                      
+                      <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2'>Data de Nascimento</th>    
+                      <th className='sm:px-1 md:px-1 lg:px-1 py-2'></th>                  
                     </tr>
                   </thead>
                   <tbody>
@@ -409,6 +449,17 @@ export default function membros() {
                         <td className='text-center text2 text-xl'>{members.nome}</td>
                         <td className='text-center text2 text-xl'>{members.numero}</td>
                         <td className='text-center text2 text-xl'>{format(new Date(members.birth), 'dd/MM/yyyy')}</td>
+                        <td className='text-center text2 text-xl py-3 pr-10'>                                                     
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(members.id_membro);
+                            }}
+                            className='px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600'
+                          >
+                            <Image src={lixo} width={30} height={40} alt='lixo Icon' />
+                          </button>                          
+                        </td>    
                       </tr>
                     ))}
                   </tbody>
@@ -416,6 +467,33 @@ export default function membros() {
                 )}
               </div>
             </div>
+            
+            <Modal
+              isOpen={isDeleteModalOpen}
+              onRequestClose={() => setIsDeleteModalOpen(false)}
+              contentLabel="Confirmar exclusão"
+              className="fixed inset-0 flex items-center justify-center p-4"
+              overlayClassName="fixed inset-0 bg-white bg-opacity-70"
+            >
+              <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+                <h2 className="text1 text-xl text-black font-bold mb-4">Confirmar Exclusão</h2>
+                <p className="text2 text-gray-600 mb-6">Você tem certeza que deseja remover este membro?</p>
+                <div className="flex justify-end space-x-4">
+                  <button
+                    onClick={() => setIsDeleteModalOpen(false)}
+                    className="text2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleDeleteConfirm}
+                    className="text2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                  >
+                    Confirmar
+                  </button>
+                </div>
+              </div>
+            </Modal>
 
             <Modal
               className="text-white flex flex-col" 
@@ -423,10 +501,14 @@ export default function membros() {
               onRequestClose={closeModal}
               contentLabel="Novo Membro"            
             > 
-              <div className='flex flex-col justify-center self-center bg-azul p-10 mt-[15vh] rounded-lg shadow-xl'>
+              <div className='flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl'>
+                <div className='cursor-pointer flex place-content-start rounded-lg'>
+                  <Image onClick={closeModal} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tl-lg'/>
+                </div>
+
                 <h2 className='text-white text1 text-4xl flex justify-center'>Novo Membro</h2>
                 
-                <div className='flex flex-col'>
+                <div className='flex flex-col px-10'>
                   <label className='text-white text1 text-xl mt-5 mb-1'>Cód. Membro</label>
 
                   <input 
@@ -440,7 +522,7 @@ export default function membros() {
                   />
                 </div>
 
-                <div className='flex flex-col'>
+                <div className='flex flex-col px-10'>
                   <label className='text-white text1 text-xl mt-5 mb-1'>Nome</label>
 
                   <input 
@@ -454,7 +536,7 @@ export default function membros() {
                   />
                 </div>
 
-                <div className='flex'>
+                <div className='flex px-10'>
                   <div className='flex flex-col'>
                     <label className='text-white text1 text-xl mt-5 mb-1'>Data de Nascimento</label>
 
@@ -482,7 +564,7 @@ export default function membros() {
                   </div>
                 </div>
 
-                <div className='flex flex-col'>
+                <div className='flex flex-col px-10'>
                   <label className='text-white text1 text-xl mt-5 mb-1'>Número</label>
 
                   <input                     
@@ -496,7 +578,7 @@ export default function membros() {
                   />
                 </div>
 
-                <div className="flex">
+                <div className="flex px-10">
                   <div className='flex flex-col'>
                     <label className='text-white text1 text-xl mt-5 mb-1'>Departamento</label>
 
@@ -536,7 +618,7 @@ export default function membros() {
                   </div>
                 </div>
                 
-                <div className='flex flex-col'>                  
+                <div className='flex flex-col px-10 pb-10'>                  
                   <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
                 </div>
               </div>              
@@ -548,10 +630,13 @@ export default function membros() {
               contentLabel="Editar Membro"
             
             > 
-              <div className='flex flex-col justify-center self-center bg-azul p-10 mt-[15vh] rounded-lg shadow-xl'>
+              <div className='flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl'>
+                <div className='cursor-pointer flex place-content-start rounded-lg'>
+                  <Image onClick={closeModal} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tl-lg'/>
+                </div>
                 <h2 className='text-white text1 text-4xl flex justify-center'>Editar Membro</h2>
                 
-                <div className='flex flex-col'>
+                <div className='flex flex-col px-10'>
                   <label className='text-white text1 text-xl mt-5 mb-1'>Cód. Membro</label>
 
                   <input 
@@ -565,7 +650,7 @@ export default function membros() {
                   />
                 </div>
 
-                <div className='flex flex-col'>
+                <div className='flex flex-col px-10'>
                   <label className='text-white text1 text-xl mt-5 mb-1'>Nome</label>
 
                   <input 
@@ -579,7 +664,7 @@ export default function membros() {
                   />
                 </div>
 
-                <div className='flex'>
+                <div className='flex px-10'>
                   <div className='flex flex-col'>
                     <label className='text-white text1 text-xl mt-5 mb-1'>Data de Nascimento</label>
 
@@ -607,7 +692,7 @@ export default function membros() {
                   </div>
                 </div>
 
-                <div className='flex flex-col'>
+                <div className='flex flex-col px-10 '>
                   <label className='text-white text1 text-xl mt-5 mb-1'>Número</label>
 
                   <input                    
@@ -621,7 +706,7 @@ export default function membros() {
                   />
                 </div>
 
-                <div className='flex flex-col'>
+                <div className='flex flex-col px-10'>
                   <label className='text-white text1 text-xl mt-5 mb-1'>Departamento</label>
 
                   <select 
@@ -636,7 +721,7 @@ export default function membros() {
                   </select>
                 </div>
 
-                <div className='flex flex-col'>                  
+                <div className='flex flex-col px-10 pb-10'>                  
                   <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={() => selectedMember && handleUpdate(selectedMember)}>Enviar</button>
                 </div>
               </div>
