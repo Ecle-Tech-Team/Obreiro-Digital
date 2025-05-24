@@ -172,16 +172,16 @@ export default function inicio() {
             <Link href={'/../../pages/inicio'} className='text-cinza text-lg text3'>Início &#62;</Link>
           </div>
 
-          <div className='bg-azul p-12 rounded-xl mt-2'>
-            <h1 className='text-white text1 text-5xl ml-3'>A Paz {cargo} {nome}!</h1>
-            <h3 className='text-white text2 text-3xl mt-1 ml-3'>Veja as principais informações sobre a sua igreja:</h3>
-          </div>
+          <div className='bg-azul sm:p-8 md:p-10 lg:p-12 rounded-xl mt-2'>
+            <h1 className='text-white text1 ml-3 sm:text-2xl md:text-3xl lg:text-5xl'>A Paz {cargo} {nome}!</h1>
+            <h3 className='text-white text2 mt-1 ml-3 sm:text-xl md:text-xl lg:text-3xl'>Veja as principais informações sobre a sua igreja:</h3>
+          </div>  
 
           <div className='grid grid-cols-1 md:grid-cols-2 gap-10 mt-6 lg:w-[130vh]'>
             <div className='bg-white shadow-xl rounded-xl p-6'>
               <div className='flex items-center'>
                 <Image src={membros} width={50} height={50} alt=''/>
-                <h4 className='text1 text-3xl ml-3'>Membros</h4>
+                <h4 className='text1 text-black sm:text-xl md:text-xl lg:text-3xl ml-3'>Membros</h4>
               </div>
               <div className='mt-4'>
                 <p className='text2 text-azul text-xl'>Membros Totais</p>
@@ -196,7 +196,7 @@ export default function inicio() {
             <div className='bg-white shadow-xl rounded-xl p-6'>
               <div className='flex items-center'>
                 <Image src={evento} width={40} height={40} alt=''/>
-                <h4 className='text1 text-3xl ml-3'>Eventos</h4>
+                <h4 className='text1 text-black sm:text-xl md:text-xl lg:text-3xl ml-3'>Eventos</h4>
               </div>
               <div className='mt-4'>
                 <p className='text2 text-azul text-xl'>Eventos Totais</p>
@@ -211,7 +211,7 @@ export default function inicio() {
             <div className='bg-white shadow-xl rounded-xl p-6 '>
               <div className='flex items-center'>
                 <Image src={saldo} width={45} height={45} alt=''/>
-                <h4 className='text1 text-3xl ml-3'>Saldo</h4>
+                <h4 className='text1 text-black sm:text-xl md:text-xl lg:text-3xl ml-3'>Saldo</h4>
               </div>
               <div className='mt-4'>
                 <p className='text2 text-azul text-xl'>Saldo Total</p>
@@ -226,7 +226,7 @@ export default function inicio() {
             <div className='bg-white shadow-xl rounded-xl p-6'>
               <div className='flex items-center'>
                 <Image src={visitantes} width={50} height={50} alt=''/>
-                <h4 className='text1 text-3xl ml-3'>Visitantes</h4>
+                <h4 className='text1 text-black sm:text-xl md:text-xl lg:text-3xl ml-3'>Visitantes</h4>
               </div>
               <div className='mt-4'>
                 <p className='text2 text-azul text-xl'>Visitantes Totais</p>
@@ -241,15 +241,15 @@ export default function inicio() {
             <div className='bg-white shadow-xl rounded-xl p-6'>
               <div className='flex items-center'>
                 <Image src={pedidos} width={40} height={40} alt=''/>
-                <h4 className='text1 text-3xl ml-3'>Pedidos</h4>
+                <h4 className='text1 text-black sm:text-xl md:text-xl lg:text-3xl ml-3'>Pedidos</h4>
               </div>
               <div className='mt-4'>
-                <p className='text2 text-verde text-xl'>Pedidos Entregues</p>
-                <p className='text2 text-black text-xl'>{pedidosEntregues}</p>
-                <p className='text2 text-amarelo text-xl mt-4'>Pedidos em Andamento</p>
-                <p className='text2 text-black text-xl'>{pedidosEmAndamento}</p>
-                <p className='text2 text-vermelho text-xl mt-4'>Pedidos Recusados</p>
-                <p className='text2 text-black text-xl'>{pedidosRecusados}</p>
+                <p className='text2 text-verde sm:text-lg md:text-lg lg:text-xl'>Pedidos Entregues</p>
+                <p className='text2 text-black sm:text-lg md:text-lg lg:text-xl'>{pedidosEntregues}</p>
+                <p className='text2 text-amarelo sm:text-lg md:text-lg lg:text-xl mt-4'>Pedidos em Andamento</p>
+                <p className='text2 text-black sm:text-lg md:text-lg lg:text-xl'>{pedidosEmAndamento}</p>
+                <p className='text2 text-vermelho sm:text-lg md:text-lg lg:text-xl mt-4'>Pedidos Recusados</p>
+                <p className='text2 text-black sm:text-lg md:text-lg lg:text-xl'>{pedidosRecusados}</p>
               </div>
               <Link className='mt-4 inline-flex items-center' href={'/../../pages/pedidos'}>
                 <span className='text2 text-blue-500'>Ver detalhes</span>

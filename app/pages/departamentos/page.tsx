@@ -331,8 +331,8 @@ export default function departamentos() {
 
               {isDropdownOpen && (
               <div className='mt-4 absolute bg-white shadow-lg rounded-lg z-50'>
-                <Link href={'/../../pages/membros'} className='block text2 text-xl p-3 rounded hover:bg-slate-200'>Membros</Link>
-                <Link href={'/../../pages/obreiros'} className='block text2 text-xl p-3 rounded hover:bg-slate-200'>Obreiros</Link>
+                <Link href={'/../../pages/membros'} className='block text2 text-black text-xl p-3 rounded hover:bg-slate-200'>Membros</Link>
+                <Link href={'/../../pages/obreiros'} className='block text2 text-black text-xl p-3 rounded hover:bg-slate-200'>Obreiros</Link>
               </div>
             )}
             </div>

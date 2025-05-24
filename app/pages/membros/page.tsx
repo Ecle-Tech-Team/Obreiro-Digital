@@ -375,8 +375,8 @@ export default function membros() {
 
               {isDropdownOpen && (
               <div className='mt-4 absolute bg-white shadow-lg rounded-lg z-50'>
-                <Link href={'/../../pages/obreiros'} className='block text2 text-xl p-3 rounded hover:bg-slate-200'>Obreiros</Link>
-                <Link href={'/../../pages/departamentos'} className='block text2 text-xl p-3 rounded hover:bg-slate-200'>Departamentos</Link>
+                <Link href={'/../../pages/obreiros'} className='block text2 text-black text-xl p-3 rounded hover:bg-slate-200'>Obreiros</Link>
+                <Link href={'/../../pages/departamentos'} className='block text2 text-black text-xl p-3 rounded hover:bg-slate-200'>Departamentos</Link>
               </div>
             )}
             </div>

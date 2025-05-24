@@ -35,7 +35,7 @@ export default function MenuLateral() {
       },
     },
     closed: {
-      opacity: 0,
+      opacity: 1,
       x: '-2%',
       transition: {
         duration: 0.6,
@@ -98,7 +98,7 @@ export default function MenuLateral() {
 
               <Link className='flex w-[13vh]' href={'/../../pages/inicio'}>
                 <Image src={inicio} width={30} height={30} alt=''/>
-                <p className='ml-4 font-bold text-2xl text1 sm:hidden md:hidden lg:block'>Início</p>
+                <p className='ml-4 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block'>Início</p>
               </Link>
             </motion.div>
 
@@ -109,7 +109,7 @@ export default function MenuLateral() {
 
               <Link className='flex mt-7 w-[16vh]' href={'/../../pages/eventos'}>
                 <Image src={evento} width={30} height={30} alt=''/>
-                <p className='ml-4 font-bold text-2xl text1 sm:hidden md:hidden lg:block'>Eventos</p>
+                <p className='ml-4 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block'>Eventos</p>
               </Link>
             </motion.div>
           </div>
@@ -122,7 +122,7 @@ export default function MenuLateral() {
 
               <Link className='flex mt-7 w-[18vh]' href={'/../../pages/membros'}>
                 <Image src={membros} width={35} height={0} alt=''/>
-                <p className='ml-3 font-bold text-2xl text1 sm:hidden md:hidden lg:block'>Membros</p>
+                <p className='ml-3 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block'>Membros</p>
               </Link>
             </motion.div>
             
@@ -133,7 +133,7 @@ export default function MenuLateral() {
 
               <Link className='flex mt-7 w-[19vh]' href={'/../../pages/financeiro'}>
                 <Image src={financas} width={30} height={30} alt=''/>
-                <p className='ml-4 font-bold text-2xl text1 sm:hidden md:hidden lg:block'>Financeiro</p>
+                <p className='ml-4 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block'>Financeiro</p>
               </Link>
             </motion.div>
             
@@ -149,7 +149,7 @@ export default function MenuLateral() {
             
               <Link className='flex mt-7 w-[16vh]' href={'/../../pages/pedidos'}>
                 <Image src={pedidos} width={30} height={30} alt=''/>
-                <p className='ml-4 font-bold text-2xl text1 sm:hidden md:hidden lg:block'>Pedidos</p>
+                <p className='ml-4 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block'>Pedidos</p>
               </Link>
             </motion.div>
             
@@ -160,7 +160,7 @@ export default function MenuLateral() {
 
               <Link className='flex mt-7 w-[16vh]' href={'/../../pages/estoque'}>
                 <Image src={estoque} width={35} height={30} alt=''/>
-                <p className='ml-3 font-bold text-2xl text1 sm:hidden md:hidden lg:block'>Estoque</p>
+                <p className='ml-3 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block'>Estoque</p>
               </Link>
             </motion.div>
           </div>

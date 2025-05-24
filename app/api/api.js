@@ -1,5 +1,5 @@
 import axios from 'axios'
 const api = axios.create({
-  baseURL: "https://obreiro-digital-api-production.up.railway.app"
+  baseURL: "http://localhost:3334"
 })
 export default api;
