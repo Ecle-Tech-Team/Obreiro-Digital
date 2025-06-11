@@ -11,6 +11,7 @@ import Modal from 'react-modal';
 import seta from '@/public/icons/seta-down.svg'
 import close from '@/public/icons/close.svg';
 import lixo from '@/public/icons/delete.svg';
+import filter from '@/public/icons/filter.png';
 
 interface Igreja {
   id_igreja: number;
@@ -63,8 +64,6 @@ export default function membros() {
   const [searchTerm, setSearchTerm] = useState('');
   const [allMembros, setAllMembros] = useState<Membro[]>([]); // Lista completa
   const [filteredMembros, setFilteredMembros] = useState<Membro[]>([]); // Lista filtrada
-  
-  
 
   const handleDeleteClick = (id_membro: number) => {
     setMemberToDelete(id_membro);
@@ -198,6 +197,41 @@ export default function membros() {
     setFilteredMembros(filtered);
   };
 
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [sortCriteria, setSortCriteria] = useState<'recent' | 'oldest' | 'name-asc' | 'name-desc' | 'birth'>('recent');
+
+  const sortMembros = (membros: Membro[]) => {
+    const sorted = [...membros];
+    
+    switch (sortCriteria) {
+      case 'recent':
+          // Adicionados recentemente (maior ID primeiro)
+        return sorted.sort((a, b) => b.id_membro - a.id_membro);
+      
+      case 'oldest':
+          // Adicionados há mais tempo (menor ID primeiro)
+          return sorted.sort((a, b) => a.id_membro - b.id_membro);
+      
+      case 'name-asc':
+          // Ordem alfabética A-Z
+        return sorted.sort((a, b) => a.nome.localeCompare(b.nome));
+      
+      case 'name-desc':
+          // Ordem alfabética Z-A
+        return sorted.sort((a, b) => b.nome.localeCompare(a.nome));
+      
+      case 'birth':
+          // Por data de nascimento (mais jovens primeiro)
+        return sorted.sort((a, b) => 
+          new Date(b.birth).getTime() - new Date(a.birth).getTime()
+        );
+      
+      default:
+        return sorted;
+    }
+  };
+
+  const sortedMembros = sortMembros(filteredMembros);
 
   const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
 
@@ -456,39 +490,125 @@ export default function membros() {
             </div>
 
             <div className='flex'>
-              <div className="mt-10  relative sm:right-[6vh] md:left-[30vh] lg:left-[54vh]">
-                <input
+              <div className="mt-10 relative sm:right-[5vh] md:left-[20vh] lg:left-[54vh]">
+                <div className="flex mb-4">            
+              {/* Botão de filtro */}
+              <div className="flex gap-5 relative">
+                <button
+                  onClick={() => setIsFilterOpen(!isFilterOpen)}
+                  className="flex items-center justify-center px-5 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
+                >                  
+                  <Image 
+                    src={filter} 
+                    width={30} 
+                    height={30} 
+                    alt="Filtrar"                    
+                  />
+                </button>
+                <div className="flex-1">
+                  <input
                     type="text"
                     placeholder="Pesquisar membros..."
                     className="sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-xl md:text-lg lg:text-xl text-gray-600 pl-5 text2 text-left content-center justify-center rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={searchTerm}
                     onChange={(e) => handleSearch(e.target.value)}
-                />
+                  />
+                </div>
+                {/* Dropdown de filtros */}
+                {isFilterOpen && (
+                <div className="absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
+                  <button
+                    className={`block w-full text-left px-4 py-2 ${
+                      sortCriteria === 'recent' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
+                    }`}
+
+                    onClick={() => {
+                      setSortCriteria('recent');
+                      setIsFilterOpen(false);
+                    }}
+                  >
+                    Adicionados recentemente
+                  </button>
+
+                  <button
+                    className={`block w-full text-left px-4 py-2 ${
+                      sortCriteria === 'oldest' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
+                    }`}
+
+                    onClick={() => {
+                      setSortCriteria('oldest');
+                      setIsFilterOpen(false);
+                    }}
+                  >
+                    Adicionados antigamente
+                  </button>
+
+                  <button
+                    className={`block w-full text-left px-4 py-2 ${
+                      sortCriteria === 'name-asc' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
+                    }`}
+
+                    onClick={() => {
+                      setSortCriteria('name-asc');
+                      setIsFilterOpen(false);
+                    }}
+                  >
+                    Nome A-Z
+                  </button>
+
+                  <button
+                    className={`block w-full text-left px-4 py-2 ${
+                      sortCriteria === 'name-desc' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
+                    }`}
+                    onClick={() => {
+                      setSortCriteria('name-desc');
+                      setIsFilterOpen(false);
+                    }}
+                  >
+                    Nome Z-A
+                  </button>
+
+                  <button
+                    className={`block w-full text-left px-4 py-2 ${
+                      sortCriteria === 'birth' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
+                    }`}
+                    onClick={() => {
+                      setSortCriteria('birth');
+                      setIsFilterOpen(false);
+                    }}
+                  >
+                    Data de nascimento
+                  </button>
+                </div>
+                )}
+                </div>
               </div>
+            </div>
               <div className='flex relative sm:right-[10vh] md:left-[35vh] lg:left-[56vh]'>            
                 <div className='mt-10 ml-1 flex justify-center'>
                   <p className='bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400' onClick={() => openModal('new')}>Novo Membro +</p>
                 </div>
               </div>
+
             </div>
 
             <div className='ml-[20vh] pr-2'>
               <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] sm:left-[2vh] md:left-[20vh] lg:left-[35vh] h-[72vh] max-h-[72vh] overflow-y-auto overflow-x-auto">
-                {filteredMembros.length === 0 ? (
+                {sortedMembros.length === 0 ? (
                   <p className="text-center text-black text1 text-4xl mt-5 text-gray-4 px-[40.5vh]">Nenhum membro encontrado.</p>
                 ) : (                                      
                 <table className='text-black'>
                   <thead className='sticky top-0'>
                     <tr className='bg-azul text-white rounded-xl'>
                       <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2 '>Cód. Membro</th>
-                      <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2'>Nome</th>
-                      <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[9.5vh] py-2'>Numero</th>
+                      <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-40 py-2'>Nome</th>
+                      <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[7.8vh] py-2'>Numero</th>
                       <th className='text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2'>Data de Nascimento</th>    
                       <th className='sm:px-1 md:px-1 lg:px-1 py-2'></th>                  
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredMembros.map((members) => (                                          
+                    {sortedMembros.map((members) => (                                          
                       <tr key={members.id_membro} onClick={() => members && openModal('edit', members)} className='cursor-pointer hover:bg-slate-200'>
                         <td className='text-center text2 text-xl py-3'>{members.cod_membro}</td>
                         <td className='text-center text2 text-xl'>{members.nome}</td>
