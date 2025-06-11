@@ -59,6 +59,12 @@ export default function membros() {
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<number | null>(null);
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [allMembros, setAllMembros] = useState<Membro[]>([]); // Lista completa
+  const [filteredMembros, setFilteredMembros] = useState<Membro[]>([]); // Lista filtrada
+  
+  
 
   const handleDeleteClick = (id_membro: number) => {
     setMemberToDelete(id_membro);
@@ -139,7 +145,8 @@ export default function membros() {
 
         if (userResponse.data && userResponse.data.id_igreja) {
           const membroResponse = await api.get(`/membro/igreja/${userResponse.data.id_igreja}`);          
-          setMembro(membroResponse.data);
+          setAllMembros(membroResponse.data);
+          setFilteredMembros(membroResponse.data);
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -163,6 +170,34 @@ export default function membros() {
 
     fetchIgrejas()
   }, []);
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    
+    if (term.trim() === '') {
+        setFilteredMembros(allMembros);
+        return;
+    }
+
+    const lowercasedTerm = term.toLowerCase();
+
+    const filtered = allMembros.filter(membro => {
+        // Converte todos os campos para string antes de verificar
+        const nomeStr = membro.nome ? membro.nome.toString().toLowerCase() : '';
+        const codStr = membro.cod_membro ? membro.cod_membro.toString().toLowerCase() : '';
+        const numeroStr = membro.numero ? membro.numero.toString() : '';
+        
+        return (
+            nomeStr.includes(lowercasedTerm) ||
+            codStr.includes(lowercasedTerm) ||
+            numeroStr.includes(lowercasedTerm)
+        );
+    });
+
+
+    setFilteredMembros(filtered);
+  };
+
 
   const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
 
@@ -420,16 +455,26 @@ export default function membros() {
             )}
             </div>
 
-
-            <div className='flex relative sm:right-[10vh] md:left-[35vh] lg:left-[75vh]'>            
-              <div className='mt-10 ml-10 flex justify-center'>
-                <p className='bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400' onClick={() => openModal('new')}>Novo Membro +</p>
+            <div className='flex'>
+              <div className="mt-10  relative sm:right-[6vh] md:left-[30vh] lg:left-[54vh]">
+                <input
+                    type="text"
+                    placeholder="Pesquisar membros..."
+                    className="sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-xl md:text-lg lg:text-xl text-gray-600 pl-5 text2 text-left content-center justify-center rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={searchTerm}
+                    onChange={(e) => handleSearch(e.target.value)}
+                />
+              </div>
+              <div className='flex relative sm:right-[10vh] md:left-[35vh] lg:left-[56vh]'>            
+                <div className='mt-10 ml-1 flex justify-center'>
+                  <p className='bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400' onClick={() => openModal('new')}>Novo Membro +</p>
+                </div>
               </div>
             </div>
 
             <div className='ml-[20vh] pr-2'>
               <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] sm:left-[2vh] md:left-[20vh] lg:left-[35vh] h-[72vh] max-h-[72vh] overflow-y-auto overflow-x-auto">
-                {membros.length === 0 ? (
+                {filteredMembros.length === 0 ? (
                   <p className="text-center text-black text1 text-4xl mt-5 text-gray-4 px-[40.5vh]">Nenhum membro encontrado.</p>
                 ) : (                                      
                 <table className='text-black'>
@@ -443,7 +488,7 @@ export default function membros() {
                     </tr>
                   </thead>
                   <tbody>
-                    {membros.map((members) => (                                          
+                    {filteredMembros.map((members) => (                                          
                       <tr key={members.id_membro} onClick={() => members && openModal('edit', members)} className='cursor-pointer hover:bg-slate-200'>
                         <td className='text-center text2 text-xl py-3'>{members.cod_membro}</td>
                         <td className='text-center text2 text-xl'>{members.nome}</td>
