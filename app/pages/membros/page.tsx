@@ -43,7 +43,7 @@ export default function membros() {
   const [cod_membro, setCodMembro] = useState<string>('')
   const [nome, setNome] = useState<string>('')
   const [birth, setBirth] = useState<string>('')
-  const [novo_convertido, setNovoConvertido] = useState<string>('')
+  const [novo_convertido, setNovoConvertido] = useState<'Sim' | 'Não'>('Não')
   const [numero, setNumero] = useState<string>('')
   const [nome_departamento, setNomeDepartamento] = useState<number>(0);
   const [nomeIgreja, setNomeIgreja] = useState<number>(0);
@@ -51,7 +51,7 @@ export default function membros() {
   const [editCodMembro, setEditCodMembro] = useState<string>('')
   const [editNome, setEditNome] = useState<string>('')
   const [editBirth, setEditBirth] = useState<string>('')
-  const [editNovoConvertido, setEditNovoConvertido] = useState<string>('')
+  const [editNovoConvertido, setEditNovoConvertido] = useState<'Sim' | 'Não'>('Não')
   const [editNumero, setEditNumero] = useState<string>('')
   const [editNomeDepartamento, setEditNomeDepartamento] = useState<number>(0);
   const [editNomeIgreja, setEditNomeIgreja] = useState<number>(0);
@@ -244,7 +244,7 @@ export default function membros() {
       setNome('');
       setBirth('');
       setNumero('');
-      setNovoConvertido('');
+      setNovoConvertido('Sim');
       setNomeDepartamento(0);
       setNomeIgreja(0);
     } else if (type === 'edit' && membro) {
@@ -253,7 +253,7 @@ export default function membros() {
       setEditNome(membro.nome);
       setEditBirth(format(new Date(membro.birth), 'yyyy-MM-dd'));
       setEditNumero(membro.numero);
-      setEditNovoConvertido(membro.novo_convertido);
+      setEditNovoConvertido(membro.novo_convertido === 'Sim' ? 'Sim' : 'Não');
       setEditNomeDepartamento(membro.id_departamento);
       setEditNomeIgreja(membro.id_igreja);
     }
@@ -299,7 +299,7 @@ export default function membros() {
       setNome(selectedMember.nome || '');
       setBirth(selectedMember.birth || '');
       setNumero(selectedMember.numero || '');
-      setNovoConvertido(selectedMember.novo_convertido || '');
+      setNovoConvertido(selectedMember.novo_convertido === 'Sim' ? 'Sim' : 'Não');
       setNomeDepartamento(selectedMember.id_departamento || 0);
       setNomeIgreja(selectedMember.id_igreja || 0);
     }
@@ -351,7 +351,7 @@ export default function membros() {
     }
 
     try{
-      if(nome === "" || birth === "" || novo_convertido === "Selecione a Opção" || numero === "" || nome_departamento === 0 || nomeIgreja === 0) {
+      if(nome === "" || birth === "" || numero === "" || nome_departamento === 0 || nomeIgreja === 0) {
           notifyWarn();
           return;
       } else if (specialCharactersRegex.test(nome)) {
@@ -721,7 +721,7 @@ export default function membros() {
                     <select 
                       className='px-4 py-3 rounded-lg text2 bg-white text-black' 
                       value={novo_convertido}
-                      onChange={(e) => setNovoConvertido(e.target.value)}
+                      onChange={(e) => setNovoConvertido(e.target.value as 'Sim' | 'Não')}
                     >
                       <option value="Sim">Sim</option>
                       <option value="Não">Não</option>
@@ -849,7 +849,7 @@ export default function membros() {
                     <select 
                       className='px-4 py-3 rounded-lg text2 bg-white text-black' 
                       value={editNovoConvertido}
-                      onChange={(e) => setEditNovoConvertido(e.target.value)}
+                      onChange={(e) => setEditNovoConvertido(e.target.value as 'Sim' | 'Não')}
                     >
                       <option value="Sim">Sim</option>
                       <option value="Não">Não</option>
