@@ -46,7 +46,6 @@ export default function membros() {
   const [novo_convertido, setNovoConvertido] = useState<'Sim' | 'Não'>('Não')
   const [numero, setNumero] = useState<string>('')
   const [nome_departamento, setNomeDepartamento] = useState<number>(0);
-  const [nomeIgreja, setNomeIgreja] = useState<number>(0);
 
   const [editCodMembro, setEditCodMembro] = useState<string>('')
   const [editNome, setEditNome] = useState<string>('')
@@ -54,7 +53,6 @@ export default function membros() {
   const [editNovoConvertido, setEditNovoConvertido] = useState<'Sim' | 'Não'>('Não')
   const [editNumero, setEditNumero] = useState<string>('')
   const [editNomeDepartamento, setEditNomeDepartamento] = useState<number>(0);
-  const [editNomeIgreja, setEditNomeIgreja] = useState<number>(0);
 
   const [departamento, setDepartamento] = useState<Departamento[]>([])
 
@@ -63,8 +61,7 @@ export default function membros() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [allMembros, setAllMembros] = useState<Membro[]>([]); // Lista completa
-  const [filteredMembros, setFilteredMembros] = useState<Membro[]>([]); // Lista filtrada
-
+  const [filteredMembros, setFilteredMembros] = useState<Membro[]>([]); // Lista filtrada  
   const handleDeleteClick = (id_membro: number) => {
     setMemberToDelete(id_membro);
     setIsDeleteModalOpen(true);
@@ -139,14 +136,14 @@ export default function membros() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {        
-        const userResponse = await api.get('/cadastro');
-        setUser(userResponse.data);
+        const id_igreja = sessionStorage.getItem('id_igreja');
+                
+        const membroResponse = await api.get(`/membro/igreja/${id_igreja}`);          
+        setAllMembros(membroResponse.data);
+        setFilteredMembros(membroResponse.data);
+        console.log('ID Igreja recebido:', id_igreja);
 
-        if (userResponse.data && userResponse.data.id_igreja) {
-          const membroResponse = await api.get(`/membro/igreja/${userResponse.data.id_igreja}`);          
-          setAllMembros(membroResponse.data);
-          setFilteredMembros(membroResponse.data);
-        }
+        
       } catch (error) {
         console.error('Error fetching user data:', error);
       }
@@ -246,7 +243,6 @@ export default function membros() {
       setNumero('');
       setNovoConvertido('Sim');
       setNomeDepartamento(0);
-      setNomeIgreja(0);
     } else if (type === 'edit' && membro) {
       setSelectedMember(membro);
       setEditCodMembro(membro.cod_membro);
@@ -255,7 +251,6 @@ export default function membros() {
       setEditNumero(membro.numero);
       setEditNovoConvertido(membro.novo_convertido === 'Sim' ? 'Sim' : 'Não');
       setEditNomeDepartamento(membro.id_departamento);
-      setEditNomeIgreja(membro.id_igreja);
     }
     setModalIsOpen(true);
   };
@@ -301,13 +296,11 @@ export default function membros() {
       setNumero(selectedMember.numero || '');
       setNovoConvertido(selectedMember.novo_convertido === 'Sim' ? 'Sim' : 'Não');
       setNomeDepartamento(selectedMember.id_departamento || 0);
-      setNomeIgreja(selectedMember.id_igreja || 0);
     }
   }, [selectedMember])
 
   async function handleRegister(event: React.FormEvent) {
     event.preventDefault();
-
     const specialCharactersRegex = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/;
     const invalidCharactersRegex = /[^a-zA-Z\s]/;
 
@@ -351,7 +344,7 @@ export default function membros() {
     }
 
     try{
-      if(nome === "" || birth === "" || numero === "" || nome_departamento === 0 || nomeIgreja === 0) {
+      if(nome === "" || birth === "" || numero === "" || nome_departamento === 0 ) {
           notifyWarn();
           return;
       } else if (specialCharactersRegex.test(nome)) {
@@ -367,8 +360,7 @@ export default function membros() {
           birth,
           novo_convertido,
           numero,
-          id_departamento: nome_departamento,
-          id_igreja: nomeIgreja
+          id_departamento: nome_departamento          
         }
 
         const response = await api.post('/membro', data)
@@ -430,7 +422,7 @@ export default function membros() {
         return;
       }
   
-      if (!editCodMembro || !editNome || !editBirth || !editNumero || !editNovoConvertido || !editNomeDepartamento || !editNomeIgreja) {
+      if (!editCodMembro || !editNome || !editBirth || !editNumero || !editNovoConvertido || !editNomeDepartamento ) {
         console.error('Erro ao atualizar o membro:', membro);
         notifyWarn();
         return;
@@ -442,8 +434,7 @@ export default function membros() {
         birth: editBirth,
         numero: editNumero,
         novo_convertido: editNovoConvertido,
-        id_departamento: editNomeDepartamento,
-        id_igreja: editNomeIgreja        
+        id_departamento: editNomeDepartamento        
       };  
       
       console.log('Dados enviados para atualização:', data);
@@ -759,28 +750,7 @@ export default function membros() {
                         </option>                      
                       ))}                    
                     </select>
-                  </div>
-
-                  <div className='flex flex-col ml-5'>
-                    <label className='text-white text1 text-xl mt-5 mb-1'>Igreja</label>
-
-                    <select                              
-                      className='bg-white px-4 py-3 rounded-lg text2 text-black'
-                      value={nomeIgreja}
-                      onChange={(e) => setNomeIgreja(Number(e.target.value))}                 
-                      required 
-                    >   
-                      <option value={0} disabled>Selecione uma Igreja</option>
-                      {igreja.map((igreja) => (
-                        <option
-                          key={igreja.id_igreja}
-                          value={igreja.id_igreja}
-                        >
-                          {igreja.nome}
-                      </option>                      
-                      ))}                            
-                    </select>
-                  </div>
+                  </div>                 
                 </div>
                 
                 <div className='flex flex-col px-10 pb-10'>                  

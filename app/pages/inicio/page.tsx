@@ -94,8 +94,8 @@ export default function inicio() {
   useEffect(() => {
     const fetchMembros = async() => {
       try {
-        const userResponse = await api.get('/cadastro');
-        const response = await api.get(`membro/count/${userResponse.data.id_igreja}`);
+        const id_igreja = sessionStorage.getItem('id_igreja');
+        const response = await api.get(`membro/count/${id_igreja}`);
         setTotalMembros(response.data);
       } catch (error) {
         console.error('Erro ao buscar membros:', error);

@@ -63,8 +63,9 @@ export default function Login() {
     }
 
     try {
-      if (email == "" || senha == "") {
+      if (!email || !senha) {
           notifyWarn();
+          return;
       }
 
       else {
@@ -74,27 +75,24 @@ export default function Login() {
           }
 
           const response = await api.post('/login', dataLogin);
+          const userData = response.data.user;
 
-          const id = response.data.user[0].id_user;
-
-          const name = response.data.user[0].nome;
-
-          const cargo = response.data.user[0].cargo;
-
-          sessionStorage.setItem("id_user", id);
-          sessionStorage.setItem("nome", name);
-          sessionStorage.setItem("cargo", cargo);
-
+          sessionStorage.setItem("id_user", userData.id_user);
+          sessionStorage.setItem("nome", userData.nome);
+          sessionStorage.setItem("cargo", userData.cargo);
+          sessionStorage.setItem("id_igreja", userData.id_igreja);
+          sessionStorage.setItem('token', response.data.token);
+          
           notifySuccess();
 
-          if (cargo === "Pastor") {
-              setTimeout(() => {
-                  router.push('/pages/inicio', { scroll: false });
-              }, 1500);
-          } else if (cargo === "Obreiro") {
-              setTimeout(() => {
-                  router.push('/pages/inicioMobile', { scroll: false });
-              }, 1500);
+          if (userData.cargo === "Pastor") {
+            setTimeout(() => {
+                router.push('/pages/inicio', { scroll: false });
+            }, 1500);
+          } else if (userData.cargo === "Obreiro") {
+            setTimeout(() => {
+                router.push('/pages/inicioMobile', { scroll: false });
+            }, 1500);
           }
       }
   } 
