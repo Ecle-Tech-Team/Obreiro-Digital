@@ -119,7 +119,7 @@ export default function membros() {
   useEffect(() => {
     const fetchDepartamentos = async () => {
       try {
-        const response = await api.get('/membro/departamentos');
+        const response = await api.get('/departamento');
         setDepartamento(response.data);
       } catch (error) {
         console.error('Error fetching users:', error);
