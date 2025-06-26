@@ -1,6 +1,8 @@
 'use client'
 import React, { useState, useEffect, useRef } from 'react';
 import MenuLateral from '@/app/components/menuLateral/menuLateral';
+import { format } from 'date-fns';
+import { toast, ToastContainer } from 'react-toastify';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -14,6 +16,20 @@ import bugIcon from '@/public/icons/bug.svg';
 import chatIcon from '@/public/icons/chat.svg';
 import shieldIcon from '@/public/icons/shield.svg';
 import apagarContaIcon from '@/public/icons/apagar-conta.svg';
+import api from '@/app/api/api';
+
+interface Igreja {
+  id_igreja: number;
+  nome: string;
+  cnpj: string;
+  setor: string;
+  ministerio: string;
+  cep:string;
+  endereco: string;
+  bairro: string;
+  cidade: string;
+  data_fundacao: Date;
+}
 
 export default function configuracoes() {
   const router = useRouter();  
@@ -28,7 +44,40 @@ export default function configuracoes() {
     // Redirecionar para a página de login
     router.push('/pages/login');
   };  
+
+  const [isIgrejaModalOpen, setIsIgrejaModalOpen] = useState(false);
+  const [igrejaData, setIgrejaData] = useState<any>(null);
   
+   // Buscar dados da igreja
+  const fetchIgrejaData = async () => {
+    try {
+      const id_igreja = sessionStorage.getItem('id_igreja');
+      if (!id_igreja) {
+        console.error('ID da igreja não encontrado');
+        return;
+      }
+      
+      const response = await api.get(`/igreja/${id_igreja}`);
+      setIgrejaData(response.data);
+      setIsIgrejaModalOpen(true);
+    } catch (error) {
+      console.error('Erro ao buscar dados da igreja:', error);
+    }
+  };
+
+  const notifySuccess = () => {
+    toast.success('Igreja atualizada com sucesso!', {
+      position: 'top-center',
+      autoClose: 1500,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: 'colored',
+    });
+  };
+
   return (
     <main>
       <div className='flex'>
@@ -51,7 +100,7 @@ export default function configuracoes() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-7 max-w-3xl">
-            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
+            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={fetchIgrejaData}>
               <Image src={igrejaIcon} width={32} height={32} alt='' className="text-black" />
               <span className="font-bold text-black">Dados da Igreja</span>
               <span className="text-gray-500 text-sm">Visualizar dados da igreja</span>
@@ -132,6 +181,140 @@ export default function configuracoes() {
                   className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                 >
                   Sim, Sair
+                </button>
+              </div>
+            </div>
+          </Modal>
+
+          <Modal
+            isOpen={isIgrejaModalOpen}
+            onRequestClose={() => setIsIgrejaModalOpen(false)}
+            contentLabel="Dados da Igreja"
+            className="fixed inset-0 flex items-center justify-center"            
+          >
+            <div className="flex flex-col justify-center self-center bg-azul mt-[1vh] rounded-lg shadow-xl">
+               <div className='cursor-pointer flex place-content-end rounded-lg'>
+                  <Image onClick={() => setIsIgrejaModalOpen(false)} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+                </div>
+
+              <h2 className='text-white text1 text-4xl flex justify-center'>Sua Igreja</h2>
+              
+              {igrejaData ? (
+                <div className="space-y-4 flex flex-col px-10">
+                  <div className='flex flex-col'>
+                    <label className="text-white text1 text-xl mt-1 mb-1">Nome</label>
+                    <input
+                      type="text"
+                      className="px-4 py-3 rounded-lg text2 text-black"
+                      value={igrejaData.nome}
+                      onChange={(e) => setIgrejaData({ ...igrejaData, nome: e.target.value })}
+                    />
+                  </div>
+                  
+                  <div className='flex flex-col'>
+                    <label className="text-white text1 text-xl mt-1 mb-1">CNPJ</label>
+                    <input
+                      type="text"
+                      className="px-4 py-3 rounded-lg text2 text-black"
+                      value={igrejaData.cnpj || ''}
+                      onChange={(e) => setIgrejaData({ ...igrejaData, cnpj: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex gap-4">                  
+                    <div className='text-white flex flex-col'>
+                      <label className="text-white text1 text-xl mt-1 mb-1">Ministério</label>
+                      <input
+                        type="text"
+                        className="px-4 py-3 rounded-lg text2 text-black"
+                        value={igrejaData.ministerio || ''}
+                        onChange={(e) => setIgrejaData({ ...igrejaData, ministerio: e.target.value })}
+                      />
+                    </div>
+
+                    <div className='text-white flex flex-col'>
+                      <label className="text-white text1 text-xl mt-1 mb-1">Setor</label>
+                      <input
+                        type="text"
+                        className="px-4 py-3 rounded-lg text2 text-black"
+                        value={igrejaData.setor || ''}
+                        onChange={(e) => setIgrejaData({ ...igrejaData, setor: e.target.value })}
+                      />
+                    </div>  
+                  </div>                  
+
+                  <div className='text-white flex flex-col'>
+                    <label className="text-white text1 text-xl mt-1 mb-1">CEP</label>
+                    <input
+                        type="text"
+                        className="px-4 py-3 rounded-lg text2 text-black"
+                        value={igrejaData.cep || ''}
+                        onChange={(e) => setIgrejaData({ ...igrejaData, cep: e.target.value })}
+                      />
+                  </div>
+
+                  <div className='text-white flex flex-col'>
+                    <label className="text-white text1 text-xl mt-1 mb-1">Endereço</label>
+                    <input
+                      type="text"
+                      className="px-4 py-3 rounded-lg text2 text-black"
+                      value={igrejaData.endereco || ''}
+                      onChange={(e) => setIgrejaData({ ...igrejaData, endereco: e.target.value })}
+                    />
+                  </div>
+                  
+                  <div className="flex gap-4">
+                    <div className='text-white flex flex-col'>
+                      <label className="text-white text1 text-xl mt-1 mb-1">Bairro</label>
+                      <input
+                        type="text"
+                        className="px-4 py-3 rounded-lg text2 text-black"
+                        value={igrejaData.bairro || ''}
+                        onChange={(e) => setIgrejaData({ ...igrejaData, bairro: e.target.value })}
+                      />
+                    </div>
+
+                    <div className='text-white flex flex-col'>
+                      <label className="text-white text1 text-xl mt-1 mb-1">Cidade</label>
+                      <input
+                        type="text"
+                        className="px-4 py-3 rounded-lg text2 text-black"
+                        value={igrejaData.cidade || ''}
+                        onChange={(e) => setIgrejaData({ ...igrejaData, cidade: e.target.value })}
+                        />
+                    </div>
+                  </div>
+
+                  <div className='text-white flex flex-col'>
+                    <label className="text-white text1 text-xl mt-1 mb-1">Data de Fundação</label>
+                    <input
+                      type="date"
+                      className="px-4 py-3 rounded-lg text2 text-black"
+                      value={(format( new Date (igrejaData.data_fundacao), 'yyyy-MM-dd')) || ''}
+                      onChange={(e) => setIgrejaData({ ...igrejaData, data_fundacao: e.target.value })}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center py-4">Carregando dados da igreja...</p>
+              )}              
+              <div className="flex flex-col px-10 pb-10">
+                <button
+                  onClick={async () => {
+                  try {
+                    await api.put(`/igreja/${igrejaData.id_igreja}`, {
+                    ...igrejaData,
+                    data_fundacao: format(new Date(igrejaData.data_fundacao), 'yyyy-MM-dd'),
+                  });;
+                    setIsIgrejaModalOpen(false);
+                    notifySuccess();
+                  } catch (error) {
+                    console.error('Erro ao atualizar igreja:', error);
+                    alert('Erro ao atualizar. Tente novamente.');
+                  }
+                }}
+                  className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"
+                >
+                  Editar
                 </button>
               </div>
             </div>
@@ -240,6 +423,7 @@ export default function configuracoes() {
             </div>
         </Modal>
          </div>
+         <ToastContainer />
       </div>
     </main>
   )

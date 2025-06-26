@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import MenuInferior from '@/app/components/menuInferior/menuInferior'
 import MenuSuperior from '@/app/components/menuSuperior/menuSuperior'
+import { format } from 'date-fns';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -14,6 +15,19 @@ import bugIcon from '@/public/icons/bug.svg';
 import chatIcon from '@/public/icons/chat.svg';
 import shieldIcon from '@/public/icons/shield.svg';
 import apagarContaIcon from '@/public/icons/apagar-conta.svg';
+import api from '@/app/api/api';
+
+interface Igreja {
+  id_igreja: number;
+  nome: string;
+  cnpj: string;
+  setor: string;
+  ministerio: string;
+  cep:string;
+  endereco: string;
+  bairro: string;
+  cidade: string;
+}
 
 export default function configuracoesMobile() {
   const router = useRouter();  
@@ -27,6 +41,26 @@ export default function configuracoesMobile() {
     
     // Redirecionar para a página de login
     router.push('/pages/login');
+  };
+
+  const [isIgrejaModalOpen, setIsIgrejaModalOpen] = useState(false);
+  const [igrejaData, setIgrejaData] = useState<any>(null);
+  
+   // Buscar dados da igreja
+  const fetchIgrejaData = async () => {
+    try {
+      const id_igreja = sessionStorage.getItem('id_igreja');
+      if (!id_igreja) {
+        console.error('ID da igreja não encontrado');
+        return;
+      }
+      
+      const response = await api.get(`/igreja/${id_igreja}`);
+      setIgrejaData(response.data);
+      setIsIgrejaModalOpen(true);
+    } catch (error) {
+      console.error('Erro ao buscar dados da igreja:', error);
+    }
   };
 
   return (
@@ -44,7 +78,7 @@ export default function configuracoesMobile() {
         </div>
         
         <div className="mt-10 mx-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-w-3xl">
-          <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
+          <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={fetchIgrejaData}>
               <Image src={igrejaIcon} width={32} height={32} alt='' className="text-black" />
               <span className="font-bold text-black">Dados da Igreja</span>
               <span className="text-gray-500 text-sm">Visualizar dados da igreja</span>
@@ -125,6 +159,84 @@ export default function configuracoesMobile() {
                   className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                 >
                   Sim, Sair
+                </button>
+              </div>
+            </div>
+          </Modal>
+
+          <Modal
+            isOpen={isIgrejaModalOpen}
+            onRequestClose={() => setIsIgrejaModalOpen(false)}
+            contentLabel="Dados da Igreja"
+            className="fixed inset-0 flex items-center bg-black bg-opacity-5 justify-center"
+            overlayClassName="fixed inset-0 bg-black bg-opacity-70"
+          >
+            <div className="bg-white rounded-xl m-3 p-6 w-full max-w-md">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl text1 font-bold text-gray-800">Dados da Igreja</h2>                
+              </div>
+              
+              {igrejaData ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text3 font-medium text-gray-500">Nome</label>
+                    <p className="mt-1 text-gray-900 text2">{igrejaData.nome}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">CNPJ</label>
+                    <p className="mt-1 text-gray-900">{igrejaData.cnpj || 'Não informado'}</p>
+                  </div>
+                  
+                  <div className="flex gap-7">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500">Ministério</label>
+                      <p className="mt-1 text-gray-900">{igrejaData.ministerio || 'Não informado'}</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500">Setor</label>
+                      <p className="mt-1 text-gray-900">{igrejaData.setor || 'Não informado'}</p>
+                    </div>  
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">CEP</label>
+                    <p className="mt-1 text-gray-900">{igrejaData.cep || 'Não informado'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">Endereço</label>
+                    <p className="mt-1 text-gray-900">{igrejaData.endereco || 'Não informado'}</p>
+                  </div>
+                  
+                  <div className="flex gap-7">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500">Bairro</label>
+                      <p className="mt-1 text-gray-900">{igrejaData.bairro || 'Não informado'}</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500">Cidade</label>
+                      <p className="mt-1 text-gray-900">{igrejaData.cidade || 'Não informado'}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500">Data de Fundação</label>
+                    <p className="mt-1 text-gray-900">{format(new Date(igrejaData.data_fundacao), 'dd-MM-yyyy') || 'Não informada'}</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center py-4">Carregando dados da igreja...</p>
+              )}
+              
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setIsIgrejaModalOpen(false)}
+                  className="px-5 py-2 rounded-lg text-gray-700 hover:bg-gray-100"
+                >
+                  Fechar
                 </button>
               </div>
             </div>
