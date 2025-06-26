@@ -163,15 +163,18 @@ export default function MenuLateral() {
                 <p className='ml-3 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block'>Estoque</p>
               </Link>
             </motion.div>
-          </div>
-
-          <div className={`ml-5 mt-20 w-[25vh] ${menuOpen ? 'block' : 'hidden'} lg:block`}>
-            {/* <Link className='flex mt-7' href={'/../../pages/configuracoes'}>
-              <Image src={config} width={30} height={30} alt=''/>
-              <p className='ml-4 font-bold text-2xl text1'>Configurações</p>
-              </Link> */}
-          </div>  
-        
+            
+            <motion.div
+              initial="closed"
+              animate={menuOpen ? 'open' : 'closed'}
+              variants={itemVariants}>
+            
+              <Link className='flex mt-7 w-[16vh]' href={'/../../pages/configuracoes'}>
+                <Image src={config} width={30} height={30} alt=''/>
+                <p className='ml-4 font-bold text-2xl text1 sm:hidden md:hidden lg:block'>Configurações</p>
+              </Link>
+            </motion.div>
+          </div>               
         </div>
         
       </div>
