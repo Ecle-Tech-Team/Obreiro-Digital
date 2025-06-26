@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Modal from 'react-modal';
+import logout from '@/public/icons/logout.svg';
 import close from '@/public/icons/close.svg';
 import igrejaIcon from '@/public/icons/igreja.svg';
 import mailIcon from '@/public/icons/mail.svg';
@@ -17,7 +18,7 @@ import apagarContaIcon from '@/public/icons/apagar-conta.svg';
 export default function configuracoes() {
   const router = useRouter();  
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-   const [isPriavcyModalOpen, setIsPrivacyModalOpen] = useState(false);
+  const [isPriavcyModalOpen, setIsPrivacyModalOpen] = useState(false);
   
   const handleLogout = () => {
     // Limpar todos os dados de autenticação
@@ -26,9 +27,7 @@ export default function configuracoes() {
     
     // Redirecionar para a página de login
     router.push('/pages/login');
-  };
-
-  
+  };  
   
   return (
     <main>
@@ -44,58 +43,56 @@ export default function configuracoes() {
             <div className='mt-10'>
               <h1 className='text-black text1 text-5xl'>Configurações</h1>
 
-              <div className='flex ml-10 relative left-[86vh] bottom-12'>
-                <p className='bg-red-500 hover:bg-red-600 px-10 py-2.5 text-white text-3xl rounded-xl cursor-pointer' onClick={() => setIsLogoutModalOpen(true)}>
-                Encerrar Sessão
-                </p>
+              <div className='flex ml-10 relative left-[86vh] bottom-12 bg-red-500 hover:bg-red-600 px-8 py-2.5 text-white text-3xl rounded-xl cursor-pointer gap-2'>
+                <p className='' onClick={() => setIsLogoutModalOpen(true)}>Encerrar Sessão</p>
+                <Image src={logout} width={32} height={32} alt=''/>
             </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-7 max-w-3xl">
+            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
+              <Image src={igrejaIcon} width={32} height={32} alt='' className="text-black" />
+              <span className="font-bold text-black">Dados da Igreja</span>
+              <span className="text-gray-500 text-sm">Visualizar dados da igreja</span>
+            </div>
 
             <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
-          <Image src={igrejaIcon} width={32} height={32} alt='' className="text-black" />
-          <span className="font-bold text-black">Dados da Igreja</span>
-          <span className="text-gray-500 text-sm">Visualizar dados da igreja</span>
-        </div>
+              <Image src={mailIcon} width={32} height={32} alt='' className="text-black" />
+              <span className="font-bold text-black">Alterar Email</span>
+              <span className="text-gray-500 text-sm">Novo email</span>
+            </div>
 
-        <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
-          <Image src={mailIcon} width={32} height={32} alt='' className="text-black" />
-          <span className="font-bold text-black">Alterar Email</span>
-          <span className="text-gray-500 text-sm">Novo email</span>
-        </div>
+            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
+              <Image src={keyIcon} width={32} height={32} alt='' className="text-black" />
+              <span className="font-bold text-black">Alterar Senha</span>
+              <span className="text-gray-500 text-sm">Nova senha</span>
+            </div>
 
-        <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
-          <Image src={keyIcon} width={32} height={32} alt='' className="text-black" />
-          <span className="font-bold text-black">Alterar Senha</span>
-          <span className="text-gray-500 text-sm">Nova senha</span>
-        </div>
+            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
+              <Image src={bugIcon} width={32} height={32} alt='' className="text-black" />
+              <span className="font-bold text-black">Relatar Bug</span>
+              <span className="text-gray-500 text-sm">Descreva o seu bug</span>
+            </div>
 
-        <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
-          <Image src={bugIcon} width={32} height={32} alt='' className="text-black" />
-          <span className="font-bold text-black">Relatar Bug</span>
-          <span className="text-gray-500 text-sm">Descreva o seu bug</span>
-        </div>
+            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
+              <Image src={chatIcon} width={32} height={32} alt='' className="text-black" />
+              <span className="font-bold text-black">Solicitar Suporte</span>
+              <span className="text-gray-500 text-sm">Solicite suporte técnico</span>
+            </div>
 
-        <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
-          <Image src={chatIcon} width={32} height={32} alt='' className="text-black" />
-          <span className="font-bold text-black">Solicitar Suporte</span>
-          <span className="text-gray-500 text-sm">Solicite suporte técnico</span>
-        </div>
+            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsPrivacyModalOpen(true)}>
+              <Image src={shieldIcon} width={32} height={32} alt='' className="text-black" />
+              <span className="font-bold text-black">Privacidade</span>
+              <span className="text-gray-500 text-sm">Termos de privacidade</span>
+            </div>
 
-        <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsPrivacyModalOpen(true)}>
-          <Image src={shieldIcon} width={32} height={32} alt='' className="text-black" />
-          <span className="font-bold text-black">Privacidade</span>
-          <span className="text-gray-500 text-sm">Termos de privacidade</span>
-        </div>
-
-        {/* Botão apagar conta */}
-        <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
-          <Image src={apagarContaIcon} width={32} height={32} alt='' className="text-red-500" />
-          <span className="font-bold text-red-500">Apagar Conta</span>
-          <span className="text-red-400 text-sm">Deletar sua conta</span>
-        </div>
+            {/* Botão apagar conta */}
+            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
+              <Image src={apagarContaIcon} width={32} height={32} alt='' className="text-red-500" />
+              <span className="font-bold text-red-500">Apagar Conta</span>
+              <span className="text-red-400 text-sm">Deletar sua conta</span>
+            </div>
           </div>
 
           <Modal
