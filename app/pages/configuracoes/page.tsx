@@ -77,6 +77,23 @@ export default function configuracoes() {
       theme: 'colored',
     });
   };
+  
+  const notifySuccessAlterEmail = () => {
+    toast.success('Email atualizado com sucesso!', {
+      position: 'top-center',
+      autoClose: 1500,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: 'colored',
+    });
+  };
+
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isConfirmEmailModalOpen, setIsConfirmEmailModalOpen] = useState(false);
+  const [novoEmail, setNovoEmail] = useState('');
 
   return (
     <main>
@@ -106,7 +123,7 @@ export default function configuracoes() {
               <span className="text-gray-500 text-sm">Visualizar dados da igreja</span>
             </div>
 
-            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
+            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsEmailModalOpen(true)}>
               <Image src={mailIcon} width={32} height={32} alt='' className="text-black" />
               <span className="font-bold text-black">Alterar Email</span>
               <span className="text-gray-500 text-sm">Novo email</span>
@@ -321,6 +338,85 @@ export default function configuracoes() {
           </Modal>
 
           <Modal
+            isOpen={isEmailModalOpen}
+            onRequestClose={() => setIsEmailModalOpen(false)}
+            contentLabel="Alterar Email"
+            className="fixed inset-0 flex items-center justify-center"            
+          >
+            <div className="flex flex-col justify-center self-center bg-azul mt-[1vh] rounded-lg shadow-xl">
+              <div className='cursor-pointer flex place-content-end rounded-lg'>
+                <Image onClick={() => setIsEmailModalOpen(false)} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+              </div>
+              
+              <div className="px-10">
+              <h2 className="text-xl text1 font-bold text-white mb-4">Novo Email</h2>
+
+                <input
+                  type="email"
+                  placeholder="Digite o novo email"
+                  className="px-4 py-3 rounded-lg text2 text-black"
+                  value={novoEmail}
+                  onChange={(e) => setNovoEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 py-5 pr-4">                
+                <button
+                  onClick={() => {
+                    if (!novoEmail || !novoEmail.includes('@')) {
+                      alert('Digite um email válido.');
+                      return;
+                    }
+                    setIsEmailModalOpen(false);
+                    setIsConfirmEmailModalOpen(true);
+                  }}
+                  className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg hover:bg-azul-escuro"
+                >
+                  Avançar
+                </button>
+              </div>
+            </div>
+          </Modal>
+
+          <Modal
+            isOpen={isConfirmEmailModalOpen}
+            onRequestClose={() => setIsConfirmEmailModalOpen(false)}
+            contentLabel="Confirmar Alteração de Email"
+            className="fixed inset-0 flex items-center bg-black bg-opacity-5 justify-center"
+          >
+            <div className="bg-white rounded-xl p-6 w-full max-w-md">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Confirmar Alteração</h2>
+              
+              <p className="text-gray-600 mb-6">Tem certeza que deseja alterar o email para <b>{novoEmail}</b>?</p>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setIsConfirmEmailModalOpen(false)}
+                  className="px-5 py-2 rounded-lg text-gray-700 hover:bg-gray-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const id_user = sessionStorage.getItem('id_user');
+                      await api.put(`/cadastro/${id_user}`, { email: novoEmail });
+                      setIsConfirmEmailModalOpen(false);
+                      notifySuccessAlterEmail();
+                    } catch (error) {
+                      console.error('Erro ao alterar email:', error);
+                      alert('Erro ao alterar email. Tente novamente.');
+                    }
+                  }}
+                  className="px-5 py-2 bg-azul text-white rounded-lg hover:bg-azul-escuro"
+                >
+                  Sim, Alterar
+                </button>
+              </div>
+            </div>
+          </Modal>
+
+          <Modal
             isOpen={isPriavcyModalOpen} 
             onRequestClose={() => setIsPrivacyModalOpen(false)}
             contentLabel="Termo de Uso"
@@ -419,9 +515,9 @@ export default function configuracoes() {
                 <div className='mt-5'>                                
                   <p className='text2 text-black leading-4'>Ao aceitar este Termo, você reconhece ter lido, <br/>compreendido e concordado com os termos e <br/>condições aqui estabelecidos, bem como com o <br/>uso dos seus dados pessoais conforme descrito.</p>                                
                 </div>
-                </div>                
+              </div>                
             </div>
-        </Modal>
+          </Modal>
          </div>
          <ToastContainer />
       </div>
