@@ -73,6 +73,31 @@ export default function configuracoesMobile() {
   const [novoPassword, setNovoPassword] = useState('');
   const [confirmarPassword, setConfirmarPassword] = useState('');
   
+  const [isBugModalOpen, setIsBugModalOpen] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [descricao, setDescricao] = useState("");
+
+  const handleEnviar = async () => {   
+    if (!motivo || !descricao) {
+      alert("Preencha todos os campos!");
+      return;
+    }
+
+    try {
+      await api.post("/report", {
+        motivo,
+        descricao        ,
+      });
+      notifySuccessReportBug();
+      setIsBugModalOpen(false);
+      setMotivo("");
+      setDescricao("");
+    } catch (error) {
+      console.error("Erro ao enviar relatório:", error);
+      alert("Erro ao enviar relatório. Tente novamente.");
+    }
+  };
+
   const notifySuccessAlterEmail = () => {
     toast.success('Email atualizado com sucesso!', {
       position: 'top-center',
@@ -97,6 +122,28 @@ export default function configuracoesMobile() {
       theme: 'colored',
     });
   };
+
+  const notifySuccessReportBug = () => {
+    toast.success('Bug reportado com sucesso!', {
+      position: 'top-center',
+      autoClose: 1500,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: 'colored',
+    });
+  };
+  
+  const categoriasBug = [
+    "Erro de Navegação",
+    "Bug Visual",
+    "Problema de Cadastro",
+    "Erro nos Dados",
+    "Outro"
+  ];
+
   return (
     <main>
       <div>
@@ -113,47 +160,47 @@ export default function configuracoesMobile() {
         
         <div className="mt-10 mx-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-w-3xl">
           <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={fetchIgrejaData}>
-              <Image src={igrejaIcon} width={32} height={32} alt='' className="text-black" />
-              <span className="font-bold text-black">Dados da Igreja</span>
-              <span className="text-gray-500 text-sm">Visualizar dados da igreja</span>
-            </div>
+            <Image src={igrejaIcon} width={32} height={32} alt='' className="text-black" />
+            <span className="font-bold text-black">Dados da Igreja</span>
+            <span className="text-gray-500 text-sm">Visualizar dados da igreja</span>
+          </div>
 
-            <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsEmailModalOpen(true)}>
-              <Image src={mailIcon} width={32} height={32} alt='' className="text-black" />
-              <span className="font-bold text-black">Alterar Email</span>
-              <span className="text-gray-500 text-sm">Novo email</span>
-            </div>
+          <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsEmailModalOpen(true)}>
+            <Image src={mailIcon} width={32} height={32} alt='' className="text-black" />
+            <span className="font-bold text-black">Alterar Email</span>
+            <span className="text-gray-500 text-sm">Novo email</span>
+          </div>
 
-            <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsPasswordModalOpen(true)}>
-              <Image src={keyIcon} width={32} height={32} alt='' className="text-black" />
-              <span className="font-bold text-black">Alterar Senha</span>
-              <span className="text-gray-500 text-sm">Nova senha</span>
-            </div>
+          <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsPasswordModalOpen(true)}>
+            <Image src={keyIcon} width={32} height={32} alt='' className="text-black" />
+            <span className="font-bold text-black">Alterar Senha</span>
+            <span className="text-gray-500 text-sm">Nova senha</span>
+          </div>
 
-            <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
-              <Image src={bugIcon} width={32} height={32} alt='' className="text-black" />
-              <span className="font-bold text-black">Relatar Bug</span>
-              <span className="text-gray-500 text-sm">Descreva o seu bug</span>
-            </div>
+          <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsBugModalOpen(true)}>
+            <Image src={bugIcon} width={32} height={32} alt='' className="text-black" />
+            <span className="font-bold text-black">Relatar Bug</span>
+            <span className="text-gray-500 text-sm">Descreva o seu bug</span>
+          </div>
 
-            <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
-              <Image src={chatIcon} width={32} height={32} alt='' className="text-black" />
-              <span className="font-bold text-black">Solicitar Suporte</span>
-              <span className="text-gray-500 text-sm">Solicite suporte técnico</span>
-            </div>
+          <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
+            <Image src={chatIcon} width={32} height={32} alt='' className="text-black" />
+            <span className="font-bold text-black">Solicitar Suporte</span>
+            <span className="text-gray-500 text-sm">Solicite suporte técnico</span>
+          </div>
 
-            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsPrivacyModalOpen(true)}>
-              <Image src={shieldIcon} width={32} height={32} alt='' className="text-black" />
-              <span className="font-bold text-black">Privacidade</span>
-              <span className="text-gray-500 text-sm">Termos de privacidade</span>
-            </div>
+          <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsPrivacyModalOpen(true)}>
+            <Image src={shieldIcon} width={32} height={32} alt='' className="text-black" />
+            <span className="font-bold text-black">Privacidade</span>
+            <span className="text-gray-500 text-sm">Termos de privacidade</span>
+          </div>
 
-            {/* Botão apagar conta */}
-            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
-              <Image src={apagarContaIcon} width={32} height={32} alt='' className="text-red-500" />
-              <span className="font-bold text-red-500">Apagar Conta</span>
-              <span className="text-red-400 text-sm">Deletar sua conta</span>
-            </div>
+          {/* Botão apagar conta */}
+          <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
+            <Image src={apagarContaIcon} width={32} height={32} alt='' className="text-red-500" />
+            <span className="font-bold text-red-500">Apagar Conta</span>
+            <span className="text-red-400 text-sm">Deletar sua conta</span>
+          </div>
         </div>
 
         <Modal
@@ -366,6 +413,52 @@ export default function configuracoesMobile() {
                 >
                   Sim, Alterar
                 </button>
+              </div>
+            </div>
+          </Modal>
+          
+          <Modal
+            isOpen={isBugModalOpen}
+            onRequestClose={() => setIsBugModalOpen(false)}
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 p-4"
+          >
+            <div className="flex flex-col justify-center self-center bg-azul mt-[1vh] rounded-lg shadow-xl">
+              <div className='cursor-pointer flex place-content-end rounded-lg'>
+                <Image onClick={() => setIsBugModalOpen(false)} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+              </div>
+
+              <div className="px-10">
+                <h2 className="text-white text-3xl text1 font-bold mb-4">Relatar Bug</h2>
+
+                <select
+                  className="bg-white text-black w-full mb-6 px-4 py-[1.2vh] border rounded-lg"
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                >
+                  <option value="">Selecione o Motivo</option>
+                  {categoriasBug.map((categoria, index) => (
+                    <option key={index} value={categoria}>
+                      {categoria}
+                    </option>
+                  ))}
+                </select>
+
+                <textarea
+                  placeholder="Descrição do Bug"
+                  className="w-full mb-3 px-4 py-3 rounded-lg text2 text-black"
+                  rows={4}
+                  value={descricao}
+                  onChange={(e) => setDescricao(e.target.value)}
+                  />
+
+                <div className="flex justify-end space-x-3 py-5">                  
+                  <button
+                    onClick={handleEnviar}
+                    className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg hover:bg-azul-escuro"
+                    >
+                    Enviar Relatório
+                  </button>
+                </div>
               </div>
             </div>
           </Modal>
