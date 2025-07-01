@@ -159,6 +159,31 @@ export default function configuracoes() {
     "Outro"
   ];
 
+  const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false);
+  const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] = useState(false);
+  const [emailConfirmacao, setEmailConfirmacao] = useState('');
+
+  const handleDeleteAccount = async () => {
+    const emailUsuario = sessionStorage.getItem('email');
+    console.log("Email salvo:", emailUsuario);
+    const id_user = sessionStorage.getItem('id_user');
+
+    if (emailConfirmacao.trim().toLowerCase() !== sessionStorage.getItem("email")?.trim().toLowerCase()) {
+      alert('O email não corresponde ao seu cadastro.');
+      return;
+    }
+
+    try {
+      await api.delete(`/cadastro/${id_user}`);
+      sessionStorage.clear();
+      localStorage.clear();
+      router.push('/pages/login');
+    } catch (error) {
+      console.error('Erro ao deletar conta:', error);
+      alert('Erro ao deletar conta. Tente novamente.');
+    }
+  };
+
   return (
     <main>
       <div className='flex'>
@@ -216,9 +241,8 @@ export default function configuracoes() {
               <span className="font-bold text-black">Privacidade</span>
               <span className="text-gray-500 text-sm">Termos de privacidade</span>
             </div>
-
-            {/* Botão apagar conta */}
-            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
+           
+            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsDeleteAccountModalOpen(true)}>
               <Image src={apagarContaIcon} width={32} height={32} alt='' className="text-red-500" />
               <span className="font-bold text-red-500">Apagar Conta</span>
               <span className="text-red-400 text-sm">Deletar sua conta</span>
@@ -718,6 +742,71 @@ export default function configuracoes() {
                   <p className='text2 text-black leading-4'>Ao aceitar este Termo, você reconhece ter lido, <br/>compreendido e concordado com os termos e <br/>condições aqui estabelecidos, bem como com o <br/>uso dos seus dados pessoais conforme descrito.</p>                                
                 </div>
               </div>                
+            </div>
+          </Modal>
+          
+          <Modal
+            isOpen={isDeleteAccountModalOpen}
+            onRequestClose={() => setIsDeleteAccountModalOpen(false)}
+            contentLabel="Apagar Conta"
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40"
+          >
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h2 className="text-xl font-bold mb-4 text-red-600">Apagar Conta</h2>
+              <p className="mb-6">Tem certeza que deseja apagar sua conta? Essa ação é <b>irreversível</b>.</p>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setIsDeleteAccountModalOpen(false)}
+                  className="px-5 py-2 rounded-lg text-gray-700 hover:bg-gray-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    setIsDeleteAccountModalOpen(false);
+                    setIsConfirmDeleteModalOpen(true);
+                  }}
+                  className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  Continuar
+                </button>
+              </div>
+            </div>
+          </Modal>
+
+          <Modal
+            isOpen={isConfirmDeleteModalOpen}
+            onRequestClose={() => setIsConfirmDeleteModalOpen(false)}
+            contentLabel="Confirmar Apagar Conta"
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40"
+          >
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h2 className="text-xl font-bold mb-4 text-red-600">Confirme seu Email</h2>
+              <p className="mb-4">Digite o seu email para confirmar a exclusão da conta:</p>
+
+              <input
+                type="email"
+                placeholder="Digite seu email"
+                className="w-full mb-4 px-4 py-2 border rounded"
+                value={emailConfirmacao}
+                onChange={(e) => setEmailConfirmacao(e.target.value)}
+              />
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setIsConfirmDeleteModalOpen(false)}
+                  className="px-5 py-2 rounded-lg text-gray-700 hover:bg-gray-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  Apagar Conta
+                </button>
+              </div>
             </div>
           </Modal>
          </div>

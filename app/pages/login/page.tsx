@@ -82,6 +82,7 @@ export default function Login() {
           sessionStorage.setItem("cargo", userData.cargo);
           sessionStorage.setItem("id_igreja", userData.id_igreja);
           sessionStorage.setItem('token', response.data.token);
+          sessionStorage.setItem("email", email);
           
           notifySuccess();
 
