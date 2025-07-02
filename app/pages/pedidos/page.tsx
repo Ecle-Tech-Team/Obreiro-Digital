@@ -12,6 +12,7 @@ import pedidoWhite from '@/public/icons/pedidos-white.svg';
 import emAndamento from '@/public/icons/em_andamento.svg';
 import recusado from '@/public/icons/recusado.svg';
 import concluido from '@/public/icons/concluido.svg';
+import filter from '@/public/icons/filter.png';
 
 interface Igreja {
   id_igreja: number;
@@ -40,13 +41,11 @@ export default function pedidos() {
   const [categoria_produto, setCategoriaProduto] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(0);
   const [data_pedido, setDataPedido] = useState<string>('');
-  const [nomeIgreja, setNomeIgreja] = useState<number>(0);
 
   const [editNomeProduto, setEditNomeProduto] = useState<string>('');
   const [editCategoriaProduto, setEditCategoriaProduto] = useState<string>('');
   const [editQuantidade, setEditQuantidade] = useState<number>(0);
   const [editDataPedido, setEditDataPedido] = useState<string>('');
-  const [editNomeIgreja, setEditNomeIgreja] = useState<number>(0);
 
   const [status_pedido, setStatusPedido] = useState<string>('');
   // const [data_entrega, setDataEntrega] = useState<string>('');
@@ -56,13 +55,15 @@ export default function pedidos() {
   const [pedidosEntregues, setPedidosEntregues] = useState<number>(0);
   const [pedidosEmAndamento, setPedidosEmAndamento] = useState<number>(0);
   const [pedidosRecusados, setPedidosRecusados] = useState<number>(0);
-  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [allPedidos, setAllPedidos] = useState<Pedidos[]>([]); // Lista completa
+  const [filteredPedidos, setFilteredPedidos] = useState<Pedidos[]>([]); //Lista filtrada
 
   useEffect(() => {
     const fetchTotalPedidos = async () => {
       try {
-        const userResponse = await api.get('/cadastro');
-        const response = await api.get(`/pedido/count/total/${userResponse.data.id_igreja}`);
+        const id_igreja = sessionStorage.getItem('id_igreja');
+        const response = await api.get(`/pedido/count/total/${id_igreja}`);
         setTotalPedidos(response.data);
       } catch (error) {
         console.error('Erro ao buscar total de pedidos:', error);
@@ -75,8 +76,8 @@ export default function pedidos() {
   useEffect(() => {
     const fetchPedidosEntregues = async () => {
       try {
-        const userResponse = await api.get('/cadastro');
-        const response = await api.get(`/pedido/count/entregue/${userResponse.data.id_igreja}`);
+        const id_igreja = sessionStorage.getItem('id_igreja');
+        const response = await api.get(`/pedido/count/entregue/${id_igreja}`);
         setPedidosEntregues(response.data);
       } catch (error) {
         console.error('Erro ao buscar pedidos entregues:', error);
@@ -89,8 +90,8 @@ export default function pedidos() {
   useEffect(() => {
     const fetchPedidosEmAndamento = async () => {
       try {
-        const userResponse = await api.get('/cadastro');
-        const response = await api.get(`pedido/count/em-andamento/${userResponse.data.id_igreja}`);
+        const id_igreja = sessionStorage.getItem('id_igreja');
+        const response = await api.get(`pedido/count/em-andamento/${id_igreja}`);
         setPedidosEmAndamento(response.data);
       } catch (error) {
         console.error('Erro ao buscar pedidos em andamento:', error);
@@ -103,8 +104,8 @@ export default function pedidos() {
   useEffect(() => {
     const fetchPedidosRecusados = async() => {
       try {
-        const userResponse = await api.get('/cadastro');
-        const response = await api.get(`pedido/count/recusados/${userResponse.data.id_igreja}`);
+        const id_igreja = sessionStorage.getItem('id_igreja');
+        const response = await api.get(`pedido/count/recusados/${id_igreja}`);
         setPedidosRecusados(response.data);
       } catch (error) {
         console.error('Erro ao buscar pedidos em andamento:', error);
@@ -121,13 +122,11 @@ export default function pedidos() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {        
-        const userResponse = await api.get('/cadastro');
-        setUser(userResponse.data);
-
-        if (userResponse.data && userResponse.data.id_igreja) {
-          const pedidoResponse = await api.get(`/pedido/${userResponse.data.id_igreja}`);
-          setPedidos(pedidoResponse.data);
-        }
+        const id_igreja = sessionStorage.getItem('id_igreja');             
+        const pedidoResponse = await api.get(`/pedido/${id_igreja}`);
+        setPedidos(pedidoResponse.data);
+        setAllPedidos(pedidoResponse.data);
+        setFilteredPedidos(pedidoResponse.data);
       } catch (error) {
         console.error('Error fetching user data:', error);
       }
@@ -151,6 +150,59 @@ export default function pedidos() {
     fetchIgrejas()
   }, []);
 
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [sortCriteria, setSortCriteria] = useState<'recent' | 'oldest' | 'name-asc' | 'name-desc' | 'birth'>('recent');
+    
+    const sortPedidos = (pedidos: Pedidos[]) => {
+      const sorted = [...pedidos];
+      
+      switch (sortCriteria) {
+        case 'recent':
+          return sorted.sort((a, b) => b.id_pedido - a.id_pedido);
+        case 'oldest':
+          return sorted.sort((a, b) => a.id_pedido - b.id_pedido);
+        case 'name-asc':
+          return sorted.sort((a, b) => a.nome_produto.localeCompare(b.nome_produto));
+        case 'name-desc':
+          return sorted.sort((a, b) => b.nome_produto.localeCompare(a.nome_produto));
+        case 'birth':
+          return sorted.sort((a, b) => 
+            new Date(b.data_pedido).getTime() - new Date(a.data_pedido).getTime()
+          );
+        default:
+          return sorted;
+      }
+    };
+  
+  const sortedPedidos = sortPedidos(filteredPedidos);
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    
+    if (term.trim() === '') {
+        setFilteredPedidos(allPedidos);
+        return;
+    }
+
+    const lowercasedTerm = term.toLowerCase();
+
+    const filtered = allPedidos.filter(pedidos => {
+        // Converte todos os campos para string antes de verificar
+        const nomeStr = pedidos.nome_produto ? pedidos.nome_produto.toString().toLowerCase() : '';
+        const catStr = pedidos.categoria_produto ? pedidos.categoria_produto.toString().toLowerCase() : '';
+        const numeroStr = pedidos.data_pedido ? pedidos.data_pedido.toString() : '';
+        
+        return (
+            nomeStr.includes(lowercasedTerm) ||
+            catStr.includes(lowercasedTerm) ||
+            numeroStr.includes(lowercasedTerm)
+        );
+    });
+
+
+    setFilteredPedidos(filtered);
+  };
+  
   const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
   const [modalIsOpen, setModalIsOpen] = useState(false);
   
@@ -160,16 +212,14 @@ export default function pedidos() {
       setNomeProduto('');
       setCategoriaProduto('');
       setQuantidade(0);
-      setDataPedido('');
-      setNomeIgreja(0);
+      setDataPedido('');      
     } else if (type === 'edit' && pedidos) {
       setSelectedPedidos(pedidos);
       setEditNomeProduto(pedidos.nome_produto);
       setEditCategoriaProduto(pedidos.categoria_produto);
       setEditQuantidade(pedidos.quantidade);
       setEditDataPedido(format(new Date(pedidos.data_pedido), 'yyyy-MM-dd'));
-      setStatusPedido(pedidos.status_pedido);
-      setEditNomeIgreja(pedidos.id_igreja);
+      setStatusPedido(pedidos.status_pedido);      
       // setMotivoRecusa(pedidos.motivo_recusa);
       // setDataEntrega(pedidos.data_entrega);
     }
@@ -189,8 +239,7 @@ export default function pedidos() {
       setCategoriaProduto(selectedPedidos.categoria_produto || '');
       setQuantidade(selectedPedidos.quantidade || 0);
       setDataPedido(selectedPedidos.data_pedido || '');
-      setStatusPedido(selectedPedidos.status_pedido || '');
-      setNomeIgreja(selectedPedidos.id_igreja || 0);
+      setStatusPedido(selectedPedidos.status_pedido || '');      
     }
   }, [selectedPedidos]);
   
@@ -237,7 +286,7 @@ export default function pedidos() {
     };
 
     try {
-      if(nome_produto === "" || categoria_produto === "" || quantidade === 0 || data_pedido === "" || nomeIgreja === 0) {
+      if(nome_produto === "" || categoria_produto === "" || quantidade === 0 || data_pedido === "" ) {
         notifyWarn();
         return;
       } else {
@@ -245,8 +294,7 @@ export default function pedidos() {
           nome_produto,
           categoria_produto,
           quantidade,
-          data_pedido,
-          id_igreja: nomeIgreja
+          data_pedido
         };
 
         const response = await api.post('/pedido', data);
@@ -334,7 +382,7 @@ export default function pedidos() {
         return;
       }
 
-      if (!editNomeProduto || !editCategoriaProduto || !editQuantidade || !editDataPedido || !status_pedido || !editNomeIgreja) {
+      if (!editNomeProduto || !editCategoriaProduto || !editQuantidade || !editDataPedido || !status_pedido ) {
         notifyWarn();
         return;
       }
@@ -344,8 +392,7 @@ export default function pedidos() {
         categoria_produto: editCategoriaProduto,
         quantidade: editQuantidade,
         data_pedido: editDataPedido,
-        status_pedido,
-        nomeIgreja: editNomeIgreja
+        status_pedido        
         // data_entrega,
         // motivo_recusa
       }
@@ -360,6 +407,10 @@ export default function pedidos() {
 
       closeModal();
       setSelectedPedidos(null)
+      
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (error) {
       console.error('Error updating financas:', error);
       notifyError();
@@ -376,15 +427,110 @@ export default function pedidos() {
             <Link href={'/../../pages/pedidos'} className='text-cinza text-lg text3 ml-2'>Pedidos &#62;</Link>            
           </div>
 
-          <div className="flex">
+          <div className="flex items-center">
             <div className='mt-10'>
               <h1 className='text-black text1 text-5xl'>Pedidos</h1>
             </div>
-
-            <div className='flex mt-10 ml-10 relative left-[86vh]'>
-              <p className='bg-azul px-10 py-2.5 text-white text2 text-3xl rounded-xl cursor-pointer' onClick={() => openModal('new')}>
-                Novo Pedido +
-              </p>
+            
+            <div className="flex">
+              <div className="mt-10 relative sm:right-[5vh] md:left-[20vh] lg:left-[46vh]">
+                <div className="flex mb-4 items-center gap-5">
+                  
+                  {/* Botão de filtro */}
+                  <div className="flex gap-5 relative">
+                    <button
+                      onClick={() => setIsFilterOpen(!isFilterOpen)}
+                      className="flex items-center justify-center px-5 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
+                    >
+                      <Image src={filter} width={30} height={30} alt="Filtrar" />
+                    </button>
+                  </div>
+  
+                  {/* Campo de pesquisa */}
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      placeholder="Pesquisar pedidos..."
+                      className="sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-xl md:text-lg lg:text-xl text-gray-600 pl-5 text2 text-left content-center justify-center rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={searchTerm}
+                      onChange={(e) => handleSearch(e.target.value)}
+                    />
+                  </div>
+  
+                  {/* Botão de novo pedido */}
+                  <button className="bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400" onClick={() => openModal ('new')}>
+                    Novo Pedido +
+                  </button>
+  
+                  {/* Dropdown de filtros */}
+                  {isFilterOpen && (
+                    <div className="absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
+                      <button
+                          className={`block w-full text-left px-4 py-2 ${
+                            sortCriteria === 'recent' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
+                          }`}
+  
+                          onClick={() => {
+                            setSortCriteria('recent');
+                            setIsFilterOpen(false);
+                          }}
+                        >
+                          Adicionados recentemente
+                        </button>
+  
+                        <button
+                          className={`block w-full text-left px-4 py-2 ${
+                            sortCriteria === 'oldest' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
+                          }`}
+  
+                          onClick={() => {
+                            setSortCriteria('oldest');
+                            setIsFilterOpen(false);
+                          }}
+                        >
+                          Adicionados antigamente
+                        </button>
+  
+                        <button
+                          className={`block w-full text-left px-4 py-2 ${
+                            sortCriteria === 'name-asc' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
+                          }`}
+  
+                          onClick={() => {
+                            setSortCriteria('name-asc');
+                            setIsFilterOpen(false);
+                          }}
+                        >
+                          Nome A-Z
+                        </button>
+  
+                        <button
+                          className={`block w-full text-left px-4 py-2 ${
+                            sortCriteria === 'name-desc' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
+                          }`}
+                          onClick={() => {
+                            setSortCriteria('name-desc');
+                            setIsFilterOpen(false);
+                          }}
+                        >
+                          Nome Z-A
+                        </button>
+  
+                        <button
+                          className={`block w-full text-left px-4 py-2 ${
+                            sortCriteria === 'birth' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
+                          }`}
+                          onClick={() => {
+                            setSortCriteria('birth');
+                            setIsFilterOpen(false);
+                          }}
+                        >
+                          Data do Pedido
+                        </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -433,7 +579,7 @@ export default function pedidos() {
           <div className="flex">
             <div className='ml-[20vh]'>
               <div className="space-x-16 shadow-xl absolute rounded-xl mt-10 left-[50vh] h-[54vh] max-h-[54vh] overflow-y-auto overflow-x-hidden">
-                {pedidos.length === 0 ? (
+                {sortedPedidos.length === 0 ? (
                   <p className="text-center text-black text1 text-4xl mt-5 text-gray-4">Nenhum pedido encontrado.</p>
                 ) : (
                   <table>
@@ -447,7 +593,7 @@ export default function pedidos() {
                       </tr>
                     </thead>
                     <tbody>
-                      {pedidos.map((ped) =>(
+                      {sortedPedidos.map((ped) =>(
                         <tr key={ped.id_pedido} onClick={() => ped && openModal('edit', ped)} className='cursor-pointer hover:bg-slate-200'>
                           <td className='text-center text2 text-xl py-3'>{ped.nome_produto}</td>
                           <td className='text-center text2 text-xl py-3'>{ped.categoria_produto}</td>
@@ -530,29 +676,7 @@ export default function pedidos() {
                       required 
                     />
                   </div>
-                </div>
-
-                <div className='flex flex-col mr-5'>
-                  <label className='text-white text1 text-xl mt-5 mb-1'>Igreja</label>
-
-                  <select                    
-                    className='px-4 py-3 rounded-lg text2 bg-white text-slate-500'
-                    value={nomeIgreja}
-                    onChange={(e) => setNomeIgreja(Number(e.target.value))}                 
-                    required 
-                  >
-                    <option value={0} disabled>Selecione uma Igreja</option>
-                    {igreja.map((igreja) => (
-                      <option
-                        key={igreja.id_igreja}
-                        value={igreja.id_igreja}
-                      >
-                        {igreja.nome}
-                      </option>                      
-                    ))}    
-                  </select>                    
-                </div>
-
+                </div>                
                 <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
               </div>
             </Modal>

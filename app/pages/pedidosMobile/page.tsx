@@ -9,6 +9,8 @@ import Modal from 'react-modal'
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import cesta from '@/public/icons/cesta.svg';
+import filter from '@/public/icons/filter.png';
+import lupa from '@/public/icons/lupa.svg';
 
 interface Igreja {
   id_igreja: number;
@@ -37,21 +39,21 @@ export default function pedidosMobile() {
   const [categoria_produto, setCategoriaProduto] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(0);
   const [data_pedido, setDataPedido] = useState<string>('');
-  const [nomeIgreja, setNomeIgreja] = useState<number>(0);
-
+  const [searchTerm, setSearchTerm] = useState('');
+  const [allPedidos, setAllPedidos] = useState<Pedidos[]>([]); // Lista completa
+  const [filteredPedidos, setFilteredPedidos] = useState<Pedidos[]>([]); //Lista filtrada
   const [pedidos, setPedidos] = useState<Pedidos[]>([]);
 
   const [user, setUser] = useState<User | null>(null);
     useEffect(() => {
         const fetchUserData = async () => {
           try {        
-            const userResponse = await api.get('/cadastro');
-            setUser(userResponse.data);
-    
-            if (userResponse.data && userResponse.data.id_igreja) {
-              const pedidoResponse = await api.get(`/pedido/${userResponse.data.id_igreja}`);
-              setPedidos(pedidoResponse.data);
-            }
+            const id_igreja = sessionStorage.getItem('id_igreja');
+            const pedidoResponse = await api.get(`/pedido/${id_igreja}`);
+            setPedidos(pedidoResponse.data);
+            setAllPedidos(pedidoResponse.data);
+            setFilteredPedidos(pedidoResponse.data);
+            
           } catch (error) {
             console.error('Error fetching user data:', error);
           }
@@ -59,32 +61,6 @@ export default function pedidosMobile() {
     
         fetchUserData();
       }, []);
-
-  useEffect(() => {
-    const fetchPedidos = async () => {
-      try {
-        const userResponse = await api.get('/cadastro');
-        const response = await api.get(`/pedido/${userResponse.data.id_igreja}`)
-        const sortedPedidos = response.data.sort((a: { data_pedido: string; }, b: { data_pedido: string; }) => {
-          const dateA = new Date(a.data_pedido as string);
-          const dateB = new Date(b.data_pedido as string); 
-          return dateB.getTime() - dateA.getTime();
-      });
-
-      const pedidosWithAdjustedDate = sortedPedidos.map((pedido: { data_pedido: string | number | Date }) => {
-        const date = new Date(pedido.data_pedido);
-        date.setDate(date.getDate() + 1);
-        return { ...pedido, data_pedido: date.toISOString().split('T')[0] };
-    });
-
-    setPedidos(pedidosWithAdjustedDate);
-      } catch (error) {
-        console.error('Error fetching pedidos:', error)
-      }
-    };
-
-    fetchPedidos();
-  }, []);
 
   const [igreja, setIgreja] = useState<Igreja[]>([]);
 
@@ -100,6 +76,61 @@ export default function pedidosMobile() {
 
         fetchIgrejas()
     }, []);
+
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [sortCriteria, setSortCriteria] = useState<'recent' | 'oldest' | 'name-asc' | 'name-desc' | 'birth'>('recent');
+  
+  const sortPedidos = (pedidos: Pedidos[]) => {
+    const sorted = [...pedidos];
+    
+    switch (sortCriteria) {
+      case 'recent':
+        return sorted.sort((a, b) => b.id_pedido - a.id_pedido);
+      case 'oldest':
+        return sorted.sort((a, b) => a.id_pedido - b.id_pedido);
+      case 'name-asc':
+        return sorted.sort((a, b) => a.nome_produto.localeCompare(b.nome_produto));
+      case 'name-desc':
+        return sorted.sort((a, b) => b.nome_produto.localeCompare(a.nome_produto));
+      case 'birth':
+        return sorted.sort((a, b) => 
+          new Date(b.data_pedido).getTime() - new Date(a.data_pedido).getTime()
+        );
+      default:
+        return sorted;
+    }
+  };
+
+  const [searchModalIsOpen, setSearchModalIsOpen] = useState(false);
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    
+    if (term.trim() === '') {
+        setFilteredPedidos(allPedidos);
+        return;
+    }
+
+    const lowercasedTerm = term.toLowerCase();
+
+    const filtered = allPedidos.filter(pedidos => {
+        // Converte todos os campos para string antes de verificar
+        const nomeStr = pedidos.nome_produto ? pedidos.nome_produto.toString().toLowerCase() : '';
+        const catStr = pedidos.categoria_produto ? pedidos.categoria_produto.toString().toLowerCase() : '';
+        const numeroStr = pedidos.data_pedido ? pedidos.data_pedido.toString() : '';
+        
+        return (
+            nomeStr.includes(lowercasedTerm) ||
+            catStr.includes(lowercasedTerm) ||
+            numeroStr.includes(lowercasedTerm)
+        );
+    });
+
+
+    setFilteredPedidos(filtered);
+  };
+
+const sortedPedidos = sortPedidos(filteredPedidos);
 
   const [modalIsOpen, setModalIsOpen] = useState(false);
     
@@ -154,7 +185,7 @@ export default function pedidosMobile() {
     };
 
     try {
-      if(nome_produto === "" || categoria_produto === "" || quantidade === 0 || data_pedido === "" || nomeIgreja === 0) {
+      if(nome_produto === "" || categoria_produto === "" || quantidade === 0 || data_pedido === "" ) {
         notifyWarn();
         return;
       } else {
@@ -162,8 +193,7 @@ export default function pedidosMobile() {
           nome_produto,
           categoria_produto,
           quantidade,
-          data_pedido,
-          id_igreja: nomeIgreja
+          data_pedido
         };
 
         const response = await api.post('/pedido', data);
@@ -187,15 +217,114 @@ export default function pedidosMobile() {
           <MenuInferior/>
         </div>
 
-        <div className="flex">
+        <div className="flex gap-5 items-center">
           <h1 className='text1 text-black text-3xl ml-4'>Pedidos</h1>
+          
+          <div className="flex">
+            <div className="mt-5 relative sm:left-[4vh] md:left-[20vh] lg:left-[54vh]">
+              <div className="flex mb-4 items-center gap-5">
+                
+                {/* Botão de filtro */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                    className="flex items-center justify-center px-2 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
+                  >
+                    <Image src={filter} width={30} height={30} alt="Filtrar" />
+                  </button>
+                </div>
 
-          <button className='bg-azul text2 text-white py-1 px-4 rounded-lg sticky left-[31vh]' onClick={openModal}>Novo Pedido +</button>
+                {/* Campo de pesquisa */}
+                <div className="flex-1">
+                  <button
+                    onClick={() => setSearchModalIsOpen(true)}
+                    className="bg-azul  py-[1.2vh] px-4 rounded-lg"
+                  >
+                    <Image src={lupa} width={23} height={30} alt="Pesquisar" />
+                  </button>
+                </div>
+
+                {/* Botão de novo pedido */}
+                <button className="bg-azul text-3xl text2 text-white py-1 px-4 rounded-lg" onClick={openModal}>
+                  +
+                </button>
+
+                {/* Dropdown de filtros */}
+                {isFilterOpen && (
+                  <div className="absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
+                    <button
+                        className={`block w-full text-left px-4 py-2 ${
+                          sortCriteria === 'recent' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
+                        }`}
+
+                        onClick={() => {
+                          setSortCriteria('recent');
+                          setIsFilterOpen(false);
+                        }}
+                      >
+                        Adicionados recentemente
+                      </button>
+
+                      <button
+                        className={`block w-full text-left px-4 py-2 ${
+                          sortCriteria === 'oldest' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
+                        }`}
+
+                        onClick={() => {
+                          setSortCriteria('oldest');
+                          setIsFilterOpen(false);
+                        }}
+                      >
+                        Adicionados antigamente
+                      </button>
+
+                      <button
+                        className={`block w-full text-left px-4 py-2 ${
+                          sortCriteria === 'name-asc' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
+                        }`}
+
+                        onClick={() => {
+                          setSortCriteria('name-asc');
+                          setIsFilterOpen(false);
+                        }}
+                      >
+                        Nome A-Z
+                      </button>
+
+                      <button
+                        className={`block w-full text-left px-4 py-2 ${
+                          sortCriteria === 'name-desc' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
+                        }`}
+                        onClick={() => {
+                          setSortCriteria('name-desc');
+                          setIsFilterOpen(false);
+                        }}
+                      >
+                        Nome Z-A
+                      </button>
+
+                      <button
+                        className={`block w-full text-left px-4 py-2 ${
+                          sortCriteria === 'birth' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
+                        }`}
+                        onClick={() => {
+                          setSortCriteria('birth');
+                          setIsFilterOpen(false);
+                        }}
+                      >
+                        Data do Pedido
+                      </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <div className="flex justify-center">
-          <div className='bg-white shadow-xl rounded-xl self-center mt-7 w-[40vh] h-[70vh] overflow-y-auto'>
-            {pedidos.map((ped) => (
+          <div className='bg-white shadow-xl rounded-xl self-center mt-4 w-[40vh] h-[70vh] overflow-y-auto'>
+            {sortedPedidos.map((ped) => (
               <div key={ped.id_pedido} className='flex p-4'>
                 <Image src={cesta} width={40} height={40} alt=''/>
                 <div className="ml-4">
@@ -207,6 +336,48 @@ export default function pedidosMobile() {
             ))}
           </div>
         </div>
+        
+        <Modal
+          className="text-white flex flex-col bg-black bg-opacity-0"
+          isOpen={searchModalIsOpen}
+          onRequestClose={() => setSearchModalIsOpen(false)}
+          contentLabel="Pesquisar Pedidos"
+        >
+          <div className="flex flex-col justify-center self-center bg-white px-5 py-6 mt-[15vh] rounded-lg shadow-xl">            
+
+            <div className="flex flex-row gap-3 mb-4">
+              <input
+                type="text"
+                placeholder="Digite o nome, categoria ou data..."
+                className="px-4 py-3 rounded-lg text2 text-slate-500 border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              /> 
+
+              <button
+              className="bg-azul px-4 py-1 rounded-lg"
+              onClick={() => {
+                handleSearch(searchTerm);
+                setSearchModalIsOpen(false);
+              }}
+            >
+               <Image src={lupa} width={23} height={20} alt="Pesquisar" />
+            </button>
+
+            </div>
+
+            <button
+              className="border-2 px-4 py-2 mt-2 rounded-lg text2 text-gray-600 text-lg"
+              onClick={() => {
+                setSearchTerm('');
+                setSearchModalIsOpen(false);                
+                window.location.reload();              
+              }}
+            >
+              Limpar
+            </button>
+          </div>
+        </Modal>
 
         <Modal
           className="text-white flex flex-col" 
@@ -275,29 +446,7 @@ export default function pedidosMobile() {
                   onChange={(e) => setDataPedido(e.target.value)}
                   required 
                 />
-            </div>
-
-            <div className='flex flex-col'>
-              <label className='text-white text1 text-lg mt-5 mb-1'>Igreja</label>
-
-              <select                              
-                className='px-4 py-3 rounded-lg text2 text-black'                            
-                value={nomeIgreja}
-                onChange={(e) => setNomeIgreja(Number(e.target.value))}
-                required
-              >
-                <option value={0} disabled>Selecione uma Igreja</option>
-                  {igreja.map((igreja) => (
-                    <option
-                      key={igreja.id_igreja}
-                      value={igreja.id_igreja}
-                    >     
-                      {igreja.nome}
-                    </option>                      
-                  ))}     
-              </select>
-            </div>
-
+            </div>           
             <button className='border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
 
           </div>
