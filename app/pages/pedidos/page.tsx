@@ -8,6 +8,7 @@ import api from '../../api/api';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Modal from 'react-modal';
+import close from '@/public/icons/close.svg';
 import pedidoWhite from '@/public/icons/pedidos-white.svg';
 import emAndamento from '@/public/icons/em_andamento.svg';
 import recusado from '@/public/icons/recusado.svg';
@@ -614,70 +615,75 @@ export default function pedidos() {
               onRequestClose={closeModal}
               contentLabel="Novo Pedido"
             >
-              <div className='flex flex-col justify-center self-center bg-azul p-10 mt-[20vh] rounded-lg shadow-xl'>
-
-                <h2 className='text-white text1 text-4xl flex justify-center'>Novo Pedido</h2>
-
-                <div className='flex flex-col mr-5'>
-                  <label className='text-white text1 text-xl mt-5 mb-1'>Nome</label>
-
-                  <input                    
-                    type="text" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
-                    placeholder='Digite o Nome...'
-                    value={nome_produto}
-                    onChange={(e) => setNomeProduto(e.target.value)}
-                    required 
-                  />
+              <div className='flex flex-col justify-center self-center bg-azul mt-[20vh] rounded-lg shadow-xl'>
+                <div className='cursor-pointer flex place-content-end rounded-lg'>
+                  <Image onClick={closeModal} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
                 </div>
+                <div className='flex flex-col px-10 pb-10'>
 
-                <div className='flex flex-col mr-5'>
-                  <label className='text-white text1 text-xl mt-5 mb-1'>Categoria</label>
+                  <h2 className='text-white text1 text-4xl flex justify-center'>Novo Pedido</h2>
 
-                  <select                    
-                    className='px-4 py-3 rounded-lg text2 bg-white text-slate-500'
-                    value={categoria_produto}
-                    onChange={(e) => setCategoriaProduto(e.target.value)}
-                    required 
-                  >
-                    <option value="" disabled>Selecione</option>
-                    <option value="Limpeza">Limpeza</option>
-                    <option value="Cozinha">Cozinha</option>
-                    <option value="Descartável">Descartável</option>
-                    <option value="Material de Construção">Material de Construção</option>
-                    <option value="Eletrônico">Eletrônico</option>
-                    <option value="Eletroeletrônico">Eletroeletrônico</option>
-                    <option value="Móvel">Móvel</option>
-                  </select>                    
-                </div>
-
-                <div className="flex">
                   <div className='flex flex-col mr-5'>
-                    <label className='text-white text1 text-xl mt-5 mb-1'>Quantidade</label>
+                    <label className='text-white text1 text-xl mt-5 mb-1'>Nome</label>
 
                     <input                    
                       type="text" 
-                      className='px-4 py-3 rounded-lg text2 text-slate-500'                      
-                      value={quantidade}
-                      onChange={(e) => setQuantidade(Number(e.target.value))}
+                      className='px-4 py-3 rounded-lg text2 text-slate-500'
+                      placeholder='Digite o Nome...'
+                      value={nome_produto}
+                      onChange={(e) => setNomeProduto(e.target.value)}
                       required 
                     />
                   </div>
 
                   <div className='flex flex-col mr-5'>
-                    <label className='text-white text1 text-xl mt-5 mb-1'>Data do Pedido</label>
+                    <label className='text-white text1 text-xl mt-5 mb-1'>Categoria</label>
 
-                    <input                    
-                      type="date" 
-                      className='px-4 py-3 rounded-lg text2 text-slate-500'
-                      placeholder='Digite o Nome...'
-                      value={data_pedido}
-                      onChange={(e) => setDataPedido(e.target.value)}
+                    <select                    
+                      className='px-4 py-3 rounded-lg text2 bg-white text-slate-500'
+                      value={categoria_produto}
+                      onChange={(e) => setCategoriaProduto(e.target.value)}
                       required 
-                    />
+                      >
+                      <option value="" disabled>Selecione</option>
+                      <option value="Limpeza">Limpeza</option>
+                      <option value="Cozinha">Cozinha</option>
+                      <option value="Descartável">Descartável</option>
+                      <option value="Material de Construção">Material de Construção</option>
+                      <option value="Eletrônico">Eletrônico</option>
+                      <option value="Eletroeletrônico">Eletroeletrônico</option>
+                      <option value="Móvel">Móvel</option>
+                    </select>                    
                   </div>
-                </div>                
-                <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
+
+                  <div className="flex">
+                    <div className='flex flex-col mr-5'>
+                      <label className='text-white text1 text-xl mt-5 mb-1'>Quantidade</label>
+
+                      <input                    
+                        type="text" 
+                        className='px-4 py-3 rounded-lg text2 text-slate-500'                      
+                        value={quantidade}
+                        onChange={(e) => setQuantidade(Number(e.target.value))}
+                        required 
+                      />
+                    </div>
+
+                    <div className='flex flex-col mr-5'>
+                      <label className='text-white text1 text-xl mt-5 mb-1'>Data do Pedido</label>
+
+                      <input                    
+                        type="date" 
+                        className='px-4 py-3 rounded-lg text2 text-slate-500'
+                        placeholder='Digite o Nome...'
+                        value={data_pedido}
+                        onChange={(e) => setDataPedido(e.target.value)}
+                        required 
+                        />
+                    </div>
+                  </div>                
+                  <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
+                </div>
               </div>
             </Modal>
 
@@ -686,86 +692,92 @@ export default function pedidos() {
               isOpen={modalIsOpen && modalType === 'edit'} 
               onRequestClose={closeModal}
               contentLabel="Ver Pedido"
-            >
-              <div className='flex flex-col justify-center self-center bg-azul p-10 mt-[20vh] rounded-lg shadow-xl'>
-
-                <h2 className='text-white text1 text-4xl flex justify-center'>Ver Pedido</h2>
-
-                <div className='flex flex-col mr-5'>
-                  <label className='text-white text1 text-xl mt-5 mb-1'>Nome</label>
-
-                  <input                    
-                    type="text" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
-                    placeholder='Digite o Nome...'
-                    value={editNomeProduto}
-                    onChange={(e) => setEditNomeProduto(e.target.value)}
-                    required 
-                  />
+              >
+              <div className='flex flex-col justify-center self-center bg-azul mt-[20vh] rounded-lg shadow-xl'>
+                <div className='cursor-pointer flex place-content-end rounded-lg'>
+                  <Image onClick={closeModal} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
                 </div>
+                <div className='flex flex-col px-10 pb-10'>
+                  <h2 className='text-white text1 text-4xl flex justify-center'>Ver Pedido</h2>
 
-                <div className='flex flex-col mr-5'>
-                  <label className='text-white text1 text-xl mt-5 mb-1'>Categoria</label>
-
-                  <select                    
-                    className='px-4 py-3 rounded-lg text2 bg-white text-slate-500'
-                    value={editCategoriaProduto}
-                    onChange={(e) => setEditCategoriaProduto(e.target.value)}
-                    required 
-                  >
-                    <option value="" disabled>Selecione</option>
-                    <option value="Limpeza">Limpeza</option>
-                    <option value="Cozinha">Cozinha</option>
-                    <option value="Descartável">Descartável</option>
-                    <option value="Material de Construção">Material de Construção</option>
-                    <option value="Eletrônico">Eletrônico</option>
-                    <option value="Eletroeletrônico">Eletroeletrônico</option>
-                    <option value="Móvel">Móvel</option>
-                  </select>                    
-                </div>
-
-                <div className="flex">
-                  <div className='flex flex-col mr-5'>
-                    <label className='text-white text1 text-xl mt-5 mb-1'>Quantidade</label>
+                  <div className='flex flex-col'>
+                    <label className='text-white text1 text-xl mt-5 mb-1'>Nome</label>
 
                     <input                    
                       type="text" 
-                      className='px-4 py-3 rounded-lg text2 text-slate-500'                      
-                      value={editQuantidade}
-                      onChange={(e) => setEditQuantidade(Number(e.target.value))}
+                      className='px-4 py-3 rounded-lg text2 text-slate-500'
+                      placeholder='Digite o Nome...'
+                      value={editNomeProduto}
+                      onChange={(e) => setEditNomeProduto(e.target.value)}
                       required 
                     />
                   </div>
 
-                  <div className='flex flex-col mr-5'>
-                    <label className='text-white text1 text-xl mt-5 mb-1'>Data do Pedido</label>
+                  <div className='flex flex-col'>
+                    <label className='text-white text1 text-xl mt-5 mb-1'>Categoria</label>
 
-                    <input                    
-                      type="date" 
-                      className='px-4 py-3 rounded-lg text2 text-slate-500'                      
-                      value={editDataPedido}
-                      onChange={(e) => setEditDataPedido(e.target.value)}
+                    <select                    
+                      className='px-4 py-3 rounded-lg text2 bg-white text-slate-500'
+                      value={editCategoriaProduto}
+                      onChange={(e) => setEditCategoriaProduto(e.target.value)}
                       required 
-                    />
+                      >
+                      <option value="" disabled>Selecione</option>
+                      <option value="Limpeza">Limpeza</option>
+                      <option value="Cozinha">Cozinha</option>
+                      <option value="Descartável">Descartável</option>
+                      <option value="Material de Construção">Material de Construção</option>
+                      <option value="Eletrônico">Eletrônico</option>
+                      <option value="Eletroeletrônico">Eletroeletrônico</option>
+                      <option value="Móvel">Móvel</option>
+                    </select>                    
                   </div>
-                </div>
 
-                <div className='flex flex-col mr-5'>
-                  <label className='text-white text1 text-xl mt-5 mb-1'>Status</label>
+                  <div className="flex">
+                    <div className='flex flex-col mr-5'>
+                      <label className='text-white text1 text-xl mt-5 mb-1'>Quantidade</label>
 
-                  <select                    
-                    className='px-4 py-3 rounded-lg text2 bg-white text-slate-500'
-                    value={status_pedido}
-                    onChange={(e) => setStatusPedido(e.target.value)}
-                    required 
-                  >
-                    <option value="" disabled>Selecione</option>
-                    <option value="Entregue">Entregue</option>
-                    <option value="Recusado">Recusar</option>                    
-                  </select>     
-                </div>
+                      <input                    
+                        type="text" 
+                        className='px-4 py-3 rounded-lg text2 text-slate-500'                      
+                        value={editQuantidade}
+                        onChange={(e) => setEditQuantidade(Number(e.target.value))}
+                        required 
+                        />
+                    </div>
+
+                    <div className='flex flex-col'>
+                      <label className='text-white text1 text-xl mt-5 mb-1'>Data do Pedido</label>
+
+                      <input                    
+                        type="date" 
+                        className='px-4 py-3 rounded-lg text2 text-slate-500'                      
+                        value={editDataPedido}
+                        onChange={(e) => setEditDataPedido(e.target.value)}
+                        required 
+                        />
+                    </div>
+                  </div>
+
+                  <div className='flex flex-col'>
+                    <label className='text-white text1 text-xl mt-5 mb-1'>Status</label>
+
+                    <select                    
+                      className='px-4 py-3 rounded-lg text2 bg-white text-slate-500'
+                      value={status_pedido}
+                      onChange={(e) => setStatusPedido(e.target.value)}
+                      required 
+                      >
+                      <option value="" disabled>Selecione</option>
+                      <option value="Entregue">Entregue</option>
+                      <option value="Recusado">Recusar</option>                    
+                    </select>     
+                  </div>
+
                 
-                <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={() => selectedPedidos && handleUpdate(selectedPedidos)}>Atualizar</button>
+                  <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={() => selectedPedidos && handleUpdate(selectedPedidos)}>Atualizar</button>
+                  
+                </div>
               </div>
             </Modal>
 

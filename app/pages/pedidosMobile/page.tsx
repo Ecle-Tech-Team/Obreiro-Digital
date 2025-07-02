@@ -6,6 +6,7 @@ import MenuSuperior from '@/app/components/menuSuperior/menuSuperior'
 import { format } from 'date-fns';
 import Image from 'next/image'
 import Modal from 'react-modal'
+import close from '@/public/icons/close.svg';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import cesta from '@/public/icons/cesta.svg';
@@ -251,7 +252,7 @@ const sortedPedidos = sortPedidos(filteredPedidos);
 
                 {/* Dropdown de filtros */}
                 {isFilterOpen && (
-                  <div className="absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
+                  <div className="absolute right-100 top-16 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
                     <button
                         className={`block w-full text-left px-4 py-2 ${
                           sortCriteria === 'recent' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
@@ -343,9 +344,12 @@ const sortedPedidos = sortPedidos(filteredPedidos);
           onRequestClose={() => setSearchModalIsOpen(false)}
           contentLabel="Pesquisar Pedidos"
         >
-          <div className="flex flex-col justify-center self-center bg-white px-5 py-6 mt-[15vh] rounded-lg shadow-xl">            
+          <div className="flex flex-col justify-center self-center bg-white mt-[15vh] rounded-lg shadow-xl">            
+            <div className='cursor-pointer flex place-content-start rounded-lg'>
+              <Image onClick={() => setSearchModalIsOpen(false)} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tl-lg'/>
+            </div>
 
-            <div className="flex flex-row gap-3 mb-4">
+            <div className="flex flex-row gap-3 px-5 py-2 mt-3">
               <input
                 type="text"
                 placeholder="Digite o nome, categoria ou data..."
@@ -355,27 +359,29 @@ const sortedPedidos = sortPedidos(filteredPedidos);
               /> 
 
               <button
-              className="bg-azul px-4 py-1 rounded-lg"
-              onClick={() => {
-                handleSearch(searchTerm);
-                setSearchModalIsOpen(false);
-              }}
-            >
-               <Image src={lupa} width={23} height={20} alt="Pesquisar" />
-            </button>
-
+                className="bg-azul px-4 py-1 rounded-lg"
+                onClick={() => {
+                  handleSearch(searchTerm);
+                  setSearchModalIsOpen(false);
+                }}
+              >
+                <Image src={lupa} width={23} height={20} alt="Pesquisar" />
+              </button>
             </div>
 
-            <button
-              className="border-2 px-4 py-2 mt-2 rounded-lg text2 text-gray-600 text-lg"
-              onClick={() => {
-                setSearchTerm('');
-                setSearchModalIsOpen(false);                
-                window.location.reload();              
-              }}
-            >
-              Limpar
-            </button>
+           
+              <button
+                className="border-2 mx-5 mb-6 px-4 py-2 mt-2 rounded-lg text2 text-gray-600 text-lg"
+                onClick={() => {
+                  setSearchTerm('');
+                  setSearchModalIsOpen(false);                
+                  window.location.reload();              
+                }}
+                >
+                Limpar
+              </button>
+            
+
           </div>
         </Modal>
 
@@ -385,10 +391,14 @@ const sortedPedidos = sortPedidos(filteredPedidos);
           onRequestClose={closeModal}
           contentLabel="Novo Pedido"
         >
-          <div className='flex flex-col justify-center self-center bg-azul px-5 py-6 mt-[15vh] rounded-lg shadow-xl'>
-            <h2 className='text-white text1 text-3xl flex justify-center'>Novo Pedido</h2>                  
-            
-              <div className='flex flex-col'>
+          <div className='flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl'>
+            <div className='cursor-pointer flex place-content-end rounded-lg'>
+              <Image onClick={closeModal} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+            </div>
+            <div className='flex flex-col px-7 pb-10'>
+              <h2 className='text-white text1 text-3xl flex justify-center'>Novo Pedido</h2>                  
+              
+                <div className='flex flex-col'>
                   <label className='text-white text1 text-lg mt-5 mb-1'>Nome</label>
 
                   <input                    
@@ -399,10 +409,10 @@ const sortedPedidos = sortPedidos(filteredPedidos);
                     onChange={(e) => setNomeProduto(e.target.value)}
                     maxLength={150}
                     required 
-                  />
-              </div>
+                    />
+                </div>
 
-              <div className='flex flex-col'>
+                <div className='flex flex-col'>
                   <label className='text-white text1 text-lg mt-5 mb-1'>Categoria</label>
 
                   <select                    
@@ -410,7 +420,7 @@ const sortedPedidos = sortPedidos(filteredPedidos);
                     value={categoria_produto}
                     onChange={(e) => setCategoriaProduto(e.target.value)}
                     required 
-                  >
+                    >
                     <option value="" disabled>Selecione</option>
                     <option value="Limpeza">Limpeza</option>
                     <option value="Cozinha">Cozinha</option>
@@ -420,10 +430,10 @@ const sortedPedidos = sortPedidos(filteredPedidos);
                     <option value="Eletroeletrônico">Eletroeletrônico</option>
                     <option value="Móvel">Móvel</option>
                   </select> 
-              </div>                        
-          
+                </div>                        
+            
 
-            <div className='flex flex-col'>
+              <div className='flex flex-col'>
                 <label className='text-white text1 text-lg mt-5 mb-1'>Quantidade</label>
 
                 <input                    
@@ -432,10 +442,10 @@ const sortedPedidos = sortPedidos(filteredPedidos);
                   value={quantidade}
                   onChange={(e) => setQuantidade(Number(e.target.value))}
                   required 
-                />
-            </div>
+                  />
+              </div>
 
-            <div className='flex flex-col'>
+              <div className='flex flex-col'>
                 <label className='text-white text1 text-lg mt-5 mb-1'>Data do Pedido</label>
 
                 <input                    
@@ -445,10 +455,10 @@ const sortedPedidos = sortPedidos(filteredPedidos);
                   value={data_pedido}
                   onChange={(e) => setDataPedido(e.target.value)}
                   required 
-                />
-            </div>           
-            <button className='border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
-
+                  />
+              </div>                         
+              <button className='border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
+            </div>
           </div>
           <ToastContainer />
         </Modal>
