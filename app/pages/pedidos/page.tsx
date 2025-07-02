@@ -14,6 +14,7 @@ import emAndamento from '@/public/icons/em_andamento.svg';
 import recusado from '@/public/icons/recusado.svg';
 import concluido from '@/public/icons/concluido.svg';
 import filter from '@/public/icons/filter.png';
+import lixo from '@/public/icons/delete.svg';
 
 interface Igreja {
   id_igreja: number;
@@ -56,6 +57,42 @@ export default function pedidos() {
   const [pedidosEntregues, setPedidosEntregues] = useState<number>(0);
   const [pedidosEmAndamento, setPedidosEmAndamento] = useState<number>(0);
   const [pedidosRecusados, setPedidosRecusados] = useState<number>(0);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [pedidoToDelete, setPedidoToDelete] = useState<number | null>(null);
+  
+  const handleDeleteClick = (id_pedido: number) => {
+    setPedidoToDelete(id_pedido);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!pedidoToDelete) return;
+
+    try {
+      await api.delete(`/pedido/${pedidoToDelete}`);
+      const notifyDelete = () => {
+      toast.success('Pedido deletado com sucesso!', {
+        position: "top-center",
+        autoClose: 1500,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+        });
+    }
+     
+      setPedidos(pedidos.filter(m => m.id_pedido !== pedidoToDelete));
+      notifyDelete();
+      window.location.reload();
+    } catch (error) {
+      toast.error('Erro ao remover pedido.');
+    } finally {
+      setIsDeleteModalOpen(false);
+      setPedidoToDelete(null);
+    }
+  };
   const [searchTerm, setSearchTerm] = useState('');
   const [allPedidos, setAllPedidos] = useState<Pedidos[]>([]); // Lista completa
   const [filteredPedidos, setFilteredPedidos] = useState<Pedidos[]>([]); //Lista filtrada
@@ -579,18 +616,19 @@ export default function pedidos() {
 
           <div className="flex">
             <div className='ml-[20vh]'>
-              <div className="space-x-16 shadow-xl absolute rounded-xl mt-10 left-[50vh] h-[54vh] max-h-[54vh] overflow-y-auto overflow-x-hidden">
+              <div className="space-x-16 shadow-xl absolute rounded-xl mt-10 left-[50vh] h-[54vh] max-h-[50vh] overflow-y-auto overflow-x-hidden">
                 {sortedPedidos.length === 0 ? (
                   <p className="text-center text-black text1 text-4xl mt-5 text-gray-4">Nenhum pedido encontrado.</p>
                 ) : (
                   <table>
                     <thead className='sticky top-0'>
                       <tr className='bg-azul text-white rounded-xl'>
-                        <th className='text1 text-white text-2xl px-[7.6vh] py-2 '>Nome</th>                                              
-                        <th className='text1 text-white text-2xl px-[7.6vh] py-2'>Categoria</th>                      
-                        <th className='text1 text-white text-2xl px-[7.6vh] py-2'>Quantidade</th>                      
-                        <th className='text1 text-white text-2xl px-[7.6vh] py-2'>Status</th>                      
-                        <th className='text1 text-white text-2xl px-[7.6vh] py-2'>Data do Pedido</th>                      
+                        <th className='text1 text-white text-2xl px-[7vh] py-2 '>Nome</th>                                              
+                        <th className='text1 text-white text-2xl px-[7vh] py-2'>Categoria</th>                      
+                        <th className='text1 text-white text-2xl px-[6vh] py-2'>Quantidade</th>                      
+                        <th className='text1 text-white text-2xl px-[7vh] py-2'>Status</th>                      
+                        <th className='text1 text-white text-2xl px-[7vh] py-2'>Data do Pedido</th>   
+                        <th className='sm:px-1 md:px-1 lg:px-1 py-2'></th>                   
                       </tr>
                     </thead>
                     <tbody>
@@ -601,6 +639,17 @@ export default function pedidos() {
                           <td className='text-center text2 text-xl py-3'>{ped.quantidade}</td>
                           <td className='text-center text2 text-xl py-3'>{ped.status_pedido}</td>
                           <td className='text-center text2 text-xl py-3'>{format(new Date(ped.data_pedido), 'dd/MM/yyyy')}</td>
+                          <td className='text-center text2 text-xl py-3 pr-10'>                                                     
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(ped.id_pedido);
+                              }}
+                              className='px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600'
+                            >
+                              <Image src={lixo} width={30} height={40} alt='lixo Icon' />
+                            </button>                          
+                          </td> 
                         </tr>
                       ))}
                     </tbody>
@@ -608,6 +657,32 @@ export default function pedidos() {
                 )}
               </div>
             </div>
+            <Modal
+              isOpen={isDeleteModalOpen}
+              onRequestClose={() => setIsDeleteModalOpen(false)}
+              contentLabel="Confirmar exclusão"
+              className="fixed inset-0 flex items-center justify-center p-4"
+              overlayClassName="fixed inset-0 bg-white bg-opacity-70"
+            >
+              <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+                <h2 className="text1 text-xl text-black font-bold mb-4">Confirmar Exclusão</h2>
+                <p className="text2 text-gray-600 mb-6">Você tem certeza que deseja remover este pedido?</p>
+                <div className="flex justify-end space-x-4">
+                  <button
+                    onClick={() => setIsDeleteModalOpen(false)}
+                    className="text2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleDeleteConfirm}
+                    className="text2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                  >
+                    Confirmar
+                  </button>
+                </div>
+              </div>
+            </Modal>
 
             <Modal
               className="text-white flex flex-col" 
