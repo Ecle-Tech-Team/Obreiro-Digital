@@ -34,8 +34,8 @@ export default function inicio() {
   useEffect(() => {
     const fetchTotalPedidos = async () => {
       try {
-        const userResponse = await api.get('/cadastro');
-        const response = await api.get(`/pedido/count/total/${userResponse.data.id_igreja}`);
+        const id_igreja = sessionStorage.getItem('id_igreja');
+        const response = await api.get(`/pedido/count/total/${id_igreja}`);
         setTotalPedidos(response.data);
       } catch (error) {
         console.error('Erro ao buscar total de pedidos:', error);
@@ -48,8 +48,8 @@ export default function inicio() {
   useEffect(() => {
     const fetchPedidosEntregues = async () => {
       try {
-        const userResponse = await api.get('/cadastro');
-        const response = await api.get(`/pedido/count/entregue/${userResponse.data.id_igreja}`);
+        const id_igreja = sessionStorage.getItem('id_igreja');
+        const response = await api.get(`/pedido/count/entregue/${id_igreja}`);
         setPedidosEntregues(response.data);
       } catch (error) {
         console.error('Erro ao buscar pedidos entregues:', error);
@@ -62,8 +62,8 @@ export default function inicio() {
   useEffect(() => {
     const fetchPedidosEmAndamento = async () => {
       try {
-        const userResponse = await api.get('/cadastro');
-        const response = await api.get(`pedido/count/em-andamento/${userResponse.data.id_igreja}`);
+        const id_igreja = sessionStorage.getItem('id_igreja');
+        const response = await api.get(`pedido/count/em-andamento/${id_igreja}`);
         setPedidosEmAndamento(response.data);
       } catch (error) {
         console.error('Erro ao buscar pedidos em andamento:', error);
@@ -76,8 +76,8 @@ export default function inicio() {
   useEffect(() => {
     const fetchPedidosRecusados = async() => {
       try {
-        const userResponse = await api.get('/cadastro');
-        const response = await api.get(`pedido/count/recusados/${userResponse.data.id_igreja}`);
+        const id_igreja = sessionStorage.getItem('id_igreja');
+        const response = await api.get(`pedido/count/recusados/${id_igreja}`);
         setPedidosRecusados(response.data);
       } catch (error) {
         console.error('Erro ao buscar pedidos em andamento:', error);
@@ -108,8 +108,8 @@ export default function inicio() {
   useEffect(() => {
     const fetchEventos = async() => {
       try {
-        const userResponse = await api.get('/cadastro');
-        const response = await api.get(`evento/count/${userResponse.data.id_igreja}`);
+        const id_igreja = sessionStorage.getItem('id_igreja');
+        const response = await api.get(`evento/count/${id_igreja}`);
         setTotalEventos(response.data);
       } catch (error) {
         console.error('Erro ao buscar eventos:', error);
@@ -122,8 +122,8 @@ export default function inicio() {
   useEffect(() => {
     const fetchVisitantes = async() => {
       try {
-        const userResponse = await api.get('/cadastro');
-        const response = await api.get(`visitante/count/${userResponse.data.id_igreja}`);
+        const id_igreja = sessionStorage.getItem('id_igreja');
+        const response = await api.get(`visitante/count/${id_igreja}`);
         setTotalVisitantes(response.data);
       } catch (error) {
         console.error('Erro ao buscar visitantes:', error);
