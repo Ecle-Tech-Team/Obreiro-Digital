@@ -480,111 +480,123 @@ export default function obreiros() {
                 </div>
               )}
             </div>
+            <div className="flex">
+              <div className="mt-10 relative sm:right-[5vh] md:left-[20vh] lg:left-[54vh]">
+                <div className="flex mb-4">
+                  {/* Botão de filtro */}
+                  <div className="flex gap-5 relative">
+                    <button
+                      onClick={() => setIsFilterOpen(!isFilterOpen)}
+                      className="flex items-center justify-center px-5 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
+                    >
+                      <Image
+                        src={filter}
+                        width={30}
+                        height={30}
+                        alt="Filtrar"
+                      />
+                    </button>
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="Pesquisar membros..."
+                        className="sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-xl md:text-lg lg:text-xl text-gray-600 pl-5 text2 text-left content-center justify-center rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                    {/* Dropdown de filtros */}
+                    {isFilterOpen && (
+                      <div className="absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
+                        <button
+                          className={`block w-full text-left px-4 py-2 ${
+                            sortCriteria === "recent"
+                              ? "bg-blue-100 text-blue-500 text1"
+                              : "text-gray-800 hover:bg-gray-100 text1"
+                          }`}
+                          onClick={() => {
+                            setSortCriteria("recent");
+                            setIsFilterOpen(false);
+                          }}
+                        >
+                          Adicionados recentemente
+                        </button>
 
-            <div className="flex relative sm:right-[10vh] md:left-[35vh] lg:left-[75vh]">
-              <div className="flex mt-10 ml-10 justify-center">
-                <p
-                  className="bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400"
-                  onClick={() => openModal("new")}
-                >
-                  Novo Obreiro +
-                </p>
-              </div>
-            </div>
-          </div>
+                        <button
+                          className={`block w-full text-left px-4 py-2 ${
+                            sortCriteria === "oldest"
+                              ? "bg-blue-100 text-blue-500 text1"
+                              : "text-gray-800 hover:bg-gray-100 text1"
+                          }`}
+                          onClick={() => {
+                            setSortCriteria("oldest");
+                            setIsFilterOpen(false);
+                          }}
+                        >
+                          Adicionados antigamente
+                        </button>
 
-          <div className="ml-[20vh] pr-2">
-            <div className="flex gap-5 relative mt-10">
-              <button
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className="flex items-center justify-center px-5 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
-              >
-                <Image src={filter} width={30} height={30} alt="Filtrar" />
-              </button>
-              <div className="flex-1">
-                <input
-                  type="text"
-                  placeholder="Pesquisar obreiros..."
-                  className="sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-xl md:text-lg lg:text-xl text-gray-600 pl-5 text2 text-left content-center justify-center rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              {/* Dropdown de filtros */}
-              {isFilterOpen && (
-                <div className="absolute right-0 top-14 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
-                  <button
-                    className={`block w-full text-left px-4 py-2 ${
-                      sortCriteria === "recent"
-                        ? "bg-blue-100 text-blue-500 text1"
-                        : "text-gray-800 hover:bg-gray-100 text1"
-                    }`}
-                    onClick={() => {
-                      setSortCriteria("recent");
-                      setIsFilterOpen(false);
-                    }}
-                  >
-                    Adicionados recentemente
-                  </button>
-                  <button
-                    className={`block w-full text-left px-4 py-2 ${
-                      sortCriteria === "oldest"
-                        ? "bg-blue-100 text-blue-500 text1"
-                        : "text-gray-800 hover:bg-gray-100 text1"
-                    }`}
-                    onClick={() => {
-                      setSortCriteria("oldest");
-                      setIsFilterOpen(false);
-                    }}
-                  >
-                    Adicionados antigamente
-                  </button>
-                  <button
-                    className={`block w-full text-left px-4 py-2 ${
-                      sortCriteria === "name-asc"
-                        ? "bg-blue-100 text-blue-500 text1"
-                        : "text-gray-800 hover:bg-gray-100 text1"
-                    }`}
-                    onClick={() => {
-                      setSortCriteria("name-asc");
-                      setIsFilterOpen(false);
-                    }}
-                  >
-                    Nome A-Z
-                  </button>
-                  <button
-                    className={`block w-full text-left px-4 py-2 ${
-                      sortCriteria === "name-desc"
-                        ? "bg-blue-100 text-blue-500 text1"
-                        : "text-gray-800 hover:bg-gray-100 text1"
-                    }`}
-                    onClick={() => {
-                      setSortCriteria("name-desc");
-                      setIsFilterOpen(false);
-                    }}
-                  >
-                    Nome Z-A
-                  </button>
-                  <button
-                    className={`block w-full text-left px-4 py-2 ${
-                      sortCriteria === "birth"
-                        ? "bg-blue-100 text-blue-500 text1"
-                        : "text-gray-800 hover:bg-gray-100 text1"
-                    }`}
-                    onClick={() => {
-                      setSortCriteria("birth");
-                      setIsFilterOpen(false);
-                    }}
-                  >
-                    Data de nascimento
-                  </button>
+                        <button
+                          className={`block w-full text-left px-4 py-2 ${
+                            sortCriteria === "name-asc"
+                              ? "bg-blue-100 text-blue-500 text1"
+                              : "text-gray-800 hover:bg-gray-100 text1"
+                          }`}
+                          onClick={() => {
+                            setSortCriteria("name-asc");
+                            setIsFilterOpen(false);
+                          }}
+                        >
+                          Nome A-Z
+                        </button>
+
+                        <button
+                          className={`block w-full text-left px-4 py-2 ${
+                            sortCriteria === "name-desc"
+                              ? "bg-blue-100 text-blue-500 text1"
+                              : "text-gray-800 hover:bg-gray-100 text1"
+                          }`}
+                          onClick={() => {
+                            setSortCriteria("name-desc");
+                            setIsFilterOpen(false);
+                          }}
+                        >
+                          Nome Z-A
+                        </button>
+
+                        <button
+                          className={`block w-full text-left px-4 py-2 ${
+                            sortCriteria === "birth"
+                              ? "bg-blue-100 text-blue-500 text1"
+                              : "text-gray-800 hover:bg-gray-100 text1"
+                          }`}
+                          onClick={() => {
+                            setSortCriteria("birth");
+                            setIsFilterOpen(false);
+                          }}
+                        >
+                          Data de nascimento
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
+              </div>
+              <div className="flex relative sm:right-[10vh] md:left-[35vh] lg:left-[56vh]">
+                <div className="mt-10 ml-1 flex justify-center">
+                  <p
+                    className="bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400"
+                    onClick={() => openModal("new")}
+                  >
+                    Novo Membro +
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] sm:left-[2vh] md:left-[20vh] lg:left-[35vh] h-[72vh] max-h-[72vh] overflow-y-auto overflow-x-auto">
               {Array.isArray(sortedUsers) && sortedUsers.length > 0 ? (
-                <table className="text-black">
+                <table className="text-black w-[160vh]">
                   <thead className="sticky top-0">
                     <tr className="bg-azul text-white rounded-xl">
                       <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[7.1vh] py-2">
@@ -633,7 +645,7 @@ export default function obreiros() {
                               e.stopPropagation();
                               handleDeleteClick(obreiro.id_user);
                             }}
-                            className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                            className="px-2 py-1 mr-5 bg-red-500 text-white rounded hover:bg-red-600"
                           >
                             <Image
                               src={lixo}
