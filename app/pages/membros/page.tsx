@@ -655,7 +655,7 @@ export default function membros() {
                     Nenhum membro encontrado.
                   </p>
                 ) : (
-                  <table className="text-black">
+                  <table className="text-black w-[160vh]">
                     <thead className="sticky top-0">
                       <tr className="bg-azul text-white rounded-xl">
                         <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2 ">
@@ -692,13 +692,13 @@ export default function membros() {
                           <td className="text-center text2 text-xl">
                             {format(new Date(members.birth), "dd/MM/yyyy")}
                           </td>
-                          <td className="text-center text2 text-xl py-3 pr-10">
+                          <td className="text-center">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteClick(members.id_membro);
                               }}
-                              className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                              className="px-2 py-1 mr-5 bg-red-500 text-white rounded hover:bg-red-600"
                             >
                               <Image
                                 src={lixo}
