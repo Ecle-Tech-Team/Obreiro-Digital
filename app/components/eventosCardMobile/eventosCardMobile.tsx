@@ -17,16 +17,18 @@ interface EventosProps {
 export default function EventosCardMobile({h3, h4, data_inicio, hora_inicio, data_fim, hora_fim}: EventosProps) {
   return (
     <main>
-        <div className='flex flex-col bg-white rounded-xl shadow-xl px-2 py-2 h-[27vh] w-[30vh]'>
-            <h4 className='text-cinza text3 text-lg text-center'>
-                Em <span className='text-azul text3 text-lg text-center'>{h4}</span>
-            </h4>
-            <h3 className='text-black text1 text-xl my-4 flex justify-center text-center'>{h3}</h3>
+        <div className='flex flex-col bg-white rounded-xl shadow-xl px-2 py-2 h-[30vh] w-[30vh]'>
+            <div className="flex justify-center">
+          <h4 className="text-azul text3 text-lg text-center mt-3 truncate max-w-[40ch]">
+            Em <span className="text-azul text3 text-xl text-center">{h4}</span>
+          </h4>
+        </div>
+            <h3 className='text-black text1 text-2xl my-4 flex justify-center text-center'>{h3}</h3>
             <div className='flex justify-center'>
                 <div className='flex flex-col justify-center'>
                     <div className='flex'>
                         <Image src={data} width={20} height={20} alt='' />
-                        <p className='text-cinza text3 ml-1'>Início</p>
+                        <p className='text-azul text3 ml-1'>Início</p>
                     </div>
                     <p className='text-black text3 text-lg my-2'>{data_inicio}</p>
                     <div className='flex mt-1'>
@@ -38,7 +40,7 @@ export default function EventosCardMobile({h3, h4, data_inicio, hora_inicio, dat
                 <div className='flex flex-col ml-3'>
                     <div className='flex'>
                         <Image src={data} width={20} height={20} alt='' />
-                        <p className='text-cinza text3 ml-1'>Fim</p>
+                        <p className='text-azul text3 ml-1'>Fim</p>
                     </div>
                     <p className='text-black text3 text-lg my-2'>{data_fim}</p>
                     <div className='flex mt-1'>
