@@ -10,6 +10,9 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Modal from "react-modal";
 import seta from "@/public/icons/seta-down.svg";
+import close from "@/public/icons/close.svg";
+import lixo from "@/public/icons/delete.svg";
+import filter from "@/public/icons/filter.png";
 
 interface Igreja {
   id_igreja: number;
@@ -39,7 +42,6 @@ export default function eventos() {
   const [horario_inicio, setHorarioInicio] = useState<string>("");
   const [data_fim, setDataFim] = useState<string>("");
   const [horario_fim, setHorarioFim] = useState<string>("");
-  const [nomeIgreja, setNomeIgreja] = useState<number>(0);
 
   const [editNome, setEditNome] = useState<string>("");
   const [editLocal, setEditLocal] = useState<string>("");
@@ -47,8 +49,48 @@ export default function eventos() {
   const [editHorarioInicio, setEditHorarioInicio] = useState<string>("");
   const [editDataFim, setEditDataFim] = useState<string>("");
   const [editHorarioFim, setEditHorarioFim] = useState<string>("");
-  const [editNomeIgreja, setEditNomeIgreja] = useState<number>(0);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [eventoToDelete, setEventoToDelete] = useState<number | null>(null);
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [allEventos, setAllEventos] = useState<Eventos[]>([]); // Lista completa
+  const [filteredEventos, setFilteredEventos] = useState<Eventos[]>([]); // Lista filtrada
+
+  const handleDeleteClick = (id_evento: number) => {
+    setEventoToDelete(id_evento);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!eventoToDelete) return;
+
+    try {
+      await api.delete(`/evento/${eventoToDelete}`);
+      const notifyDelete = () => {
+        toast.success("Evento deletado com sucesso!", {
+          position: "top-center",
+          autoClose: 1500,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "colored",
+        });
+      };
+
+      setEventos(eventos.filter((m) => m.id_evento !== eventoToDelete));
+      notifyDelete();
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error) {
+      toast.error("Erro ao remover evento.");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setEventoToDelete(null);
+    }
+  };
   const [eventos, setEventos] = useState<Eventos[]>([]);
 
   const [user, setUser] = useState<User | null>(null);
@@ -56,15 +98,12 @@ export default function eventos() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const userResponse = await api.get("/cadastro");
-        setUser(userResponse.data);
+        const id_igreja = sessionStorage.getItem("id_igreja");
 
-        if (userResponse.data && userResponse.data.id_igreja) {
-          const eventoResponse = await api.get(
-            `/evento/${userResponse.data.id_igreja}`
-          );
-          setEventos(eventoResponse.data);
-        }
+        const eventoResponse = await api.get(`/evento/${id_igreja}`);
+        setAllEventos(eventoResponse.data);
+        setFilteredEventos(eventoResponse.data);
+        console.log("ID Igreja recebido:", id_igreja);
       } catch (error) {
         console.error("Error fetching user data:", error);
       }
@@ -91,18 +130,67 @@ export default function eventos() {
     }
   };
 
-  useEffect(() => {
-    const fetchIgrejas = async () => {
-      try {
-        const response = await api.get("/departamento/igreja");
-        setIgreja(response.data);
-      } catch (error) {
-        console.error("Error fetching igrejas:", error);
-      }
-    };
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
 
-    fetchIgrejas();
-  }, []);
+    if (term.trim() === "") {
+      setFilteredEventos(allEventos);
+      return;
+    }
+
+    const lowercasedTerm = term.toLowerCase();
+
+    const filtered = allEventos.filter((evento) => {
+      // Converte todos os campos para string antes de verificar
+      const nomeStr = evento.nome ? evento.nome.toString().toLowerCase() : "";
+      const codStr = evento.local ? evento.local.toString().toLowerCase() : "";
+      const dataInicioStr = evento.data_inicio
+        ? evento.data_inicio.toString()
+        : "";
+      const dataFimStr = evento.data_fim ? evento.data_fim.toString() : "";
+
+      return (
+        nomeStr.includes(lowercasedTerm) ||
+        codStr.includes(lowercasedTerm) ||
+        dataInicioStr.includes(lowercasedTerm) ||
+        dataFimStr.includes(lowercasedTerm)
+      );
+    });
+
+    setFilteredEventos(filtered);
+  };
+
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [sortCriteria, setSortCriteria] = useState<
+    "recent" | "oldest" | "name-asc" | "name-desc"
+  >("recent");
+
+  const sortEventos = (eventos: Eventos[]) => {
+    const sorted = [...eventos];
+
+    switch (sortCriteria) {
+      case "recent":
+        // Adicionados recentemente (maior ID primeiro)
+        return sorted.sort((a, b) => b.id_evento - a.id_evento);
+
+      case "oldest":
+        // Adicionados há mais tempo (menor ID primeiro)
+        return sorted.sort((a, b) => a.id_evento - b.id_evento);
+
+      case "name-asc":
+        // Ordem alfabética A-Z
+        return sorted.sort((a, b) => a.nome.localeCompare(b.nome));
+
+      case "name-desc":
+        // Ordem alfabética Z-A
+        return sorted.sort((a, b) => b.nome.localeCompare(a.nome));
+
+      default:
+        return sorted;
+    }
+  };
+
+  const sortedEventos = sortEventos(filteredEventos);
 
   const [modalType, setModalType] = useState<"new" | "edit" | null>(null);
   const [modalIsOpen, setModalIsOpen] = useState(false);
@@ -116,7 +204,6 @@ export default function eventos() {
       setHorarioInicio("");
       setDataFim("");
       setHorarioFim("");
-      setNomeIgreja(0);
     } else if (type === "edit" && eventos) {
       setSelectedEvento(eventos);
       setEditNome(eventos.nome);
@@ -125,7 +212,6 @@ export default function eventos() {
       setEditHorarioInicio(eventos.horario_inicio);
       setEditDataFim(format(new Date(eventos.data_fim), "yyyy-MM-dd"));
       setEditHorarioFim(eventos.horario_fim);
-      setEditNomeIgreja(eventos.id_igreja);
     }
     setModalIsOpen(true);
   };
@@ -139,7 +225,6 @@ export default function eventos() {
     setEditHorarioInicio("");
     setEditDataFim("");
     setEditHorarioFim("");
-    setEditNomeIgreja(0);
   };
 
   const [selectedEvento, setSelectedEvento] = useState<Eventos | null>(null);
@@ -152,7 +237,6 @@ export default function eventos() {
       setHorarioInicio(selectedEvento.horario_inicio || "");
       setDataFim(selectedEvento.data_fim || "");
       setHorarioFim(selectedEvento.horario_fim || "");
-      setNomeIgreja(selectedEvento.id_igreja || 0);
     }
   }, [selectedEvento]);
 
@@ -205,8 +289,7 @@ export default function eventos() {
         data_inicio === "" ||
         horario_inicio === "" ||
         data_fim === "" ||
-        horario_fim === "" ||
-        nomeIgreja === 0
+        horario_fim === ""
       ) {
         notifyWarn();
         return;
@@ -218,7 +301,6 @@ export default function eventos() {
           horario_inicio,
           data_fim,
           horario_fim,
-          id_igreja: nomeIgreja,
         };
 
         const response = await api.post("/evento", dados);
@@ -286,8 +368,7 @@ export default function eventos() {
         !editDataInicio ||
         !editHorarioInicio ||
         !data_fim ||
-        !horario_fim ||
-        !editNomeIgreja
+        !horario_fim
       ) {
         notifyWarn();
         return;
@@ -300,7 +381,6 @@ export default function eventos() {
         horario_inicio: editHorarioInicio,
         data_fim: editDataFim,
         horario_fim: editHorarioFim,
-        nomeIgreja: editNomeIgreja,
       };
 
       setEventos((prevEventos) =>
@@ -312,7 +392,9 @@ export default function eventos() {
       const response = await api.put(`/evento/${eventos.id_evento}`, dados);
 
       notifySuccess();
-
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
       closeModal();
       setSelectedEvento(null);
     } catch (error) {
@@ -373,22 +455,116 @@ export default function eventos() {
               )}
             </div>
 
-            <div className="flex mt-10 lg:ml-[60vh]">
-              <p
-                className="bg-azul flex sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] text-white text-center items-center justify-center text2 sm:text-2xl md:text-2xl lg:text-3xl rounded-xl cursor-pointer"
-                onClick={() => openModal("new")}
-              >
-                Novo Evento +
-              </p>
+            <div className="flex">
+              <div className="mt-10 relative sm:right-[5vh] md:left-[20vh] lg:left-[50.8vh]">
+                <div className="flex mb-4">
+                  {/* Botão de filtro */}
+                  <div className="flex gap-5 relative">
+                    <button
+                      onClick={() => setIsFilterOpen(!isFilterOpen)}
+                      className="flex items-center justify-center px-5 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
+                    >
+                      <Image
+                        src={filter}
+                        width={30}
+                        height={30}
+                        alt="Filtrar"
+                      />
+                    </button>
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        placeholder="Pesquisar eventos..."
+                        className="sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-xl md:text-lg lg:text-xl text-gray-600 pl-5 text2 text-left content-center justify-center rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={searchTerm}
+                        onChange={(e) => handleSearch(e.target.value)}
+                      />
+                    </div>
+                    {/* Dropdown de filtros */}
+                    {isFilterOpen && (
+                      <div className="absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
+                        <button
+                          className={`block w-full text-left px-4 py-2 ${
+                            sortCriteria === "recent"
+                              ? "bg-blue-100 text-blue-500 text1"
+                              : "text-gray-800 hover:bg-gray-100 text1"
+                          }`}
+                          onClick={() => {
+                            setSortCriteria("recent");
+                            setIsFilterOpen(false);
+                          }}
+                        >
+                          Adicionados recentemente
+                        </button>
+
+                        <button
+                          className={`block w-full text-left px-4 py-2 ${
+                            sortCriteria === "oldest"
+                              ? "bg-blue-100 text-blue-500 text1"
+                              : "text-gray-800 hover:bg-gray-100 text1"
+                          }`}
+                          onClick={() => {
+                            setSortCriteria("oldest");
+                            setIsFilterOpen(false);
+                          }}
+                        >
+                          Adicionados antigamente
+                        </button>
+
+                        <button
+                          className={`block w-full text-left px-4 py-2 ${
+                            sortCriteria === "name-asc"
+                              ? "bg-blue-100 text-blue-500 text1"
+                              : "text-gray-800 hover:bg-gray-100 text1"
+                          }`}
+                          onClick={() => {
+                            setSortCriteria("name-asc");
+                            setIsFilterOpen(false);
+                          }}
+                        >
+                          Nome A-Z
+                        </button>
+
+                        <button
+                          className={`block w-full text-left px-4 py-2 ${
+                            sortCriteria === "name-desc"
+                              ? "bg-blue-100 text-blue-500 text1"
+                              : "text-gray-800 hover:bg-gray-100 text1"
+                          }`}
+                          onClick={() => {
+                            setSortCriteria("name-desc");
+                            setIsFilterOpen(false);
+                          }}
+                        >
+                          Nome Z-A
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex relative sm:right-[10vh] md:left-[35vh] lg:left-[52.8vh]">
+                <div className="mt-10 ml-1 flex justify-center">
+                  <p
+                    className="bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400"
+                    onClick={() => openModal("new")}
+                  >
+                    Novo Evento +
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="">
-            <div className=" bg-white md:h-[70vh] lg:h-[70vh] max-h-[70vh] mt-10 shadow-xl p-8 sm:w-[36vh] md:w-[70vh] lg:w-[140vh] xl:w-[100vh] rounded-xl overflow-y-scroll mr-[10vh]">
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-3 gap-[4.8vh]">
-                {eventos &&
-                  eventos &&
-                  eventos.map((evento) => (
+          <div className="pr-2">
+            <div className="bg-white space-x-16 shadow-xl absolute rounded-xl top-[24%] sm:left-[2vh] md:left-[20vh] lg:left-[35vh] h-[72vh] max-h-[72vh] max-w-[151vh] overflow-y-auto overflow-x-auto">
+              <div className="m-9 grid md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-3 gap-[4vh]">
+                {sortedEventos.length === 0 ? (
+                  <p className="text-center text-black text1 text-4xl mt-5 text-gray-4]">
+                    Nenhum evento encontrado.
+                  </p>
+                ) : (
+                  sortedEventos.map((evento) => (
                     <EventosCard
                       key={evento.id_evento}
                       h4={evento.local}
@@ -397,15 +573,54 @@ export default function eventos() {
                         new Date(evento.data_inicio),
                         "dd/MM/yyyy"
                       )}
-                      hora_inicio={evento.horario_inicio}
+                      hora_inicio={format(
+                        new Date(`1970-01-01T${evento.horario_inicio}`),
+                        "HH:mm"
+                      )}
                       data_fim={format(new Date(evento.data_fim), "dd/MM/yyyy")}
-                      hora_fim={evento.horario_fim}
+                      hora_fim={format(
+                        new Date(`1970-01-01T${evento.horario_fim}`),
+                        "HH:mm"
+                      )}
                       onClick={() => openModal("edit", evento)}
+                      onDelete={() => handleDeleteClick(evento.id_evento)}
                     />
-                  ))}
+                  ))
+                )}
               </div>
             </div>
           </div>
+
+          <Modal
+            isOpen={isDeleteModalOpen}
+            onRequestClose={() => setIsDeleteModalOpen(false)}
+            contentLabel="Confirmar exclusão"
+            className="fixed inset-0 flex items-center justify-center p-4"
+            overlayClassName="fixed inset-0 bg-black bg-opacity-40"
+          >
+            <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+              <h2 className="text1 text-xl text-black font-bold mb-4">
+                Confirmar Exclusão
+              </h2>
+              <p className="text2 text-gray-600 mb-6">
+                Você tem certeza que deseja remover este evento?
+              </p>
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  className="text2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  className="text2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </Modal>
 
           <Modal
             className="text-white flex flex-col"
@@ -413,12 +628,22 @@ export default function eventos() {
             onRequestClose={closeModal}
             contentLabel="Novo Evento"
           >
-            <div className="flex flex-col justify-center self-center bg-azul p-10 mt-[15vh] rounded-lg shadow-xl">
+            <div className="flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl">
+              <div className="cursor-pointer flex place-content-end rounded-lg">
+                <Image
+                  onClick={closeModal}
+                  src={close}
+                  width={40}
+                  height={40}
+                  alt="close Icon"
+                  className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
+                />
+              </div>
               <h2 className="text-white text1 text-4xl flex justify-center">
                 Novo Evento
               </h2>
 
-              <div className="flex flex-col mr-5">
+              <div className="flex flex-col px-10">
                 <label className="text-white text1 text-xl mt-5 mb-1">
                   Nome
                 </label>
@@ -434,7 +659,7 @@ export default function eventos() {
                 />
               </div>
 
-              <div className="flex flex-col mr-5">
+              <div className="flex flex-col px-10">
                 <label className="text-white text1 text-xl mt-5 mb-1">
                   Local
                 </label>
@@ -450,7 +675,7 @@ export default function eventos() {
                 />
               </div>
 
-              <div className="flex">
+              <div className="flex px-10">
                 <div className="flex flex-col mr-5">
                   <label className="text-white text1 text-xl mt-5 mb-1">
                     Data de Início
@@ -482,7 +707,7 @@ export default function eventos() {
                 </div>
               </div>
 
-              <div className="flex">
+              <div className="flex px-10">
                 <div className="flex flex-col mr-5">
                   <label className="text-white text1 text-xl mt-5 mb-1">
                     Data de Término
@@ -514,34 +739,14 @@ export default function eventos() {
                 </div>
               </div>
 
-              <div className="flex flex-col">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Igreja Realizadora
-                </label>
-
-                <select
-                  className="bg-white px-4 py-3 rounded-lg text2 text-slate-500"
-                  value={nomeIgreja}
-                  onChange={(e) => setNomeIgreja(Number(e.target.value))}
-                  required
+              <div className="flex flex-col px-10 pb-10">
+                <button
+                  className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"
+                  onClick={handleRegister}
                 >
-                  <option value={0} disabled>
-                    Selecione uma Igreja
-                  </option>
-                  {igreja.map((igreja) => (
-                    <option key={igreja.id_igreja} value={igreja.id_igreja}>
-                      {igreja.nome}
-                    </option>
-                  ))}
-                </select>
+                  Enviar
+                </button>
               </div>
-
-              <button
-                className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"
-                onClick={handleRegister}
-              >
-                Enviar
-              </button>
             </div>
           </Modal>
 
@@ -551,12 +756,22 @@ export default function eventos() {
             onRequestClose={closeModal}
             contentLabel="Ver Evento"
           >
-            <div className="flex flex-col justify-center self-center bg-azul p-10 mt-[15vh] rounded-lg shadow-xl">
+            <div className="flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl">
+              <div className="cursor-pointer flex place-content-end rounded-lg">
+                  <Image
+                    onClick={closeModal}
+                    src={close}
+                    width={40}
+                    height={40}
+                    alt="close Icon"
+                    className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
+                  />
+                </div>
               <h2 className="text-white text1 text-4xl flex justify-center">
                 Ver Evento
               </h2>
 
-              <div className="flex flex-col mr-5">
+              <div className="flex flex-col px-10">
                 <label className="text-white text1 text-xl mt-5 mb-1">
                   Nome
                 </label>
@@ -572,7 +787,7 @@ export default function eventos() {
                 />
               </div>
 
-              <div className="flex flex-col mr-5">
+              <div className="flex flex-col px-10">
                 <label className="text-white text1 text-xl mt-5 mb-1">
                   Local
                 </label>
@@ -588,7 +803,7 @@ export default function eventos() {
                 />
               </div>
 
-              <div className="flex">
+              <div className="flex px-10">
                 <div className="flex flex-col mr-5">
                   <label className="text-white text1 text-xl mt-5 mb-1">
                     Data de Início
@@ -620,7 +835,7 @@ export default function eventos() {
                 </div>
               </div>
 
-              <div className="flex">
+              <div className="flex px-10">
                 <div className="flex flex-col mr-5">
                   <label className="text-white text1 text-xl mt-5 mb-1">
                     Data de Término
@@ -636,7 +851,7 @@ export default function eventos() {
                   />
                 </div>
 
-                <div className="flex flex-col mr-5">
+                <div className="flex flex-col">
                   <label className="text-white text1 text-xl mt-5 mb-1">
                     Horário de Término
                   </label>
@@ -652,12 +867,14 @@ export default function eventos() {
                 </div>
               </div>
 
-              <button
-                className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"
-                onClick={() => selectedEvento && handleUpdate(selectedEvento)}
-              >
-                Atualizar
-              </button>
+              <div className="flex flex-col px-10 pb-10">
+                <button
+                  className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"
+                  onClick={() => selectedEvento && handleUpdate(selectedEvento)}
+                >
+                  Atualizar
+                </button>
+              </div>
             </div>
           </Modal>
         </div>
