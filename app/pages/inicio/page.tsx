@@ -12,6 +12,7 @@ import visitantes from '@/public/icons/visitantes.svg'
 import pedidos from '@/public/icons/pedidos.svg'
 import on from '@/public/icons/on-black.svg'
 import off from '@/public/icons/off-black.svg'
+import cast from '@/public/icons/cast.svg'
 
 interface Saldo {
   id_saldo: number;
@@ -168,8 +169,19 @@ export default function inicio() {
         <MenuLateral/>
 
         <div className="sm:ml-[15vh] md:ml-[30vh] lg:ml-[15vh] mr-[10vh] mb-[5vh]">
-          <div className='flex mt-12'>
+          <div className='flex justify-between items-center mt-12'>
             <Link href={'/../../pages/inicio'} className='text-cinza text-lg text3'>Início &#62;</Link>
+            
+            <Link
+              className="flex bg-azul items-center justify-center px-5 py-2 cursor-pointer rounded-lg focus:outline-none"
+              href={"/../../pages/apresentacao"}
+            >
+                <Image src={cast} 
+                width={30} 
+                height={30} 
+                alt="Filtrar" 
+                />
+          </Link>            
           </div>
 
           <div className='bg-azul sm:p-8 md:p-10 lg:p-12 rounded-xl mt-2'>

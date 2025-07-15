@@ -11,7 +11,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Modal from "react-modal";
 import seta from "@/public/icons/seta-down.svg";
 import close from "@/public/icons/close.svg";
-import lixo from "@/public/icons/delete.svg";
+import cast from "@/public/icons/cast.svg";
 import filter from "@/public/icons/filter.png";
 
 interface Aviso {
@@ -353,10 +353,20 @@ export default function avisos() {
             </div>
 
             <div className="flex">
-              <div className="mt-10 relative sm:right-[5vh] md:left-[20vh] lg:left-[54vh]">
+              <div className="mt-10 relative sm:right-[5vh] md:left-[20vh] lg:left-[46vh]">
                 <div className="flex mb-4">
                   {/* Botão de filtro */}
                   <div className="flex gap-5 relative">
+                    <Link
+                      className="flex bg-azul items-center justify-center px-5 py-2 cursor-pointer rounded-lg focus:outline-none"
+                      href={"/../../pages/apresentacao"}
+                    >
+                        <Image src={cast} 
+                        width={30} 
+                        height={30} 
+                        alt="Filtrar" 
+                      />
+                    </Link>
                     <button
                       onClick={() => setIsFilterOpen(!isFilterOpen)}
                       className="flex items-center justify-center px-5 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
@@ -454,7 +464,7 @@ export default function avisos() {
                   </div>
                 </div>
               </div>
-              <div className="flex relative sm:right-[10vh] md:left-[35vh] lg:left-[56vh]">
+              <div className="flex relative sm:right-[10vh] md:left-[35vh] lg:left-[47vh]">
                 <div className="mt-10 ml-1 flex justify-center">
                   <p
                     className="bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400"
