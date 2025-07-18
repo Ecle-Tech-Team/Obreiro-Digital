@@ -14,6 +14,7 @@ import lixo from "@/public/icons/delete.svg";
 import on from "@/public/icons/on.svg";
 import off from "@/public/icons/off.svg";
 import filter from "@/public/icons/filter.png";
+import { isMatriz } from "@/app/utils/auth";
 
 interface Igreja {
   id_igreja: number;
@@ -465,6 +466,14 @@ export default function obreiros() {
 
               {isDropdownOpen && (
                 <div className="mt-4 absolute bg-white shadow-lg rounded-lg z-50">
+                  {isMatriz() && (            
+                    <Link
+                      href={"/../../pages/igrejas"}
+                      className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
+                    >
+                      Igreja
+                    </Link>                
+                  )}
                   <Link
                     href={"/../../pages/membros"}
                     className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"

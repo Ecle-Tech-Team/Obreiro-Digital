@@ -9,6 +9,7 @@ import Modal from 'react-modal';
 import Link from 'next/link';
 import Image from 'next/image';
 import seta from '@/public/icons/seta-down.svg'
+import { isMatriz } from "@/app/utils/auth";
 
 interface Igreja {
   id_igreja: number;
@@ -330,9 +331,27 @@ export default function departamentos() {
               </button>
 
               {isDropdownOpen && (
-              <div className='mt-4 absolute bg-white shadow-lg rounded-lg z-50'>
-                <Link href={'/../../pages/membros'} className='block text2 text-black text-xl p-3 rounded hover:bg-slate-200'>Membros</Link>
-                <Link href={'/../../pages/obreiros'} className='block text2 text-black text-xl p-3 rounded hover:bg-slate-200'>Obreiros</Link>
+              <div className='mt-4 absolute bg-white w-[16vh] shadow-lg rounded-lg z-50'>
+                {isMatriz() && (            
+                  <Link
+                    href={"/../../pages/igrejas"}
+                    className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
+                  >
+                    Igreja
+                  </Link>                
+                )}
+                <Link 
+                  href={'/../../pages/membros'} 
+                  className='block text2 text-black text-xl p-3 rounded hover:bg-slate-200'
+                >
+                  Membros
+                </Link>
+                <Link 
+                  href={'/../../pages/obreiros'} 
+                  className='block text2 text-black text-xl p-3 rounded hover:bg-slate-200'
+                >
+                  Obreiros
+                </Link>
               </div>
             )}
             </div>

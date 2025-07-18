@@ -83,14 +83,15 @@ export default function Login() {
           sessionStorage.setItem("id_igreja", userData.id_igreja);
           sessionStorage.setItem('token', response.data.token);
           sessionStorage.setItem("email", email);
+          sessionStorage.setItem("id_matriz", userData.id_matriz);
           
           notifySuccess();
 
-          if (userData.cargo === "Pastor") {
+          if (userData.cargo === "Pastor" || "Pastor Matriz") {
             setTimeout(() => {
                 router.push('/pages/inicio', { scroll: false });
             }, 1500);
-          } else if (userData.cargo === "Obreiro") {
+          } else if (userData.cargo === "Obreiro" || "Obreiro Matriz") {
             setTimeout(() => {
                 router.push('/pages/inicioMobile', { scroll: false });
             }, 1500);

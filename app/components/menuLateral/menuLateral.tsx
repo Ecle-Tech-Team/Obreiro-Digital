@@ -8,12 +8,14 @@ import perfilPastor from "@/public/images/Pastor 1.png";
 import inicio from "@/public/icons/inicio.png";
 import evento from "@/public/icons/evento.png";
 import membros from "@/public/icons/groups_black_24dp(1).svg";
+import igreja from "@/public/icons/igreja.svg";
 import financas from "@/public/icons/financas.png";
 import relatorio from "@/public/icons/relatorios.png";
 import pedidos from "@/public/icons/pedidos.png";
 import estoque from "@/public/icons/inventory_2_black_24dp.svg";
 import config from "@/public/icons/config.png";
 import hamburger from "@/public/icons/hamburguer.svg";
+import { isMatriz } from "@/app/utils/auth";
 
 export default function MenuLateral() {
   const [nome, setNome] = useState("");
@@ -168,21 +170,43 @@ export default function MenuLateral() {
               menuOpen ? "block" : "hidden"
             } lg:block`}
           >
-            <motion.div
-              initial="closed"
-              animate={menuOpen ? "open" : "closed"}
-              variants={itemVariants}
-            >
-              <Link
-                className="flex mt-7 w-[18vh]"
-                href={"/../../pages/membros"}
-              >
-                <Image src={membros} width={35} height={0} alt="" />
-                <p className="ml-3 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block">
-                  Membros
-                </p>
-              </Link>
-            </motion.div>
+            {isMatriz() ? (
+              <>
+                <motion.div
+                  initial="closed"
+                  animate={menuOpen ? "open" : "closed"}
+                  variants={itemVariants}
+                >
+                  <Link
+                    className="flex mt-7 w-[18vh]"
+                    href={"/../../pages/igrejas"}
+                  >
+                    <Image src={igreja} width={35} height={0} alt="" />
+                    <p className="ml-3 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block">
+                      Igrejas
+                    </p>
+                  </Link>
+                </motion.div>
+              </>
+            ) : (
+              <>
+                <motion.div
+                  initial="closed"
+                  animate={menuOpen ? "open" : "closed"}
+                  variants={itemVariants}
+                >
+                  <Link
+                    className="flex mt-7 w-[18vh]"
+                    href={"/../../pages/membros"}
+                  >
+                    <Image src={membros} width={35} height={0} alt="" />
+                    <p className="ml-3 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block">
+                      Membros
+                    </p>
+                  </Link>
+                </motion.div>
+              </>
+            )}
 
             <motion.div
               initial="closed"
