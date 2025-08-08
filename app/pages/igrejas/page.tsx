@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import MenuLateral from "@/app/components/menuLateral/menuLateral";
+import ModalIgrejaDetalhes from "@/app/components/igrejaModal/ModalIgreja";
 import Link from "next/link";
 import Image from "next/image";
 import api from "../../api/api";
@@ -27,7 +28,7 @@ interface Igreja {
   id_matriz: number;
 }
 
-export default function Igrejas() {
+export default function Igrejas({ igrejas } : { igrejas: Igreja[] }) {
   const [nome, setNome] = useState<string>("");
   const [cnpj, setCnpj] = useState<string>("");
   const [data_fundacao, setDataFundacao] = useState<string>("");
@@ -38,8 +39,6 @@ export default function Igrejas() {
   const [cidade, setCidade] = useState<string>("");
   const [bairro, setBairro] = useState<string>("");
   const [aceitoTermos, setAceitoTermos] = useState<boolean>(false);
-
-  const [igrejas, setIgrejas] = useState<Igreja[]>([]);
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [igrejaToDelete, setIgrejaToDelete] = useState<number | null>(null);
@@ -52,33 +51,33 @@ export default function Igrejas() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!igrejaToDelete) return;
+  // const handleDeleteConfirm = async () => {
+  //   if (!igrejaToDelete) return;
 
-    try {
-      await api.delete(`/igreja/${igrejaToDelete}`);
-      const notifyDelete = () => {
-        toast.success("Igreja deletada com sucesso!", {
-          position: "top-center",
-          autoClose: 1500,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "colored",
-        });
-      };
+  //   try {
+  //     await api.delete(`/igreja/${igrejaToDelete}`);
+  //     const notifyDelete = () => {
+  //       toast.success("Igreja deletada com sucesso!", {
+  //         position: "top-center",
+  //         autoClose: 1500,
+  //         hideProgressBar: false,
+  //         closeOnClick: true,
+  //         pauseOnHover: true,
+  //         draggable: true,
+  //         progress: undefined,
+  //         theme: "colored",
+  //       });
+  //     };
 
-      setIgrejas(igrejas.filter((i) => i.id_igreja !== igrejaToDelete));
-      notifyDelete();
-    } catch (error) {
-      toast.error("Erro ao remover igreja.");
-    } finally {
-      setIsDeleteModalOpen(false);
-      setIgrejaToDelete(null);
-    }
-  };
+  //     setIgrejas(igrejas.filter((i) => i.id_igreja !== igrejaToDelete));
+  //     notifyDelete();
+  //   } catch (error) {
+  //     toast.error("Erro ao remover igreja.");
+  //   } finally {
+  //     setIsDeleteModalOpen(false);
+  //     setIgrejaToDelete(null);
+  //   }
+  // };
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -185,6 +184,8 @@ export default function Igrejas() {
     }
   };
   const sortedIgrejas = sortIgrejas(filteredIgrejas);
+
+  const [modalIgreja, setModalIgreja] = useState<Igreja | null>(null);
 
   return (
     <main>
@@ -395,7 +396,7 @@ export default function Igrejas() {
                     {sortedIgrejas.map((igreja) => (
                       <tr
                         key={igreja.id_igreja}
-                        // onClick={() => igreja && openModal("edit", igreja)}
+                        onClick={() => setModalIgreja(igreja)}
                         className="cursor-pointer hover:bg-slate-200"
                       >
                         <td className="text-center text2 text-xl">
@@ -420,6 +421,13 @@ export default function Igrejas() {
               )}
             </div>
           </div>
+          {/* Modal de detalhes da igreja */}
+          {modalIgreja && (
+            <ModalIgrejaDetalhes
+              igreja={modalIgreja}
+              onClose={() => setModalIgreja(null)}
+            />
+          )}
         </div>
       </div>
     </main>

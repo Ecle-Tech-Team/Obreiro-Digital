@@ -17,4 +17,22 @@ api.interceptors.request.use(config => {
   return Promise.reject(error);
 });
 
+
+
+export const fetchMembrosPorIgreja = async (id_igreja) => {
+  const res = await api.get(`/membro/matriz/${id_igreja}`);
+  return res.data;
+};
+
+export const fetchObreirosPorIgreja = async (id_igreja) => {
+  const res = await api.get(`/obreiros/igreja/${id_igreja}`);
+  return res.data;
+};
+
+export const fetchDepartamentosPorIgreja = async (id_igreja) => {
+  const res = await api.get(`/departamentos/igreja/${id_igreja}`);
+  return res.data;
+};
+
+
 export default api;
