@@ -39,7 +39,6 @@ export default function obreiros() {
   const [senha, setSenha] = useState<string>("");
   const [birth, setBirth] = useState<string>("");
   const [cargo, setCargo] = useState<string>("");
-  const [nomeIgreja, setNomeIgreja] = useState<number>(0);
 
   const [editCodMembro, setEditCodMembro] = useState<string>("");
   const [editNome, setEditNome] = useState<string>("");
@@ -47,19 +46,54 @@ export default function obreiros() {
   const [editSenha, setEditSenha] = useState<string>("");
   const [editBirth, setEditBirth] = useState<string>("");
   const [editCargo, setEditCargo] = useState<string>("");
-  const [editNomeIgreja, setEditNomeIgreja] = useState<number>(0);
 
   const [modalType, setModalType] = useState<"new" | "edit" | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<number | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [sortCriteria, setSortCriteria] = useState<
-    "recent" | "oldest" | "name-asc" | "name-desc" | "birth"
-  >("recent");
+  const handleDeleteClick = (id_user: number) => {
+    setUserToDelete(id_user);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!userToDelete) return;
+
+    try {
+      await api.delete(`/cadastro/${userToDelete}`);
+      const notifyDelete = () => {
+        toast.success("Usuário deletado com sucesso!", {
+          position: "top-center",
+          autoClose: 1500,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "colored",
+        });
+      };
+
+      setUsers(user.filter((m) => m.id_user !== userToDelete));
+      notifyDelete();
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error) {
+      toast.error("Erro ao remover usuário.");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setUserToDelete(null);
+    }
+  };
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
@@ -71,18 +105,6 @@ export default function obreiros() {
       !dropdownRef.current.contains(event.target as Node)
     ) {
       setIsDropdownOpen(false);
-    }
-  };
-
-  const handleDeleteClick = async (id: number) => {
-    try {
-      await api.delete(`/cadastro/${id}`);
-      setUsers((prev) => prev.filter((user) => user.id_user !== id));
-      setFilteredUsers((prev) => prev.filter((user) => user.id_user !== id));
-      toast.success("Obreiro deletado com sucesso!");
-    } catch (error) {
-      console.error("Erro ao deletar obreiro:", error);
-      toast.error("Erro ao deletar obreiro.");
     }
   };
 
@@ -99,15 +121,10 @@ export default function obreiros() {
     const fetchUserData = async () => {
       try {
         const id_igreja = sessionStorage.getItem("id_igreja");
-        if (id_igreja) {
-          const response = await api.get(`/cadastro/obreiros/${id_igreja}`);
-          setUsers(response.data);
-          setFilteredUsers(response.data);
-        } else {
-          const response = await api.get("/cadastro");
-          setUsers(response.data);
-          setFilteredUsers(response.data);
-        }
+
+        const response = await api.get(`/cadastro/obreiros/${id_igreja}`);
+        setAllUsers(response.data);
+        setFilteredUsers(response.data);
       } catch (error) {
         console.error("Error fetching user data:", error);
       }
@@ -131,35 +148,65 @@ export default function obreiros() {
     fetchIgrejas();
   }, []);
 
-  // Search function
-  useEffect(() => {
-    const lowercasedTerm = searchTerm.toLowerCase();
-    const filtered = user.filter((u) => {
-      const fieldsToSearch = [u.cod_membro, u.nome, u.email, u.cargo];
-      return fieldsToSearch.some(
-        (field) =>
-          field && field.toString().toLowerCase().includes(lowercasedTerm)
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+
+    if (term.trim() === "") {
+      setFilteredUsers(allUsers);
+      return;
+    }
+
+    const lowercasedTerm = term.toLowerCase();
+
+    const filtered = allUsers.filter((user) => {
+      // Converte todos os campos para string antes de verificar
+      const nomeStr = user.nome ? user.nome.toString().toLowerCase() : "";
+      const codStr = user.cod_membro
+        ? user.cod_membro.toString().toLowerCase()
+        : "";
+      const emailStr = user.email ? user.email.toString().toLowerCase() : "";
+
+      return (
+        nomeStr.includes(lowercasedTerm) ||
+        codStr.includes(lowercasedTerm) ||
+        emailStr.includes(lowercasedTerm)
       );
     });
-    setFilteredUsers(filtered);
-  }, [searchTerm, user]);
 
-  // Sorting function
+    setFilteredUsers(filtered);
+  };
+
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [sortCriteria, setSortCriteria] = useState<
+    "recent" | "oldest" | "name-asc" | "name-desc" | "birth"
+  >("recent");
+
   const sortUsers = (users: User[]) => {
     const sorted = [...users];
+
     switch (sortCriteria) {
       case "recent":
+        // Adicionados recentemente (maior ID primeiro)
         return sorted.sort((a, b) => b.id_user - a.id_user);
+
       case "oldest":
+        // Adicionados há mais tempo (menor ID primeiro)
         return sorted.sort((a, b) => a.id_user - b.id_user);
+
       case "name-asc":
+        // Ordem alfabética A-Z
         return sorted.sort((a, b) => a.nome.localeCompare(b.nome));
+
       case "name-desc":
+        // Ordem alfabética Z-A
         return sorted.sort((a, b) => b.nome.localeCompare(a.nome));
+
       case "birth":
+        // Por data de nascimento (mais jovens primeiro)
         return sorted.sort(
           (a, b) => new Date(b.birth).getTime() - new Date(a.birth).getTime()
         );
+
       default:
         return sorted;
     }
@@ -178,7 +225,6 @@ export default function obreiros() {
       setSenha("");
       setBirth("");
       setCargo("");
-      setNomeIgreja(0);
     } else if (type === "edit" && user) {
       setSelectedUser(user);
       setEditCodMembro(user.cod_membro);
@@ -187,7 +233,6 @@ export default function obreiros() {
       setEditSenha(user.senha);
       setEditBirth(format(new Date(user.birth), "yyyy-MM-dd"));
       setEditCargo(user.cargo);
-      setEditNomeIgreja(user.id_igreja);
     }
     setModalIsOpen(true);
   };
@@ -233,7 +278,6 @@ export default function obreiros() {
       setSenha(selectedUser.senha || "");
       setBirth(selectedUser.birth || "");
       setCargo(selectedUser.cargo || "");
-      setNomeIgreja(selectedUser.id_igreja || 0);
     }
   }, [selectedUser]);
 
@@ -289,8 +333,7 @@ export default function obreiros() {
         email === "" ||
         senha === "" ||
         birth === "" ||
-        cargo === "" ||
-        nomeIgreja === 0
+        cargo === ""
       ) {
         notifyWarn();
         return;
@@ -308,7 +351,6 @@ export default function obreiros() {
           senha,
           birth,
           cargo,
-          id_igreja: nomeIgreja,
         };
 
         const response = await api.post("/cadastro", data);
@@ -375,8 +417,7 @@ export default function obreiros() {
         !editNome ||
         !editEmail ||
         !editBirth ||
-        !editCargo ||
-        !editNomeIgreja
+        !editCargo
       ) {
         notifyWarn();
         return;
@@ -389,7 +430,6 @@ export default function obreiros() {
         senha: editSenha,
         birth: editBirth,
         cargo: editCargo,
-        id_igreja: editNomeIgreja,
       };
 
       const response = await api.put(
@@ -466,13 +506,13 @@ export default function obreiros() {
 
               {isDropdownOpen && (
                 <div className="mt-4 absolute bg-white shadow-lg rounded-lg z-50">
-                  {isMatriz() && (            
+                  {isMatriz() && (
                     <Link
                       href={"/../../pages/igrejas"}
                       className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
                     >
                       Igreja
-                    </Link>                
+                    </Link>
                   )}
                   <Link
                     href={"/../../pages/membros"}
@@ -508,10 +548,10 @@ export default function obreiros() {
                     <div className="flex-1">
                       <input
                         type="text"
-                        placeholder="Pesquisar membros..."
+                        placeholder="Pesquisar obreiros..."
                         className="sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-xl md:text-lg lg:text-xl text-gray-600 pl-5 text2 text-left content-center justify-center rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => handleSearch(e.target.value)}
                       />
                     </div>
                     {/* Dropdown de filtros */}
@@ -597,14 +637,14 @@ export default function obreiros() {
                     className="bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400"
                     onClick={() => openModal("new")}
                   >
-                    Novo Membro +
+                    Novo Obreiro +
                   </p>
                 </div>
               </div>
             </div>
 
             <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] sm:left-[2vh] md:left-[20vh] lg:left-[35vh] h-[72vh] max-h-[72vh] overflow-y-auto overflow-x-auto">
-              {Array.isArray(sortedUsers) && sortedUsers.length > 0 ? (
+              {sortedUsers.length > 0 ? (
                 <table className="text-black w-[160vh]">
                   <thead className="sticky top-0">
                     <tr className="bg-azul text-white rounded-xl">
@@ -677,154 +717,171 @@ export default function obreiros() {
           </div>
 
           <Modal
+            isOpen={isDeleteModalOpen}
+            onRequestClose={() => setIsDeleteModalOpen(false)}
+            contentLabel="Confirmar exclusão"
+            className="fixed inset-0 flex items-center justify-center p-4"
+            overlayClassName="fixed inset-0 bg-white bg-opacity-70"
+          >
+            <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+              <h2 className="text1 text-xl text-black font-bold mb-4">
+                Confirmar Exclusão
+              </h2>
+              <p className="text2 text-gray-600 mb-6">
+                Você tem certeza que deseja remover este obreiro?
+              </p>
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  className="text2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  className="text2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </Modal>
+
+          <Modal
             className="text-white flex flex-col"
             isOpen={modalIsOpen && modalType === "new"}
             onRequestClose={closeModal}
             contentLabel="Novo Obreiro"
           >
             <div className="flex flex-col justify-center self-center bg-azul mt-[10vh] rounded-lg shadow-xl">
-              <div className="cursor-pointer flex place-content-start rounded-lg">
+              <div className="cursor-pointer flex place-content-end rounded-lg">
                 <Image
                   onClick={closeModal}
                   src={close}
                   width={40}
                   height={40}
                   alt="close Icon"
-                  className="bg-red-500 hover:bg-red-600 rounded-tl-lg"
+                  className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
                 />
               </div>
-              <div className="p-10">
-                <h2 className="text-white text1 text-4xl flex justify-center">
-                  Novo Obreiro
-                </h2>
-                <div className="flex flex-col">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Cód. Membro
-                  </label>
-                  <input
-                    type="text"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    placeholder="Digite o Código..."
-                    value={cod_membro}
-                    onChange={(e) => setCodMembro(e.target.value)}
-                    maxLength={16}
-                    required
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Nome
-                  </label>
-                  <input
-                    type="text"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    placeholder="Digite o Nome..."
-                    value={nome}
-                    onChange={(e) => setNome(e.target.value)}
-                    maxLength={150}
-                    required
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="text"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    placeholder="Digite o Email..."
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    maxLength={150}
-                    required
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Senha
-                  </label>
-                  <div className="flex">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      className="pl-4 py-3 rounded-lg text2 text-slate-500"
-                      placeholder="Digite a Senha..."
-                      value={senha}
-                      onChange={(e) => setSenha(e.target.value)}
-                      maxLength={16}
-                    />
-                    <button
-                      type="button"
-                      className="ml-[1vh]"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      <Image
-                        src={showPassword ? on : off}
-                        width={40}
-                        height={40}
-                        alt={showPassword ? "Open" : "Closed"}
-                      />
-                    </button>
-                  </div>
-                </div>
+
+              <h2 className="text-white text1 text-4xl flex justify-center">
+                Novo Obreiro
+              </h2>
+
+              <div className="flex flex-col px-10">
+                <label className="text-white text1 text-xl mt-5 mb-1">
+                  Cód. Membro
+                </label>
+                <input
+                  type="text"
+                  className="px-4 py-3 rounded-lg text2 text-slate-500"
+                  placeholder="Digite o Código..."
+                  value={cod_membro}
+                  onChange={(e) => setCodMembro(e.target.value)}
+                  maxLength={16}
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col px-10">
+                <label className="text-white text1 text-xl mt-5 mb-1">
+                  Nome
+                </label>
+                <input
+                  type="text"
+                  className="px-4 py-3 rounded-lg text2 text-slate-500"
+                  placeholder="Digite o Nome..."
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  maxLength={150}
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col px-10">
+                <label className="text-white text1 text-xl mt-5 mb-1">
+                  Email
+                </label>
+                <input
+                  type="text"
+                  className="px-4 py-3 rounded-lg text2 text-slate-500"
+                  placeholder="Digite o Email..."
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  maxLength={150}
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col px-10">
+                <label className="text-white text1 text-xl mt-5 mb-1">
+                  Senha
+                </label>
                 <div className="flex">
-                  <div className="flex flex-col">
-                    <label className="text-white text1 text-xl mt-5 mb-1">
-                      Data de Nascimento
-                    </label>
-                    <input
-                      type="date"
-                      className="px-4 py-3 rounded-lg text2 text-slate-500"
-                      value={birth}
-                      onChange={(e) => setBirth(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="flex flex-col ml-5">
-                    <label className="text-white text1 text-xl mt-5 mb-1">
-                      Cargo
-                    </label>
-                    <select
-                      className="bg-white px-4 py-3 rounded-lg text2 text-slate-500"
-                      value={cargo}
-                      onChange={(e) => setCargo(e.target.value)}
-                      required
-                    >
-                      <option value="" disabled>
-                        Selecione o Cargo
-                      </option>
-                      <option value="Pastor">Pastor</option>
-                      <option value="Obreiro">Obreiro</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Igreja
-                  </label>
-                  <select
-                    className="bg-white px-4 py-3 rounded-lg text2 text-black"
-                    value={nomeIgreja}
-                    onChange={(e) => setNomeIgreja(Number(e.target.value))}
-                    required
-                  >
-                    <option value={0} disabled>
-                      Selecione uma Igreja
-                    </option>
-                    {igreja.map((igreja) => (
-                      <option key={igreja.id_igreja} value={igreja.id_igreja}>
-                        {igreja.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex flex-col px-15 pb-10">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="pl-4 py-3 rounded-lg text2 text-slate-500"
+                    placeholder="Digite a Senha..."
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    maxLength={16}
+                  />
                   <button
-                    className="border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg"
-                    onClick={handleRegister}
+                    type="button"
+                    className="ml-[1vh]"
+                    onClick={() => setShowPassword(!showPassword)}
                   >
-                    Enviar
+                    <Image
+                      src={showPassword ? on : off}
+                      width={40}
+                      height={40}
+                      alt={showPassword ? "Open" : "Closed"}
+                    />
                   </button>
                 </div>
+              </div>
+
+              <div className="flex px-10">
+                <div className="flex flex-col">
+                  <label className="text-white text1 text-xl mt-5 mb-1">
+                    Data de Nascimento
+                  </label>
+                  <input
+                    type="date"
+                    className="px-4 py-3 rounded-lg text2 text-slate-500"
+                    value={birth}
+                    onChange={(e) => setBirth(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col ml-5">
+                  <label className="text-white text1 text-xl mt-5 mb-1">
+                    Cargo
+                  </label>
+                  <select
+                    className="bg-white px-4 py-3 rounded-lg text2 text-slate-500"
+                    value={cargo}
+                    onChange={(e) => setCargo(e.target.value)}
+                    required
+                  >
+                    <option value="" disabled>
+                      Selecione o Cargo
+                    </option>
+                    <option value="Pastor">Pastor</option>
+                    <option value="Obreiro">Obreiro</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex flex-col px-10 pb-10">
+                <button
+                  className="border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg"
+                  onClick={handleRegister}
+                >
+                  Enviar
+                </button>
               </div>
             </div>
           </Modal>
@@ -835,21 +892,23 @@ export default function obreiros() {
             onRequestClose={closeModal}
             contentLabel="Editar Obreiro"
           >
-            <div className="flex flex-col justify-center self-center bg-azul p-10 mt-[15vh] rounded-lg shadow-xl">
-              <div className="cursor-pointer flex place-content-start rounded-lg">
+            <div className="flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl">
+              <div className="cursor-pointer flex place-content-end rounded-lg">
                 <Image
                   onClick={closeModal}
                   src={close}
                   width={40}
                   height={40}
                   alt="close Icon"
-                  className="bg-red-500 hover:bg-red-600 rounded-tl-lg"
+                  className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
                 />
               </div>
+
               <h2 className="text-white text1 text-4xl flex justify-center">
                 Editar Obreiro
               </h2>
-              <div className="flex flex-col">
+
+              <div className="flex flex-col px-10">
                 <label className="text-white text1 text-xl mt-5 mb-1">
                   Cód. Membro
                 </label>
@@ -863,7 +922,8 @@ export default function obreiros() {
                   required
                 />
               </div>
-              <div className="flex flex-col">
+
+              <div className="flex flex-col px-10">
                 <label className="text-white text1 text-xl mt-5 mb-1">
                   Nome
                 </label>
@@ -877,7 +937,8 @@ export default function obreiros() {
                   required
                 />
               </div>
-              <div className="flex flex-col">
+
+              <div className="flex flex-col px-10">
                 <label className="text-white text1 text-xl mt-5 mb-1">
                   Email
                 </label>
@@ -891,7 +952,8 @@ export default function obreiros() {
                   required
                 />
               </div>
-              <div className="flex flex-col">
+
+              <div className="flex flex-col px-10">
                 <label className="text-white text1 text-xl mt-5 mb-1">
                   Senha
                 </label>
@@ -918,7 +980,8 @@ export default function obreiros() {
                   </button>
                 </div>
               </div>
-              <div className="flex">
+
+              <div className="flex px-10">
                 <div className="flex flex-col">
                   <label className="text-white text1 text-xl mt-5 mb-1">
                     Data de Nascimento
@@ -949,27 +1012,8 @@ export default function obreiros() {
                   </select>
                 </div>
               </div>
-              <div className="flex flex-col">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Igreja
-                </label>
-                <select
-                  className="bg-white px-4 py-3 rounded-lg text2 text-black"
-                  value={editNomeIgreja}
-                  onChange={(e) => setEditNomeIgreja(Number(e.target.value))}
-                  required
-                >
-                  <option value={0} disabled>
-                    Selecione uma Igreja
-                  </option>
-                  {igreja.map((igreja) => (
-                    <option key={igreja.id_igreja} value={igreja.id_igreja}>
-                      {igreja.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col px-15 pb-10">
+
+              <div className="flex flex-col px-10 pb-10">
                 <button
                   className="border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg"
                   onClick={() => selectedUser && handleUpdate(selectedUser)}
