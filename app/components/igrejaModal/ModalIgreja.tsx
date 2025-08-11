@@ -33,6 +33,7 @@ interface Departamento {
   nome: string;
   birth: string;
   data_congresso: string;
+  qtd_membros: number;
   id_igreja: number;
 }
 
@@ -265,6 +266,7 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
                   >
                     <td className="p-2 text2 text-lg">{d.nome}</td>
                     <td className="p-2 text2 text-lg">{format(new Date(d.data_congresso), "dd/MM/yyyy")}</td>
+                    <td className="p-2 text2 text-lg">{d.qtd_membros}</td>
                   </tr>
                 ))}
               </tbody>
