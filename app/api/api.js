@@ -25,12 +25,12 @@ export const fetchMembrosPorIgreja = async (id_igreja) => {
 };
 
 export const fetchObreirosPorIgreja = async (id_igreja) => {
-  const res = await api.get(`/obreiros/igreja/${id_igreja}`);
+  const res = await api.get(`/cadastro/matriz/${id_igreja}`);
   return res.data;
 };
 
 export const fetchDepartamentosPorIgreja = async (id_igreja) => {
-  const res = await api.get(`/departamentos/igreja/${id_igreja}`);
+  const res = await api.get(`/departamento/matriz/${id_igreja}`);
   return res.data;
 };
 

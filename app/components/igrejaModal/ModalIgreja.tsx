@@ -23,7 +23,6 @@ interface User {
   cod_membro: string;
   nome: string;
   email: string;
-  senha: string;
   birth: string;
   cargo: string;
   id_igreja: number;
@@ -87,9 +86,9 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
 
   if (!igreja) return null;
 
-  const getNomeDepartamento = (id: number) => {
+  const getNomeDepartamento = (id_departamento: number) => {
     const departamento = departamentos.find(
-      (dep) => dep.id_departamento === id
+      (dep) => dep.id_departamento === id_departamento
     );
     return departamento ? departamento.nome : "Sem departamento";
   };
@@ -205,7 +204,7 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
                 {membros.map((m) => (
                   <tr
                     key={m.id_membro}
-                    className="text-center hover:bg-slate-200 cursor-pointer"
+                    className="text-center text-black hover:bg-slate-200 cursor-pointer"
                   >
                     <td className="p-2 text2 text-lg">{m.nome}</td>
                     <td className="p-2 text2 text-lg">
@@ -235,7 +234,7 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
                 {obreiros.map((o) => (
                   <tr
                     key={o.id_user}
-                    className="text-center hover:bg-slate-200"
+                    className="text-center text-black hover:bg-slate-200"
                   >
                     <td className="p-2 text2 text-lg">{o.nome}</td>
                     <td className="p-2 text2 text-lg">{o.cargo}</td>
@@ -262,10 +261,10 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
                 {departamentos.map((d) => (
                   <tr
                     key={d.id_departamento}
-                    className="text-center hover:bg-slate-200"
+                    className="text-center text-black hover:bg-slate-200"
                   >
                     <td className="p-2 text2 text-lg">{d.nome}</td>
-                    <td className="p-2 text2 text-lg">{d.data_congresso}</td>
+                    <td className="p-2 text2 text-lg">{format(new Date(d.data_congresso), "dd/MM/yyyy")}</td>
                   </tr>
                 ))}
               </tbody>
