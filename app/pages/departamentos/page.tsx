@@ -24,6 +24,7 @@ interface Departamento {
   nome: string;
   birth: string;
   data_congresso: string;
+  qtd_membros: number;
   id_igreja: number;
 }
 
@@ -486,7 +487,7 @@ export default function departamentos() {
                     <div className="flex-1">
                       <input
                         type="text"
-                        placeholder="Pesquisar Departamentos..."
+                        placeholder="Pesquisar departamentos..."
                         className="sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-xl md:text-lg lg:text-xl text-gray-600 pl-5 text2 text-left content-center justify-center rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
                         value={searchTerm}
                         onChange={(e) => handleSearch(e.target.value)}
@@ -594,14 +595,17 @@ export default function departamentos() {
                         <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2 ">
                           Cód. Depart.
                         </th>
-                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2">
+                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[11.5vh] py-2">
                           Nome
                         </th>
-                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2">
-                          Data de Aniversário
+                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-10 py-2">
+                          Fundação
                         </th>
-                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2">
+                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-10 py-2">
                           Data do Congresso
+                        </th>
+                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:pr-24 py-2">
+                          Qtd. Membros
                         </th>
                       </tr>
                     </thead>
@@ -626,6 +630,9 @@ export default function departamentos() {
                               new Date(departs.data_congresso),
                               "dd/MM/yyyy"
                             )}
+                          </td>
+                          <td className="text-center text2 text-xl">
+                            {departs.qtd_membros}
                           </td>
                         </tr>
                       ))}
