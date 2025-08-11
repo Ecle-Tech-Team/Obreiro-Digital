@@ -17,8 +17,6 @@ api.interceptors.request.use(config => {
   return Promise.reject(error);
 });
 
-
-
 export const fetchMembrosPorIgreja = async (id_igreja) => {
   const res = await api.get(`/membro/matriz/${id_igreja}`);
   return res.data;
@@ -31,6 +29,18 @@ export const fetchObreirosPorIgreja = async (id_igreja) => {
 
 export const fetchDepartamentosPorIgreja = async (id_igreja) => {
   const res = await api.get(`/departamento/matriz/${id_igreja}`);
+  return res.data;
+};
+
+export const moverPessoa = async (tipo, id, nova_igreja_id) => {
+  const endpoint = tipo === "membro" ? "/mover/membro" : "/mover/cadastro";
+
+  const body =
+    tipo === "membro"
+      ? { id_membro: id, nova_igreja_id }
+      : { id_user: id, nova_igreja_id };
+
+  const res = await api.put(endpoint, body);
   return res.data;
 };
 

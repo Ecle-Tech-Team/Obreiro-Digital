@@ -1,10 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import {
-  fetchMembrosPorIgreja,
-  fetchObreirosPorIgreja,
-  fetchDepartamentosPorIgreja,
-} from "@/app/api/api";
+import { fetchMembrosPorIgreja, fetchObreirosPorIgreja, fetchDepartamentosPorIgreja } from "@/app/api/api";
+import ModalMovimentacao from "../movimentacaoModal/movimentacaoModal";
 import { format } from "date-fns";
 import Link from "next/link";
 import Image from "next/image";
@@ -54,6 +51,11 @@ interface ModalProps {
 }
 
 const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
+  const [modalMov, setModalMov] = useState<{
+  tipo: "membro" | "usuario";
+  id: number;
+} | null>(null);
+
   const [tab, setTab] = useState<"membros" | "obreiros" | "departamentos">(
     "membros"
   );
@@ -206,6 +208,7 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
                   <tr
                     key={m.id_membro}
                     className="text-center text-black hover:bg-slate-200 cursor-pointer"
+                    onClick={() => setModalMov({ tipo: "membro", id: m.id_membro })}
                   >
                     <td className="p-2 text2 text-lg">{m.nome}</td>
                     <td className="p-2 text2 text-lg">
@@ -235,7 +238,8 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
                 {obreiros.map((o) => (
                   <tr
                     key={o.id_user}
-                    className="text-center text-black hover:bg-slate-200"
+                    className="text-center text-black hover:bg-slate-200 cursor-pointer"
+                    onClick={() => setModalMov({ tipo: "usuario", id: o.id_user })}
                   >
                     <td className="p-2 text2 text-lg">{o.nome}</td>
                     <td className="p-2 text2 text-lg">{o.cargo}</td>
@@ -262,7 +266,7 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
                 {departamentos.map((d) => (
                   <tr
                     key={d.id_departamento}
-                    className="text-center text-black hover:bg-slate-200"
+                    className="text-center text-black hover:bg-slate-200 cursor-pointer"
                   >
                     <td className="p-2 text2 text-lg">{d.nome}</td>
                     <td className="p-2 text2 text-lg">{format(new Date(d.data_congresso), "dd/MM/yyyy")}</td>
@@ -274,6 +278,18 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
           )}
         </div>
       </div>
+      {modalMov && (
+        <ModalMovimentacao
+          tipo={modalMov.tipo}
+          id={modalMov.id}
+          onClose={() => setModalMov(null)}
+          onSuccess={() => {
+          setTimeout(() => {
+            window.location.reload();
+          });
+          }}
+        />
+      )}
     </div>
   );
 };
