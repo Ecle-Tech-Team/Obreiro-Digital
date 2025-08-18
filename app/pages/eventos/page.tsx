@@ -33,6 +33,9 @@ interface Eventos {
   horario_fim: string;
   local: string;
   id_igreja: number;
+  is_global?: 0 | 1 | boolean;
+  id_matriz?: number | null;
+  tipo_evento?: "matriz" | "local";
 }
 
 export default function eventos() {
@@ -42,6 +45,7 @@ export default function eventos() {
   const [horario_inicio, setHorarioInicio] = useState<string>("");
   const [data_fim, setDataFim] = useState<string>("");
   const [horario_fim, setHorarioFim] = useState<string>("");
+  const [tipoEvento, setTipoEvento] = useState<"local" | "matriz">("local");
 
   const [editNome, setEditNome] = useState<string>("");
   const [editLocal, setEditLocal] = useState<string>("");
@@ -49,6 +53,7 @@ export default function eventos() {
   const [editHorarioInicio, setEditHorarioInicio] = useState<string>("");
   const [editDataFim, setEditDataFim] = useState<string>("");
   const [editHorarioFim, setEditHorarioFim] = useState<string>("");
+
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [eventoToDelete, setEventoToDelete] = useState<number | null>(null);
 
@@ -95,12 +100,25 @@ export default function eventos() {
 
   const [user, setUser] = useState<User | null>(null);
 
+  const [cargoUsuario, setCargoUsuario] = useState<string | null>(null);
+  const [idIgreja, setIdIgreja] = useState<string | null>(null);
+  const [idMatriz, setIdMatriz] = useState<string | null>(null);
+
+  useEffect(() => {
+    const cargo = sessionStorage.getItem("cargo");
+    const id_igreja = sessionStorage.getItem("id_igreja");
+    const id_matriz = sessionStorage.getItem("id_matriz");
+    setCargoUsuario(cargo);
+    setIdIgreja(id_igreja);
+    setIdMatriz(id_matriz);
+  }, []);
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const id_igreja = sessionStorage.getItem("id_igreja");
 
-        const eventoResponse = await api.get(`/evento/${id_igreja}`);
+        const eventoResponse = await api.get(`/evento/matriz/${id_igreja}`);
         setAllEventos(eventoResponse.data);
         setFilteredEventos(eventoResponse.data);
         console.log("ID Igreja recebido:", id_igreja);
@@ -294,7 +312,7 @@ export default function eventos() {
         notifyWarn();
         return;
       } else {
-        const dados = {
+        const body: any = {
           nome,
           local,
           data_inicio,
@@ -303,7 +321,17 @@ export default function eventos() {
           horario_fim,
         };
 
-        const response = await api.post("/evento", dados);
+        if (tipoEvento === "matriz" && cargoUsuario === "Pastor Matriz") {
+          body.is_global = true;
+          body.id_matriz = idMatriz ?? idIgreja; // fallback
+        } else {
+          body.is_global = false;
+          body.id_matriz = null;
+        }
+
+        console.log("Enviando evento:", body);
+
+        const response = await api.post("/evento", body);
 
         notifySuccess();
 
@@ -464,11 +492,7 @@ export default function eventos() {
                       className="flex bg-azul items-center justify-center px-5 py-2 cursor-pointer rounded-lg focus:outline-none"
                       href={"/../../pages/apresentacao"}
                     >
-                        <Image src={cast} 
-                        width={30} 
-                        height={30} 
-                        alt="Filtrar" 
-                      />
+                      <Image src={cast} width={30} height={30} alt="Filtrar" />
                     </Link>
                     <button
                       onClick={() => setIsFilterOpen(!isFilterOpen)}
@@ -592,6 +616,10 @@ export default function eventos() {
                         new Date(`1970-01-01T${evento.horario_fim}`),
                         "HH:mm"
                       )}
+                      tipo_evento={
+                        evento.tipo_evento ??
+                        (evento.is_global ? "matriz" : "local")
+                      }
                       onClick={() => openModal("edit", evento)}
                       onDelete={() => handleDeleteClick(evento.id_evento)}
                     />
@@ -749,6 +777,26 @@ export default function eventos() {
                 </div>
               </div>
 
+              {cargoUsuario === "Pastor Matriz" && (
+                <div className="flex flex-col px-10">
+                  <label className="text-white text1 text-xl mt-5 mb-1">
+                    Tipo Evento
+                  </label>
+
+                  <select
+                    className="px-4 py-3 rounded-lg text2 text-slate-500 bg-white"
+                    value={tipoEvento}
+                    onChange={(e) =>
+                      setTipoEvento(e.target.value as "local" | "matriz")
+                    }
+                    required
+                  >
+                    <option disabled>Escolha o Tipo do Evento</option>
+                    <option value="local">Evento Local</option>
+                    <option value="matriz">Evento da Matriz</option>
+                  </select>
+                </div>
+              )}
               <div className="flex flex-col px-10 pb-10">
                 <button
                   className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"
