@@ -258,6 +258,8 @@ export default function eventos() {
     }
   }, [selectedEvento]);
 
+  const isReadOnlyEvento = selectedEvento?.id_matriz !== null;
+
   async function handleRegister(event: React.FormEvent) {
     event.preventDefault();
 
@@ -814,7 +816,7 @@ export default function eventos() {
             onRequestClose={closeModal}
             contentLabel="Ver Evento"
           >
-            <div className={`flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl ${cargoUsuario === "Pastor" ? "pb-20" : ""}`}>
+            <div className={`flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl ${isReadOnlyEvento ? "pb-20" : ""}`}>
               <div className="cursor-pointer flex place-content-end rounded-lg">
                 <Image
                   onClick={closeModal}
@@ -842,7 +844,7 @@ export default function eventos() {
                   onChange={(e) => setEditNome(e.target.value)}
                   maxLength={150}
                   required
-                  readOnly={cargoUsuario === "Pastor"}
+                  readOnly={isReadOnlyEvento}
                 />
               </div>
 
@@ -859,7 +861,7 @@ export default function eventos() {
                   onChange={(e) => setEditLocal(e.target.value)}
                   maxLength={150}
                   required
-                  readOnly={cargoUsuario === "Pastor"}
+                  readOnly={isReadOnlyEvento}
                 />
               </div>
 
@@ -876,7 +878,7 @@ export default function eventos() {
                     value={editDataInicio}
                     onChange={(e) => setEditDataInicio(e.target.value)}
                     required
-                    readOnly={cargoUsuario === "Pastor"}
+                    readOnly={isReadOnlyEvento}
                   />
                 </div>
 
@@ -892,7 +894,7 @@ export default function eventos() {
                     value={editHorarioInicio}
                     onChange={(e) => setEditHorarioInicio(e.target.value)}
                     required
-                    readOnly={cargoUsuario === "Pastor"}
+                    readOnly={isReadOnlyEvento}
                   />
                 </div>
               </div>
@@ -910,7 +912,7 @@ export default function eventos() {
                     value={editDataFim}
                     onChange={(e) => setEditDataFim(e.target.value)}
                     required
-                    readOnly={cargoUsuario === "Pastor"}
+                    readOnly={isReadOnlyEvento}
                   />
                 </div>
 
@@ -926,11 +928,11 @@ export default function eventos() {
                     value={editHorarioFim}
                     onChange={(e) => setEditHorarioFim(e.target.value)}
                     required
-                    readOnly={cargoUsuario === "Pastor"}
+                    readOnly={isReadOnlyEvento}
                   />
                 </div>
               </div>
-              {cargoUsuario !== "Pastor" && (
+              {!isReadOnlyEvento && (
                 <div className="flex flex-col px-10 pb-10">
                   <button
                     className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"

@@ -19,15 +19,22 @@ interface Aviso {
   titulo: string;
   conteudo: string;
   data_criacao: string;
+  is_global?: 0 | 1 | boolean;
+  id_matriz?: number | null;
+  tipo_aviso?: "matriz" | "local";
 }
 
 export default function avisos() {
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [titulo, setTitulo] = useState<string>("");
   const [conteudo, setConteudo] = useState<string>("");
+  const [tipoAviso, setTipoAviso] = useState<"local" | "matriz">("local");
   const [editTitulo, setEditTitulo] = useState<string>("");
   const [editConteudo, setEditConteudo] = useState<string>("");
+
   const [selectedAviso, setSelectedAviso] = useState<Aviso | null>(null);
+  const isReadOnlyAviso = selectedAviso?.id_matriz !== null;
+
   const [modalType, setModalType] = useState<"new" | "edit" | null>(null);
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -93,12 +100,25 @@ export default function avisos() {
     };
   }, []);
 
+  const [cargoUsuario, setCargoUsuario] = useState<string | null>(null);
+    const [idIgreja, setIdIgreja] = useState<string | null>(null);
+    const [idMatriz, setIdMatriz] = useState<string | null>(null);
+  
+    useEffect(() => {
+      const cargo = sessionStorage.getItem("cargo");
+      const id_igreja = sessionStorage.getItem("id_igreja");
+      const id_matriz = sessionStorage.getItem("id_matriz");
+      setCargoUsuario(cargo);
+      setIdIgreja(id_igreja);
+      setIdMatriz(id_matriz);
+    }, []);
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const id_igreja = sessionStorage.getItem("id_igreja");
 
-        const avisoResponse = await api.get(`/avisos/${id_igreja}`);
+        const avisoResponse = await api.get(`/avisos/matriz/${id_igreja}`);
         setAllAvisos(avisoResponse.data);
         setFilteredAvisos(avisoResponse.data);
         console.log("ID Igreja recebido:", id_igreja);
@@ -215,8 +235,15 @@ export default function avisos() {
       return;
     }
     try {
-      const dados = { titulo, conteudo };
-      await api.post("/avisos", dados);
+      const body: any = { titulo, conteudo }
+      if (tipoAviso === "matriz" && cargoUsuario === "Pastor Matriz") {
+          body.is_global = true;
+          body.id_matriz = idMatriz ?? idIgreja; // fallback
+        } else {
+          body.is_global = false;
+          body.id_matriz = null;
+        }
+      await api.post("/avisos", body);
 
       toast.success("Aviso cadastrado com sucesso!", {
         position: "top-center",
@@ -493,6 +520,10 @@ export default function avisos() {
                           new Date(aviso.data_criacao),
                           "dd/MM/yyyy"
                         )}
+                        tipo_aviso={
+                        aviso.tipo_aviso ??
+                        (aviso.is_global ? "matriz" : "local")
+                      }
                         onClick={() => openModal("edit", aviso)}
                         onDelete={() => handleDeleteClick(aviso.id_aviso)}
                       />
@@ -581,6 +612,27 @@ export default function avisos() {
                   />
                 </div>
 
+                {cargoUsuario === "Pastor Matriz" && (
+                  <div className="flex flex-col px-10">
+                    <label className="text-white text1 text-xl mt-5 mb-1">
+                      Tipo Aviso
+                    </label>
+
+                    <select
+                      className="px-4 py-3 rounded-lg text2 text-slate-500 bg-white"
+                      value={tipoAviso}
+                      onChange={(e) =>
+                        setTipoAviso(e.target.value as "local" | "matriz")
+                      }
+                      required
+                    >
+                      <option disabled>Escolha o Tipo do Aviso</option>
+                      <option value="local">Aviso Local</option>
+                      <option value="matriz">Aviso da Matriz</option>
+                    </select>
+                  </div>
+                )}
+
                 <div className="flex flex-col px-10 pb-10">
                   <button
                     className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"
@@ -599,7 +651,7 @@ export default function avisos() {
               onRequestClose={closeModal}
               contentLabel="Editar Aviso"
             >
-              <div className="flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl">
+              <div className={`flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl ${isReadOnlyAviso ? "pb-20" : ""}`}>
                 <div className='cursor-pointer flex place-content-end rounded-lg'>
                   <Image onClick={closeModal} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
                 </div>
@@ -618,6 +670,7 @@ export default function avisos() {
                     placeholder="Digite o título..."
                     value={editTitulo}
                     onChange={(e) => setEditTitulo(e.target.value)}
+                    readOnly={isReadOnlyAviso}
                   />
                 </div>
 
@@ -630,17 +683,19 @@ export default function avisos() {
                     placeholder="Digite o conteúdo..."
                     value={editConteudo}
                     onChange={(e) => setEditConteudo(e.target.value)}
+                    readOnly={isReadOnlyAviso}
                   />
                 </div>
-
-                <div className="flex flex-col px-10 pb-10">
-                  <button
-                    className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"
-                    onClick={handleUpdate}
-                  >
-                    Atualizar
-                  </button>
-                </div>
+                {!isReadOnlyAviso && (
+                  <div className="flex flex-col px-10 pb-10">
+                    <button
+                      className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"
+                      onClick={handleUpdate}
+                    >
+                      Atualizar
+                    </button>
+                  </div>
+                )}
               </div>
             </Modal>
           </div>

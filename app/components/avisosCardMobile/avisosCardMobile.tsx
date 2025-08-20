@@ -2,10 +2,18 @@ import React, { FormEvent } from "react";
 import Image from "next/image";
 import lixo from "@/public/icons/delete.svg";
 
+interface Igreja {
+  id_igreja: number;
+  nome: string;
+  id_matriz: number;
+  is_global: boolean;
+}
+
 interface AvisosProps {
   titulo: string;
   conteudo: string;
   data: string;
+  tipo_aviso: string,
   onClick?: (event: FormEvent<Element>) => void;
 }
 
@@ -13,11 +21,13 @@ export default function AvisosCardMobile({
   titulo,
   conteudo,
   data,
+  tipo_aviso,
   onClick,
 }: AvisosProps) {
   return (
     <main>
       <div className="flex flex-col bg-white rounded-xl shadow-xl px-5 py-5 h-[35vh] w-[31vh] justify-between">
+        <h4 className="text-black text3 text-md text-left mt-2">{tipo_aviso === "matriz" ? "Aviso da Matriz" : "Aviso Local"}</h4>
         <div className="mt-2">
           <h4 className="text-azul text3 text-md text-left">Publicado em:</h4>
           <p className="text-black text3 text-xl my-2 text-left">{data}</p>
