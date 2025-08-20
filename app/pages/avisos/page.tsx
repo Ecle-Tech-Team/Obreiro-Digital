@@ -33,7 +33,6 @@ export default function avisos() {
   const [editConteudo, setEditConteudo] = useState<string>("");
 
   const [selectedAviso, setSelectedAviso] = useState<Aviso | null>(null);
-  const isReadOnlyAviso = selectedAviso?.id_matriz !== null;
 
   const [modalType, setModalType] = useState<"new" | "edit" | null>(null);
   const [modalIsOpen, setModalIsOpen] = useState(false);
@@ -101,17 +100,19 @@ export default function avisos() {
   }, []);
 
   const [cargoUsuario, setCargoUsuario] = useState<string | null>(null);
-    const [idIgreja, setIdIgreja] = useState<string | null>(null);
-    const [idMatriz, setIdMatriz] = useState<string | null>(null);
-  
-    useEffect(() => {
-      const cargo = sessionStorage.getItem("cargo");
-      const id_igreja = sessionStorage.getItem("id_igreja");
-      const id_matriz = sessionStorage.getItem("id_matriz");
-      setCargoUsuario(cargo);
-      setIdIgreja(id_igreja);
-      setIdMatriz(id_matriz);
-    }, []);
+  const [idIgreja, setIdIgreja] = useState<string | null>(null);
+  const [idMatriz, setIdMatriz] = useState<string | null>(null);
+
+  useEffect(() => {
+    const cargo = sessionStorage.getItem("cargo");
+    const id_igreja = sessionStorage.getItem("id_igreja");
+    const id_matriz = sessionStorage.getItem("id_matriz");
+    setCargoUsuario(cargo);
+    setIdIgreja(id_igreja);
+    setIdMatriz(id_matriz);
+  }, []);
+
+  const isReadOnlyAviso = selectedAviso?.id_matriz !== null && cargoUsuario !== "Pastor Matriz";
 
   useEffect(() => {
     const fetchUserData = async () => {

@@ -258,7 +258,7 @@ export default function eventos() {
     }
   }, [selectedEvento]);
 
-  const isReadOnlyEvento = selectedEvento?.id_matriz !== null;
+  const isReadOnlyEvento = selectedEvento?.id_matriz !== null && cargoUsuario !== "Pastor Matriz";
 
   async function handleRegister(event: React.FormEvent) {
     event.preventDefault();
