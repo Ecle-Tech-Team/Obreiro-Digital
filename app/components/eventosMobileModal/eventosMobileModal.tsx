@@ -11,6 +11,7 @@ interface EventoModalMobileProps {
     horario_inicio: string;
     data_fim: string;
     horario_fim: string;
+    tipo_evento?: "matriz" | "local";
   } | null;
 }
 
@@ -33,6 +34,9 @@ export default function EventoModalMobile({
         <div className="text-sm text-gray-700">
           <p className="mb-5 text3 text-gray-500">
             <strong className="text1 text-lg text-black">Nome:</strong> {evento.nome}
+          </p>
+          <p className="mb-5 text3 text-gray-500">
+            <strong className="text1 text-lg text-black">Tipo do Evento:</strong> {evento.tipo_evento}
           </p>
           <p className="mb-5 text3 text-gray-500">
             <strong className="text1 text-lg text-black">Local:</strong> {evento.local}

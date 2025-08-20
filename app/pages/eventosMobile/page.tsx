@@ -30,6 +30,9 @@ interface Eventos {
   horario_fim: string;
   local: string;
   id_igreja: number;
+  is_global?: 0 | 1 | boolean;
+  id_matriz?: number | null;
+  tipo_evento?: "matriz" | "local";
 }
 
 export default function eventosMobile() {
@@ -52,7 +55,7 @@ export default function eventosMobile() {
       try {
         const id_igreja = sessionStorage.getItem("id_igreja");
 
-        const eventoResponse = await api.get(`/evento/${id_igreja}`);
+        const eventoResponse = await api.get(`/evento/matriz/${id_igreja}`);
         setAllEventos(eventoResponse.data);
         setFilteredEventos(eventoResponse.data);
         console.log("ID Igreja recebido:", id_igreja);
@@ -301,6 +304,10 @@ export default function eventosMobile() {
                         new Date(`1970-01-01T${evento.horario_fim}`),
                         "HH:mm"
                       )}
+                      tipo_evento={
+                        evento.tipo_evento ??
+                        (evento.is_global ? "matriz" : "local")
+                      }
                     />
                   </div>
                 ))
@@ -332,6 +339,7 @@ export default function eventosMobile() {
                     new Date(`1970-01-01T${selectedEvento.horario_fim}`),
                     "HH:mm"
                   ),
+                  tipo_evento: selectedEvento.tipo_evento                             
                 }
               : null
           }
