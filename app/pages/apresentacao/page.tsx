@@ -14,12 +14,18 @@ interface Evento {
   data_fim: string;
   horario_fim: string;
   local: string;
+  is_global?: 0 | 1 | boolean;
+  id_matriz?: number | null;
+  tipo_evento?: "matriz" | "local";
 }
 
 interface Aviso {
   id_aviso: number;
   titulo: string;
   conteudo: string;
+  is_global?: 0 | 1 | boolean;
+  id_matriz?: number | null;
+  tipo_aviso?: "matriz" | "local";
 }
 
 export default function Apresentacao() {
@@ -30,8 +36,9 @@ export default function Apresentacao() {
     const fetchData = async () => {
       try {
         const id_igreja = sessionStorage.getItem("id_igreja");
+        const id_matriz = sessionStorage.getItem("id_matriz");
 
-        const response = await api.get(`/evento/semana/${id_igreja}`);
+        const response = await api.get(`/evento/semana/${id_igreja}/${id_matriz}`);
         setEventos(response.data.eventos);
         setAvisos(response.data.avisos);
       } catch (error) {
@@ -53,6 +60,7 @@ export default function Apresentacao() {
               className="bg-white text-black p-4 rounded-xl shadow"
             >
               <p className="text-azul text3 text-md mb-1">em {evento.local}</p>
+              <h4 className="text-lg text1 mt-2">{evento.tipo_evento ?? (evento.is_global ? "matriz" : "local")}</h4>
               <h2 className="text-3xl text1">{evento.nome}</h2>
               <div className="mt-2">
                 <p className="text-xl text3 mt-4">
@@ -82,7 +90,8 @@ export default function Apresentacao() {
               key={aviso.id_aviso}
               className="bg-blue-500 text-white p-4 rounded-lg shadow-md"
             >
-              <h3 className="text-lg text1">{aviso.titulo}</h3>
+              <h4 className="text-sm text1">{aviso.tipo_aviso ?? (aviso.is_global ? "matriz" : "local")}</h4>
+              <h3 className="text-xl text1">{aviso.titulo}</h3>
               <p className="text-sm mt-1 text3">{aviso.conteudo}</p>
             </div>
           ))}
