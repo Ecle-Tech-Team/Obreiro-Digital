@@ -88,7 +88,10 @@ export default function membros() {
         });
       };
 
-      setMembro(membros.filter((m) => m.id_membro !== memberToDelete));
+      // Atualizar todas as listas de estado
+      setMembro(prev => prev.filter((m) => m.id_membro !== memberToDelete));
+      setAllMembros(prev => prev.filter((m) => m.id_membro !== memberToDelete));
+      setFilteredMembros(prev => prev.filter((m) => m.id_membro !== memberToDelete));
       notifyDelete();
     } catch (error) {
       toast.error("Erro ao remover membro.");
@@ -280,7 +283,7 @@ export default function membros() {
   };
 
   const notifyTypingErrorSpecial = () => {
-    toast.error("O nome contém caracteres inválidos.", {
+    toast.error("O nome contém caracteres inválidos. Use apenas letras, acentos, espaços, hífens e apóstrofos.", {
       position: "top-center",
       autoClose: 1500,
       hideProgressBar: false,
@@ -310,7 +313,8 @@ export default function membros() {
   async function handleRegister(event: React.FormEvent) {
     event.preventDefault();
     const specialCharactersRegex = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/;
-    const invalidCharactersRegex = /[^a-zA-Z\s]/;
+    // Permite letras (incluindo acentos), números, espaços, hífens e apóstrofos
+    const validNameRegex = /^[\p{L}\p{M}\s'-]+$/u;
 
     const notifySuccess = () => {
       toast.success("Membro cadastrado com sucesso!", {
@@ -363,7 +367,7 @@ export default function membros() {
       } else if (specialCharactersRegex.test(nome)) {
         notifyTypingError();
         return;
-      } else if (invalidCharactersRegex.test(nome)) {
+      } else if (!validNameRegex.test(nome.trim())) {
         notifyTypingErrorSpecial();
         return;
       } else {
@@ -378,10 +382,23 @@ export default function membros() {
 
         const response = await api.post("/membro", data);
 
+        // Atualizar a lista de membros localmente
+        const novoMembro = response.data;
+        setAllMembros(prev => [...prev, novoMembro]);
+        setFilteredMembros(prev => [...prev, novoMembro]);
+
         notifySuccess();
 
+        // Fechar modal após sucesso
         setTimeout(() => {
-          window.location.reload();
+          closeModal();
+          // Resetar formulário
+          setCodMembro("");
+          setNome("");
+          setBirth("");
+          setNumero("");
+          setNovoConvertido("Sim");
+          setNomeDepartamento(0);
         }, 1500);
       }
     } catch {
@@ -448,6 +465,15 @@ export default function membros() {
         return;
       }
 
+      // Validação do nome (mesma validação do cadastro)
+      if (specialCharactersRegex.test(editNome)) {
+        notifyTypingError();
+        return;
+      } else if (!validNameRegex.test(editNome.trim())) {
+        notifyTypingErrorSpecial();
+        return;
+      }
+
       const data = {
         cod_membro: editCodMembro,
         nome: editNome,
@@ -466,11 +492,20 @@ export default function membros() {
 
       notifySuccess();
 
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      // Atualizar o membro na lista localmente
+      const membroAtualizado = response.data;
+      setAllMembros(prev => prev.map(m =>
+        m.id_membro === membro.id_membro ? { ...m, ...membroAtualizado } : m
+      ));
+      setFilteredMembros(prev => prev.map(m =>
+        m.id_membro === membro.id_membro ? { ...m, ...membroAtualizado } : m
+      ));
 
-      setSelectedMember(null);
+      // Fechar modal após sucesso
+      setTimeout(() => {
+        closeModal();
+        setSelectedMember(null);
+      }, 1500);
     } catch (error) {
       console.error("Error updating member:", error);
       notifyError();

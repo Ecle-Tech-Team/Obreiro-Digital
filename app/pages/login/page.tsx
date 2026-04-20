@@ -61,9 +61,29 @@ export default function Login() {
       });
     };
 
+    const notifyInvalidEmail = () => {
+      toast.error("Por favor, insira um email válido.", {
+        position: "top-center",
+        autoClose: 1500,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "colored",
+      });
+    };
+
     try {
       if (!email || !senha) {
         notifyWarn();
+        return;
+      }
+
+      // Validação de formato de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        notifyInvalidEmail();
         return;
       } else {
         const dataLogin = {
@@ -153,13 +173,9 @@ export default function Login() {
               </div>
 
               <div className="flex justify-center">
-                <input className="w-5" type="checkbox" name="" id="" />
-                <p className="text-white text-lg mt-1 text2 ml-2">
-                  Manter Conectado
-                </p>
                 <button
                   type="button"
-                  className="ml-[16vh]"
+                  className="ml-auto"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   <Image
