@@ -1,18 +1,14 @@
 "use client";
+import { AddButton, AppModal, FilterButton, PageTitle, SearchField } from '@/app/components/shared/MemberStyle';
 import React, { useState, useEffect, useRef } from "react";
+import { ChevronDown, Radio, X } from "lucide-react";
 import { format } from "date-fns";
 import MenuLateral from "@/app/components/menuLateral/menuLateral";
 import AvisosCard from "@/app/components/avisosCard/avisosCard";
-import Image from "next/image";
 import Link from "next/link";
 import api from "../../api/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Modal from "react-modal";
-import seta from "@/public/icons/seta-down.svg";
-import close from "@/public/icons/close.svg";
-import cast from "@/public/icons/cast.svg";
-import filter from "@/public/icons/filter.png";
 
 interface Aviso {
   id_aviso: number;
@@ -326,8 +322,8 @@ export default function avisos() {
     <main>
       <div className="flex">
         <MenuLateral />
-        <div className="sm:ml-[12vh] md:ml-[20vh] lg:ml-[5vh] mr-[10vh] mb-[5vh]">
-          <div className="flex mt-12">
+        <div className="app-content">
+          <div className="od-breadcrumb pt-2">
             <Link
               href={"/../../pages/inicio"}
               className="text-cinza text-lg text3"
@@ -348,20 +344,16 @@ export default function avisos() {
             </Link>
           </div>
 
-          <div className="flex">
+          <div className="page-toolbar mt-6">
             <div
-              className="mt-10 relative sm:right-20 md:right-2"
+              className="relative min-w-0"
               ref={dropdownRef}
             >
-              <button onClick={toggleDropdown} className="ml-2 flex">
-                <h1 className="text-black text1 sm:mr-[2vh]  sm:text-4xl md:text-4xl lg:text-5xl">
-                  Avisos
-                </h1>
-                <Image
-                  src={seta}
+              <button onClick={toggleDropdown} className="flex items-center gap-2">
+                <PageTitle>Avisos</PageTitle>
+                <ChevronDown
                   width={24}
-                  height={24}
-                  alt="Arrow Icon"
+                  height={24} aria-label="Arrow Icon"
                   className={`${
                     isDropdownOpen ? "rotate-180" : ""
                   } transition-transform`}
@@ -380,44 +372,33 @@ export default function avisos() {
               )}
             </div>
 
-            <div className="flex">
-              <div className="mt-10 relative sm:right-[5vh] md:left-[20vh] lg:left-[46vh]">
-                <div className="flex mb-4">
+            <div className="page-toolbar-actions">
+              <div className="relative flex min-w-0 flex-1">
+                <div className="flex w-full min-w-0">
                   {/* Botão de filtro */}
-                  <div className="flex gap-5 relative">
+                  <div className="od-list-controls relative flex w-full min-w-0 items-center gap-2">
                     <Link
                       className="flex bg-azul items-center justify-center px-5 py-2 cursor-pointer rounded-lg focus:outline-none"
                       href={"/../../pages/apresentacao"}
                     >
-                        <Image src={cast} 
-                        width={30} 
-                        height={30} 
-                        alt="Filtrar" 
-                      />
+                      <Radio size={24} aria-label="Apresentação" />
                     </Link>
-                    <button
+                    <FilterButton
                       onClick={() => setIsFilterOpen(!isFilterOpen)}
-                      className="flex items-center justify-center px-5 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
-                    >
-                      <Image
-                        src={filter}
-                        width={30}
-                        height={30}
-                        alt="Filtrar"
-                      />
-                    </button>
+
+                     />
                     <div className="flex-1">
-                      <input
+                      <SearchField
                         type="text"
                         placeholder="Pesquisar avisos..."
-                        className="sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-xl md:text-lg lg:text-xl text-gray-600 pl-5 text2 text-left content-center justify-center rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
+
                         value={searchTerm}
                         onChange={(e) => handleSearch(e.target.value)}
                       />
                     </div>
                     {/* Dropdown de filtros */}
                     {isFilterOpen && (
-                      <div className="absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
+                      <div className="od-filter-menu absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
                         <button
                           className={`block w-full text-left px-4 py-2 ${
                             sortCriteria === "recent"
@@ -492,21 +473,16 @@ export default function avisos() {
                   </div>
                 </div>
               </div>
-              <div className="flex relative sm:right-[10vh] md:left-[35vh] lg:left-[47vh]">
-                <div className="mt-10 ml-1 flex justify-center">
-                  <p
-                    className="bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400"
-                    onClick={() => openModal("new")}
-                  >
-                    Novo Aviso +
-                  </p>
+              <div className="flex min-w-0">
+                <div className="flex justify-center">
+                  <AddButton onClick={() => openModal("new")}>Novo Aviso</AddButton>
                 </div>
               </div>
             </div>
 
-            <div className="ml-[20vh] pr-2">
-              <div className="bg-white space-x-16 shadow-xl absolute rounded-xl top-[24%] sm:left-[2vh] md:left-[20vh] lg:left-[35vh] h-[72vh] max-h-[72vh] overflow-y-auto overflow-x-auto ">
-                <div className="m-9 grid md:grid-cols-2 lg:grid-cols-5 xl:grid-cols-3 gap-[4vh]">
+            <div className="page-list-region">
+              <div className="mt-4 max-h-[70vh] overflow-y-auto rounded-xl bg-white shadow-xl">
+                <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3 sm:p-6">
                   {sortedAvisos.length === 0 ? (
                     <p className="text-center text-black text1 text-4xl mt-5 text-gray-4]">
                       Nenhum aviso encontrado.
@@ -534,7 +510,7 @@ export default function avisos() {
               </div>
             </div>
 
-            <Modal
+            <AppModal
               isOpen={isDeleteModalOpen}
               onRequestClose={() => setIsDeleteModalOpen(false)}
               contentLabel="Confirmar exclusão"
@@ -563,10 +539,10 @@ export default function avisos() {
                   </button>
                 </div>
               </div>
-            </Modal>
+            </AppModal>
 
             {/* Modal Novo Aviso */}
-            <Modal
+            <AppModal
               className="text-white flex flex-col"
               isOpen={modalIsOpen && modalType === "new"}
               onRequestClose={closeModal}
@@ -574,12 +550,10 @@ export default function avisos() {
             >
               <div className="flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl">
                 <div className="cursor-pointer flex place-content-end rounded-lg">
-                  <Image
+                  <X
                     onClick={closeModal}
-                    src={close}
                     width={40}
-                    height={40}
-                    alt="close Icon"
+                    height={40} aria-label="close Icon"
                     className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
                   />
                 </div>
@@ -643,10 +617,10 @@ export default function avisos() {
                   </button>
                 </div>
               </div>
-            </Modal>
+            </AppModal>
 
             {/* Modal Editar Aviso */}
-            <Modal
+            <AppModal
               className="text-white flex flex-col"
               isOpen={modalIsOpen && modalType === "edit"}
               onRequestClose={closeModal}
@@ -654,7 +628,7 @@ export default function avisos() {
             >
               <div className={`flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl ${isReadOnlyAviso ? "pb-20" : ""}`}>
                 <div className='cursor-pointer flex place-content-end rounded-lg'>
-                  <Image onClick={closeModal} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+                  <X onClick={closeModal} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
                 </div>
 
                 <h2 className="text-white text1 text-4xl flex justify-center">
@@ -698,7 +672,7 @@ export default function avisos() {
                   </div>
                 )}
               </div>
-            </Modal>
+            </AppModal>
           </div>
         </div>
         <ToastContainer />

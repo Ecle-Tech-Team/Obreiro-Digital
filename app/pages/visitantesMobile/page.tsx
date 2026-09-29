@@ -1,14 +1,13 @@
 'use client'
+import { AddButton, AppModal, PageTitle } from '@/app/components/shared/MemberStyle';
 import React, { useState, useEffect } from 'react'
+import { UserRound } from 'lucide-react'
 import { format } from 'date-fns';
 import MenuInferior from '@/app/components/menuInferior/menuInferior'
 import MenuSuperior from '@/app/components/menuSuperior/menuSuperior'
-import Image from 'next/image'
-import Modal from 'react-modal'
 import api from '../../api/api';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import perfilVisitante from '@/public/images/Visitante 1.svg'
 
 
 interface Membro {
@@ -33,7 +32,7 @@ interface User {
     data_visita: string; 
 }
 export default function visitantesMobile() {
-    
+
     const [nome, setNome] = useState<string>('')
     const [cristao, setCristao] = useState<string>('')
     const [dataVisita, setDataVisita] = useState<string>('');
@@ -41,9 +40,9 @@ export default function visitantesMobile() {
     const [ministerio, setMinisterio] = useState<string>('')
     const [convidadoPor, setConvidadoPor] = useState<number | string>(0);
     const [nomeIgreja, setNomeIgreja] = useState<number>(0)
-    
+
     const [membros, setMembros] = useState<Membro[]>([]); 
-    
+
     useEffect(() => {
         const fetchMembers = async () => {
             try {
@@ -64,7 +63,7 @@ export default function visitantesMobile() {
           try {        
             const userResponse = await api.get('/cadastro');
             setUser(userResponse.data);
-    
+
             if (userResponse.data && userResponse.data.id_igreja) {
               const visitanteResponse = await api.get(`/visitante/${userResponse.data.id_igreja}`);
               setVisitantes(visitanteResponse.data);
@@ -73,7 +72,7 @@ export default function visitantesMobile() {
             console.error('Error fetching user data:', error);
           }
         };
-    
+
         fetchUserData();
       }, []);
 
@@ -87,19 +86,19 @@ export default function visitantesMobile() {
                     const dateB = new Date(b.data_visita as string);                      
                     return dateB.getTime() - dateA.getTime();
                 });               
-    
+
                 const visitantesWithAdjustedDate = sortedVisitantes.map((visitante: { data_visita: string | number | Date; }) => {
                     const date = new Date(visitante.data_visita);
                     date.setDate(date.getDate() + 1);
                     return { ...visitante, data_visita: date.toISOString().split('T')[0] };
                 });
-    
+
                 setVisitantes(visitantesWithAdjustedDate);
             } catch (error) {
                 console.error('Error fetching visitantes:', error);
             }
         };
-    
+
         fetchVisitantes();
     }, []);
 
@@ -119,11 +118,11 @@ export default function visitantesMobile() {
     }, []);
 
     const [modalIsOpen, setModalIsOpen] = useState(false);
-    
+
     const openModal = () => {
         setModalIsOpen(true);
     };
-    
+
     const closeModal = () => {
         setModalIsOpen(false);
     };
@@ -140,7 +139,7 @@ export default function visitantesMobile() {
           theme: "colored",
         });
       }
-    
+
       const notifyTypingErrorSpecial = () => {
         toast.error('O nome contém caracteres inválidos.', {
           position: "top-center",
@@ -153,13 +152,13 @@ export default function visitantesMobile() {
           theme: "colored",
         });
       }
-    
+
       async function handleRegister(event: React.FormEvent) {
         event.preventDefault();        
 
         const specialCharactersRegex = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/;
         const invalidCharactersRegex = /[^a-zA-Z\s]/;
-    
+
         const notifySuccess = () => {
           toast.success('Visitante cadastrado com sucesso!', {
             position: "top-center",
@@ -172,7 +171,7 @@ export default function visitantesMobile() {
             theme: "colored",
             });
         }
-    
+
         const notifyWarn = () => {
           toast.warn('Todos os campos devem ser preenchidos!', {
             position: "top-center",
@@ -185,7 +184,7 @@ export default function visitantesMobile() {
             theme: "colored",
             });
         }
-    
+
         const notifyError = () => {
           toast.error('Erro no cadastro, Tente novamente.', {
             position: "top-center",
@@ -198,7 +197,7 @@ export default function visitantesMobile() {
             theme: "colored",
           });
         }
-    
+
         try{
           if(nome === "" || (cristao === "Sim" && (congregacao === "" || ministerio === "")) || dataVisita === "" || convidadoPor === 0 || nomeIgreja === 0) {
               notifyWarn();
@@ -219,11 +218,11 @@ export default function visitantesMobile() {
               convidado_por: convidadoPor,
               id_igreja: nomeIgreja
             }           
-           
+
             const response = await api.post('/visitante', data)           
-            
+
             notifySuccess();
-    
+
             setTimeout(() => {
                window.location.reload();
             }, 1500);
@@ -234,7 +233,7 @@ export default function visitantesMobile() {
     }  
 
   return (
-    <main>
+    <main className="mobile-page">
         <div>
             <div>
                 <MenuSuperior/>
@@ -242,29 +241,29 @@ export default function visitantesMobile() {
             </div>
 
             <div>
-                <div className='flex'>
-                    <h1 className='text1 text-black text-3xl ml-4'>Visitantes</h1>
-                    
-                    <button className='bg-azul text2 text-white py-1 px-4 rounded-lg sticky left-[29.5vh]' onClick={openModal}>Novo Visitante +</button>                    
+                <div className='mobile-list-header'>
+                    <PageTitle>Visitantes</PageTitle>
+
+                    <AddButton onClick={openModal}>Novo Visitante</AddButton>
                 </div>
             </div>
 
-            <div className='flex justify-center'>
-                <div className='bg-white shadow-xl rounded-xl self-center mt-7 w-[40vh] h-[70vh] overflow-y-auto'>
+            <div className='px-4'>
+                <div className='bg-white shadow-xl rounded-xl mt-5 w-full min-w-0 max-h-[65vh] overflow-y-auto'>
                 {visitantes.map((visitante) => (
-                        <div key={visitante.id_visitante} className='flex p-4'>
-                            <Image src={perfilVisitante} width={40} height={40} alt=''/>
-                            <div className='ml-4'>
+                        <div key={visitante.id_visitante} className='flex min-w-0 gap-3 p-4'>
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-azul"><UserRound size={22} aria-hidden="true" /></span>
+                            <div className='min-w-0 flex-1'>
                                 <h4 className='text1 text-black text-lg leading-5'>{visitante.nome}</h4>
                                 <p className='text2 text-black relative bottom-1.5'>{visitante.congregacao}</p>
                             </div>
-                            <h4 className='flex self-center text2 text-black sticky left-[35vh]'>{format(new Date(visitante.data_visita), 'dd/MM')}</h4>
+                            <h4 className='ml-auto shrink-0 self-center text2 text-black'>{format(new Date(visitante.data_visita), 'dd/MM')}</h4>
                         </div>
                     ))}
                 </div>
             </div>
 
-            <Modal
+            <AppModal
                 className="text-white flex flex-col" 
                 isOpen={modalIsOpen} 
                 onRequestClose={closeModal}
@@ -386,7 +385,7 @@ export default function visitantesMobile() {
 
                 </div>
                 <ToastContainer />
-            </Modal>
+            </AppModal>
 
         </div>
     </main>

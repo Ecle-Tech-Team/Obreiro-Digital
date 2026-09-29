@@ -1,12 +1,11 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import { DataTable, ModalSurface } from '@/app/components/shared/MemberStyle';
+import { ChevronDown, X } from "lucide-react";
 import { fetchMembrosPorIgreja, fetchObreirosPorIgreja, fetchDepartamentosPorIgreja } from "@/app/api/api";
 import ModalMovimentacao from "../movimentacaoModal/movimentacaoModal";
 import { format } from "date-fns";
 import Link from "next/link";
-import Image from "next/image";
-import seta from "@/public/icons/seta-down-white.svg";
-import close from "@/public/icons/close.svg";
 
 interface Igreja {
   id_igreja: number;
@@ -121,24 +120,22 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[80vh] overflow-auto relative">
+      <ModalSurface className="relative w-full max-w-2xl max-h-[86dvh] overflow-auto">
         <div className="bg-azul pb-4 sticky top-0 z-20">
           <div className="cursor-pointer flex place-content-end rounded-lg sticky">
-            <Image
+            <X
               onClick={onClose}
-              src={close}
               width={40}
-              height={40}
-              alt="close Icon"
+              height={40} aria-label="close Icon"
               className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
             />
           </div>
 
-          <h2 className="text-xl text1 text-white ml-[5.6vh] mb-2 text-left">
+          <h2 className="text-xl text1 text-white px-4 sm:px-8 mb-2 text-left">
             {igreja.nome}
           </h2>
 
-          <div className="relative ml-[5.6vh]" ref={dropdownRef}>
+          <div className="relative px-4 sm:px-8" ref={dropdownRef}>
             <button
               onClick={toggleDropdown}
               className="flex items-center bg-azul py-2 cursor-pointer"
@@ -146,11 +143,9 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
               <span className="text-white text-3xl text1 capitalize mr-2">
                 {tab}
               </span>
-              <Image
-                src={seta}
+              <ChevronDown
                 width={22}
-                height={22}
-                alt="seta"
+                height={22} aria-label="seta"
                 className={`transition-transform ${
                   isDropdownOpen ? "rotate-180" : ""
                 }`}
@@ -192,9 +187,9 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
         </div>
 
         {/* Table Content */}
-        <div className="h-[72vh] max-h-[72vh]">
+        <div className="max-h-[70dvh] overflow-auto">
           {tab === "membros" && (
-            <table className="w-full table-auto">
+            <DataTable className="min-w-[42rem] table-auto">
               <thead className="sticky top-[130px] z-30">
                 <tr className="bg-azul text-white text1 text-xl">
                   <th className="py-2 px-5">Nome</th>
@@ -221,11 +216,11 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </DataTable>
           )}
 
           {tab === "obreiros" && (
-            <table className="w-full table-auto">
+            <DataTable className="min-w-[42rem] table-auto">
               <thead>
                 <tr className="bg-azul text-white text1 text-xl">
                   <th className="p-2">Nome</th>
@@ -250,11 +245,11 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </DataTable>
           )}
 
           {tab === "departamentos" && (
-            <table className="w-full table-auto">
+            <DataTable className="min-w-[42rem] table-auto">
               <thead>
                 <tr className="bg-azul text-white text1 text-xl">
                   <th className="p-2">Nome</th>
@@ -274,10 +269,10 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </DataTable>
           )}
         </div>
-      </div>
+      </ModalSurface>
       {modalMov && (
         <ModalMovimentacao
           tipo={modalMov.tipo}

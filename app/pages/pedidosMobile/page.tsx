@@ -1,17 +1,13 @@
 'use client'
+import { AddButton, AppModal, FilterButton, PageTitle, SearchField } from '@/app/components/shared/MemberStyle';
 import React, { useState, useEffect } from 'react'
+import { Search, ShoppingBasket, X } from "lucide-react";
 import api from '@/app/api/api'
 import MenuInferior from '@/app/components/menuInferior/menuInferior'
 import MenuSuperior from '@/app/components/menuSuperior/menuSuperior'
 import { format } from 'date-fns';
-import Image from 'next/image'
-import Modal from 'react-modal'
-import close from '@/public/icons/close.svg';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import cesta from '@/public/icons/cesta.svg';
-import filter from '@/public/icons/filter.png';
-import lupa from '@/public/icons/lupa.svg';
 
 interface Igreja {
   id_igreja: number;
@@ -54,12 +50,12 @@ export default function pedidosMobile() {
             setPedidos(pedidoResponse.data);
             setAllPedidos(pedidoResponse.data);
             setFilteredPedidos(pedidoResponse.data);
-            
+
           } catch (error) {
             console.error('Error fetching user data:', error);
           }
         };
-    
+
         fetchUserData();
       }, []);
 
@@ -80,10 +76,10 @@ export default function pedidosMobile() {
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [sortCriteria, setSortCriteria] = useState<'recent' | 'oldest' | 'name-asc' | 'name-desc' | 'birth'>('recent');
-  
+
   const sortPedidos = (pedidos: Pedidos[]) => {
     const sorted = [...pedidos];
-    
+
     switch (sortCriteria) {
       case 'recent':
         return sorted.sort((a, b) => b.id_pedido - a.id_pedido);
@@ -106,7 +102,7 @@ export default function pedidosMobile() {
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
-    
+
     if (term.trim() === '') {
         setFilteredPedidos(allPedidos);
         return;
@@ -119,7 +115,7 @@ export default function pedidosMobile() {
         const nomeStr = pedidos.nome_produto ? pedidos.nome_produto.toString().toLowerCase() : '';
         const catStr = pedidos.categoria_produto ? pedidos.categoria_produto.toString().toLowerCase() : '';
         const numeroStr = pedidos.data_pedido ? pedidos.data_pedido.toString() : '';
-        
+
         return (
             nomeStr.includes(lowercasedTerm) ||
             catStr.includes(lowercasedTerm) ||
@@ -127,25 +123,24 @@ export default function pedidosMobile() {
         );
     });
 
-
     setFilteredPedidos(filtered);
   };
 
 const sortedPedidos = sortPedidos(filteredPedidos);
 
   const [modalIsOpen, setModalIsOpen] = useState(false);
-    
+
   const openModal = () => {
     setModalIsOpen(true);
   };
-  
+
   const closeModal = () => {
     setModalIsOpen(false);
   };
 
   async function handleRegister(event: React.FormEvent) {
     event.preventDefault();
-    
+
     const notifySuccess = () => {
       toast.success('Pedido realizado com sucesso!', {
         position: "top-center",
@@ -211,48 +206,47 @@ const sortedPedidos = sortPedidos(filteredPedidos);
   }
 
   return (
-    <main>
+    <main className="mobile-page">
       <div>
         <div>
           <MenuSuperior/>
           <MenuInferior/>
         </div>
 
-        <div className="flex gap-5 items-center">
-          <h1 className='text1 text-black text-3xl ml-4'>Pedidos</h1>
-          
+        <div className="mobile-list-header">
+          <PageTitle>Pedidos</PageTitle>
+
           <div className="flex">
-            <div className="mt-5 relative sm:left-[4vh] md:left-[20vh] lg:left-[54vh]">
-              <div className="flex mb-4 items-center gap-5">
-                
+            <div className="relative">
+              <div className="mobile-list-controls">
+
                 {/* Botão de filtro */}
                 <div className="flex gap-2">
-                  <button
+                  <FilterButton
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    className="flex items-center justify-center px-2 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
-                  >
-                    <Image src={filter} width={30} height={30} alt="Filtrar" />
-                  </button>
+
+                   />
                 </div>
 
                 {/* Campo de pesquisa */}
                 <div className="flex-1">
-                  <button
+                  <SearchField
+                    readOnly
+                    className="cursor-pointer"
+                    value={searchTerm}
+                    placeholder="Pesquisar pedidos..."
+                    aria-label="Abrir pesquisa de pedidos"
                     onClick={() => setSearchModalIsOpen(true)}
-                    className="bg-azul  py-[1.2vh] px-4 rounded-lg"
-                  >
-                    <Image src={lupa} width={23} height={30} alt="Pesquisar" />
-                  </button>
+                    onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSearchModalIsOpen(true); } }}
+                  />
                 </div>
 
                 {/* Botão de novo pedido */}
-                <button className="bg-azul text-3xl text2 text-white py-1 px-4 rounded-lg" onClick={openModal}>
-                  +
-                </button>
+                <AddButton onClick={openModal}>Novo Pedido</AddButton>
 
                 {/* Dropdown de filtros */}
                 {isFilterOpen && (
-                  <div className="absolute right-100 top-16 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
+                  <div className="od-filter-menu absolute right-100 top-16 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
                     <button
                         className={`block w-full text-left px-4 py-2 ${
                           sortCriteria === 'recent' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
@@ -323,22 +317,22 @@ const sortedPedidos = sortPedidos(filteredPedidos);
 
         </div>
 
-        <div className="flex justify-center">
-          <div className='bg-white shadow-xl rounded-xl self-center mt-4 w-[40vh] h-[70vh] overflow-y-auto'>
+        <div className="px-4">
+          <div className='bg-white shadow-xl rounded-xl mt-4 w-full min-w-0 max-h-[65vh] overflow-y-auto'>
             {sortedPedidos.map((ped) => (
-              <div key={ped.id_pedido} className='flex p-4'>
-                <Image src={cesta} width={40} height={40} alt=''/>
-                <div className="ml-4">
+              <div key={ped.id_pedido} className='flex min-w-0 gap-3 p-4'>
+                <ShoppingBasket width={40} height={40} aria-hidden="true"/>
+                <div className="min-w-0 flex-1">
                   <h4 className='text1 text-black text-lg leading-5'>{ped.nome_produto}</h4>
                   <p className='text2 text-black relative bottom-1.5'>{ped.categoria_produto}</p>
                 </div>
-                <h4 className='flex self-center text2 text-black sticky left-[35vh]'>{format(new Date(ped.data_pedido), 'dd/MM')}</h4>
+                <h4 className='ml-auto shrink-0 self-center text2 text-black'>{format(new Date(ped.data_pedido), 'dd/MM')}</h4>
               </div>
             ))}
           </div>
         </div>
-        
-        <Modal
+
+        <AppModal
           className="text-white flex flex-col bg-black bg-opacity-0"
           isOpen={searchModalIsOpen}
           onRequestClose={() => setSearchModalIsOpen(false)}
@@ -346,14 +340,13 @@ const sortedPedidos = sortPedidos(filteredPedidos);
         >
           <div className="flex flex-col justify-center self-center bg-white mt-[15vh] rounded-lg shadow-xl">            
             <div className='cursor-pointer flex place-content-start rounded-lg'>
-              <Image onClick={() => setSearchModalIsOpen(false)} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tl-lg'/>
+              <X onClick={() => setSearchModalIsOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tl-lg'/>
             </div>
 
             <div className="flex flex-row gap-3 px-5 py-2 mt-3">
-              <input
+              <SearchField
                 type="text"
                 placeholder="Digite o nome, categoria ou data..."
-                className="px-4 py-3 rounded-lg text2 text-slate-500 border focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               /> 
@@ -365,11 +358,11 @@ const sortedPedidos = sortPedidos(filteredPedidos);
                   setSearchModalIsOpen(false);
                 }}
               >
-                <Image src={lupa} width={23} height={20} alt="Pesquisar" />
+                <Search width={23} height={20} aria-label="Pesquisar" />
               </button>
             </div>
 
-           
+
               <button
                 className="border-2 mx-5 mb-6 px-4 py-2 mt-2 rounded-lg text2 text-gray-600 text-lg"
                 onClick={() => {
@@ -380,12 +373,12 @@ const sortedPedidos = sortPedidos(filteredPedidos);
                 >
                 Limpar
               </button>
-            
+
 
           </div>
-        </Modal>
+        </AppModal>
 
-        <Modal
+        <AppModal
           className="text-white flex flex-col" 
           isOpen={modalIsOpen} 
           onRequestClose={closeModal}
@@ -393,11 +386,11 @@ const sortedPedidos = sortPedidos(filteredPedidos);
         >
           <div className='flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl'>
             <div className='cursor-pointer flex place-content-end rounded-lg'>
-              <Image onClick={closeModal} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+              <X onClick={closeModal} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
             </div>
             <div className='flex flex-col px-7 pb-10'>
               <h2 className='text-white text1 text-3xl flex justify-center'>Novo Pedido</h2>                  
-              
+
                 <div className='flex flex-col'>
                   <label className='text-white text1 text-lg mt-5 mb-1'>Nome</label>
 
@@ -431,7 +424,7 @@ const sortedPedidos = sortPedidos(filteredPedidos);
                     <option value="Móvel">Móvel</option>
                   </select> 
                 </div>                        
-            
+
 
               <div className='flex flex-col'>
                 <label className='text-white text1 text-lg mt-5 mb-1'>Quantidade</label>
@@ -461,7 +454,7 @@ const sortedPedidos = sortPedidos(filteredPedidos);
             </div>
           </div>
           <ToastContainer />
-        </Modal>
+        </AppModal>
 
       </div>
     </main>

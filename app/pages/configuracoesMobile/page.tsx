@@ -1,21 +1,13 @@
 'use client'
+import { AppModal, PageTitle } from '@/app/components/shared/MemberStyle';
 import React, { useState, useEffect } from 'react'
+import { Bug, Church, KeyRound, Mail, MessageCircle, ShieldCheck, UserRoundX, X } from "lucide-react";
 import MenuInferior from '@/app/components/menuInferior/menuInferior'
 import MenuSuperior from '@/app/components/menuSuperior/menuSuperior'
 import { format } from 'date-fns';
 import { toast, ToastContainer } from 'react-toastify';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import Modal from 'react-modal';
-import close from '@/public/icons/close.svg';
-import igrejaIcon from '@/public/icons/igreja.svg';
-import mailIcon from '@/public/icons/mail.svg';
-import keyIcon from '@/public/icons/key.svg';
-import bugIcon from '@/public/icons/bug.svg';
-import chatIcon from '@/public/icons/chat.svg';
-import shieldIcon from '@/public/icons/shield.svg';
-import apagarContaIcon from '@/public/icons/apagar-conta.svg';
 import api from '@/app/api/api';
 
 interface Igreja {
@@ -34,19 +26,19 @@ export default function configuracoesMobile() {
   const router = useRouter();  
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isPriavcyModalOpen, setIsPrivacyModalOpen] = useState(false);
-    
+
   const handleLogout = () => {
     // Limpar todos os dados de autenticação
     sessionStorage.clear();
     localStorage.clear();
-    
+
     // Redirecionar para a página de login
     router.push('/pages/login');
   };
 
   const [isIgrejaModalOpen, setIsIgrejaModalOpen] = useState(false);
   const [igrejaData, setIgrejaData] = useState<any>(null);
-  
+
    // Buscar dados da igreja
   const fetchIgrejaData = async () => {
     try {
@@ -55,7 +47,7 @@ export default function configuracoesMobile() {
         console.error('ID da igreja não encontrado');
         return;
       }
-      
+
       const response = await api.get(`/igreja/${id_igreja}`);
       setIgrejaData(response.data);
       setIsIgrejaModalOpen(true);
@@ -67,12 +59,12 @@ export default function configuracoesMobile() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isConfirmEmailModalOpen, setIsConfirmEmailModalOpen] = useState(false);
   const [novoEmail, setNovoEmail] = useState('');
-  
+
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isConfirmPasswordModalOpen, setIsConfirmPasswordModalOpen] = useState(false);
   const [novoPassword, setNovoPassword] = useState('');
   const [confirmarPassword, setConfirmarPassword] = useState('');
-  
+
   const [isBugModalOpen, setIsBugModalOpen] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -135,7 +127,7 @@ export default function configuracoesMobile() {
       theme: 'colored',
     });
   };
-  
+
   const categoriasBug = [
     "Erro de Navegação",
     "Bug Visual",
@@ -169,64 +161,64 @@ export default function configuracoesMobile() {
   };
 
   return (
-    <main>
+    <main className="mobile-page">
       <div>
         <div>
           <MenuSuperior/>
           <MenuInferior/>
         </div>
-        <div className="flex">
-          <h1 className='text1 text-black text-3xl ml-4'>Configurações</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-5">
+          <PageTitle className="ml-4">Configurações</PageTitle>
 
-          <button className='bg-red-500 hover:bg-red-600 text2 text-white py-1 px-4 rounded-lg  sticky left-[30vh] gap-1' onClick={() => setIsLogoutModalOpen(true)}>Encerrar Sessão            
+          <button className='bg-red-500 hover:bg-red-600 text2 text-white py-2 px-4 rounded-lg' onClick={() => setIsLogoutModalOpen(true)}>Encerrar Sessão
           </button>
         </div>
-        
+
         <div className="mt-10 mx-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-w-3xl">
           <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={fetchIgrejaData}>
-            <Image src={igrejaIcon} width={32} height={32} alt='' className="text-black" />
+            <Church width={32} height={32} aria-hidden="true" className="text-black" />
             <span className="font-bold text-black">Dados da Igreja</span>
             <span className="text-gray-500 text-sm">Visualizar dados da igreja</span>
           </div>
 
           <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsEmailModalOpen(true)}>
-            <Image src={mailIcon} width={32} height={32} alt='' className="text-black" />
+            <Mail width={32} height={32} aria-hidden="true" className="text-black" />
             <span className="font-bold text-black">Alterar Email</span>
             <span className="text-gray-500 text-sm">Novo email</span>
           </div>
 
           <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsPasswordModalOpen(true)}>
-            <Image src={keyIcon} width={32} height={32} alt='' className="text-black" />
+            <KeyRound width={32} height={32} aria-hidden="true" className="text-black" />
             <span className="font-bold text-black">Alterar Senha</span>
             <span className="text-gray-500 text-sm">Nova senha</span>
           </div>
 
           <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsBugModalOpen(true)}>
-            <Image src={bugIcon} width={32} height={32} alt='' className="text-black" />
+            <Bug width={32} height={32} aria-hidden="true" className="text-black" />
             <span className="font-bold text-black">Relatar Bug</span>
             <span className="text-gray-500 text-sm">Descreva o seu bug</span>
           </div>
 
           <div className="bg-white py-4 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
-            <Image src={chatIcon} width={32} height={32} alt='' className="text-black" />
+            <MessageCircle width={32} height={32} aria-hidden="true" className="text-black" />
             <span className="font-bold text-black">Solicitar Suporte</span>
             <span className="text-gray-500 text-sm">Solicite suporte técnico</span>
           </div>
 
           <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsPrivacyModalOpen(true)}>
-            <Image src={shieldIcon} width={32} height={32} alt='' className="text-black" />
+            <ShieldCheck width={32} height={32} aria-hidden="true" className="text-black" />
             <span className="font-bold text-black">Privacidade</span>
             <span className="text-gray-500 text-sm">Termos de privacidade</span>
           </div>
-         
+
           <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsDeleteAccountModalOpen(true)}>
-            <Image src={apagarContaIcon} width={32} height={32} alt='' className="text-red-500" />
+            <UserRoundX width={32} height={32} aria-hidden="true" className="text-red-500" />
             <span className="font-bold text-red-500">Apagar Conta</span>
             <span className="text-red-400 text-sm">Deletar sua conta</span>
           </div>
         </div>
 
-        <Modal
+        <AppModal
             isOpen={isLogoutModalOpen}
             onRequestClose={() => setIsLogoutModalOpen(false)}
             contentLabel="Confirmar Logout"
@@ -240,17 +232,15 @@ export default function configuracoesMobile() {
                   onClick={() => setIsLogoutModalOpen(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <X className="h-6 w-6" aria-hidden="true" />
                 </button>
               </div>
-              
+
               <p className="text-gray-600 mb-6">
                 Tem certeza que deseja sair da sua conta? Você será desconectado e
                 precisará fazer login novamente para acessar o sistema.
               </p>
-              
+
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setIsLogoutModalOpen(false)}
@@ -266,9 +256,9 @@ export default function configuracoesMobile() {
                 </button>
               </div>
             </div>
-          </Modal>
+          </AppModal>
 
-          <Modal
+          <AppModal
             isOpen={isEmailModalOpen}
             onRequestClose={() => setIsEmailModalOpen(false)}
             contentLabel="Alterar Email"
@@ -276,9 +266,9 @@ export default function configuracoesMobile() {
           >
             <div className="flex flex-col justify-center self-center bg-azul mt-[1vh] rounded-lg shadow-xl">
               <div className='cursor-pointer flex place-content-end rounded-lg'>
-                <Image onClick={() => setIsEmailModalOpen(false)} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+                <X onClick={() => setIsEmailModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
               </div>
-              
+
               <div className="px-10">
               <h2 className="text-xl text1 font-bold text-white mb-4">Novo Email</h2>
 
@@ -307,9 +297,9 @@ export default function configuracoesMobile() {
                 </button>
               </div>
             </div>
-          </Modal>
+          </AppModal>
 
-          <Modal
+          <AppModal
             isOpen={isConfirmEmailModalOpen}
             onRequestClose={() => setIsConfirmEmailModalOpen(false)}
             contentLabel="Confirmar Alteração de Email"
@@ -318,7 +308,7 @@ export default function configuracoesMobile() {
           >
             <div className="bg-white rounded-xl m-3 p-6 w-full max-w-md">
               <h2 className="text-xl font-bold text-gray-800 mb-4">Confirmar Alteração</h2>
-              
+
               <p className="text-gray-600 mb-6">Tem certeza que deseja alterar o email para <b>{novoEmail}</b>?</p>
 
               <div className="flex justify-end space-x-3">
@@ -346,9 +336,9 @@ export default function configuracoesMobile() {
                 </button>
               </div>
             </div>
-          </Modal>
-          
-          <Modal
+          </AppModal>
+
+          <AppModal
             isOpen={isPasswordModalOpen}
             onRequestClose={() => setIsPasswordModalOpen(false)}
             contentLabel="Alterar Senha"
@@ -356,11 +346,11 @@ export default function configuracoesMobile() {
           >
             <div className="flex flex-col justify-center self-center bg-azul mt-[1vh] rounded-lg shadow-xl">
               <div className='cursor-pointer flex place-content-end rounded-lg'>
-                <Image onClick={() => setIsPasswordModalOpen(false)} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+                <X onClick={() => setIsPasswordModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
               </div>
-              
+
               <h2 className="text-xl text1 font-bold text-white mb-4 px-10">Nova Senha</h2>
-              
+
               <div className="flex flex-col px-10 gap-4">
 
                 <input
@@ -400,9 +390,9 @@ export default function configuracoesMobile() {
                 </button>
               </div>
             </div>
-          </Modal>
+          </AppModal>
 
-          <Modal
+          <AppModal
             isOpen={isConfirmPasswordModalOpen}
             onRequestClose={() => setIsConfirmPasswordModalOpen(false)}
             contentLabel="Confirmar Alteração de Senha"
@@ -410,7 +400,7 @@ export default function configuracoesMobile() {
           >
             <div className="bg-white rounded-xl m-3 p-6 w-full max-w-md">
               <h2 className="text-xl font-bold text-gray-800 mb-4">Confirmar Alteração</h2>
-              
+
               <p className="text-gray-600 mb-6">Tem certeza que deseja alterar sua senha?</p>
 
               <div className="flex justify-end space-x-3">
@@ -438,16 +428,16 @@ export default function configuracoesMobile() {
                 </button>
               </div>
             </div>
-          </Modal>
-          
-          <Modal
+          </AppModal>
+
+          <AppModal
             isOpen={isBugModalOpen}
             onRequestClose={() => setIsBugModalOpen(false)}
             className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 p-4"
           >
             <div className="flex flex-col justify-center self-center bg-azul mt-[1vh] rounded-lg shadow-xl">
               <div className='cursor-pointer flex place-content-end rounded-lg'>
-                <Image onClick={() => setIsBugModalOpen(false)} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+                <X onClick={() => setIsBugModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
               </div>
 
               <div className="px-10">
@@ -484,9 +474,9 @@ export default function configuracoesMobile() {
                 </div>
               </div>
             </div>
-          </Modal>
+          </AppModal>
 
-          <Modal
+          <AppModal
             isOpen={isIgrejaModalOpen}
             onRequestClose={() => setIsIgrejaModalOpen(false)}
             contentLabel="Dados da Igreja"
@@ -497,19 +487,19 @@ export default function configuracoesMobile() {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl text1 font-bold text-gray-800">Dados da Igreja</h2>                
               </div>
-              
+
               {igrejaData ? (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm text3 font-medium text-gray-500">Nome</label>
                     <p className="mt-1 text-gray-900 text2">{igrejaData.nome}</p>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-500">CNPJ</label>
                     <p className="mt-1 text-gray-900">{igrejaData.cnpj || 'Não informado'}</p>
                   </div>
-                  
+
                   <div className="flex gap-7">
                     <div>
                       <label className="block text-sm font-medium text-gray-500">Ministério</label>
@@ -531,7 +521,7 @@ export default function configuracoesMobile() {
                     <label className="block text-sm font-medium text-gray-500">Endereço</label>
                     <p className="mt-1 text-gray-900">{igrejaData.endereco || 'Não informado'}</p>
                   </div>
-                  
+
                   <div className="flex gap-7">
                     <div>
                       <label className="block text-sm font-medium text-gray-500">Bairro</label>
@@ -552,7 +542,7 @@ export default function configuracoesMobile() {
               ) : (
                 <p className="text-center py-4">Carregando dados da igreja...</p>
               )}
-              
+
               <div className="mt-6 flex justify-end">
                 <button
                   onClick={() => setIsIgrejaModalOpen(false)}
@@ -562,9 +552,9 @@ export default function configuracoesMobile() {
                 </button>
               </div>
             </div>
-          </Modal>
+          </AppModal>
 
-          <Modal
+          <AppModal
             isOpen={isPriavcyModalOpen} 
             onRequestClose={() => setIsPrivacyModalOpen(false)}
             contentLabel="Termo de Uso"
@@ -573,12 +563,12 @@ export default function configuracoesMobile() {
           >
             <div className='flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl'>
               <div className='cursor-pointer flex place-content-end rounded-lg'>
-                  <Image onClick={() => setIsPrivacyModalOpen(false)} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+                  <X onClick={() => setIsPrivacyModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
                 </div>
               <h2 className='text-white text1 text-4xl flex justify-center'>Termos de uso</h2>
 
-              <div className='flex flex-col justify-center self-center bg-white m-10 p-10 py-5 mt-[2vh] rounded-lg max-h-[45vh] overflow-y-auto'>
-                <div className='mt-[255vh]'>
+              <div className='flex flex-col bg-white w-full max-w-2xl p-4 sm:p-8 rounded-lg max-h-[calc(100dvh-2rem)] overflow-y-auto'>
+                <div>
                   <h3 className='text1 text-black text-lg'>1. Consentimento</h3>
                   <p className='text2 text-black leading-4 mt-1'>Ao utilizar o Sistema, você expressa seu<br/>consentimento para a coleta, armazenamento,<br/>processamento e uso dos seus dados pessoais de <br/>acordo com os termos estabelecidos neste Termo. <br/>Caso não concorde com estes termos, por favor, não <br/>prossiga utilizando o Sistema.</p>
                 </div>
@@ -665,9 +655,9 @@ export default function configuracoesMobile() {
                 </div>
               </div>                
             </div>
-          </Modal>
+          </AppModal>
 
-          <Modal
+          <AppModal
             isOpen={isDeleteAccountModalOpen}
             onRequestClose={() => setIsDeleteAccountModalOpen(false)}
             contentLabel="Apagar Conta"
@@ -695,9 +685,9 @@ export default function configuracoesMobile() {
                 </button>
               </div>
             </div>
-          </Modal>
+          </AppModal>
 
-          <Modal
+          <AppModal
             isOpen={isConfirmDeleteModalOpen}
             onRequestClose={() => setIsConfirmDeleteModalOpen(false)}
             contentLabel="Confirmar Apagar Conta"
@@ -730,7 +720,7 @@ export default function configuracoesMobile() {
                 </button>
               </div>
             </div>
-          </Modal>
+          </AppModal>
 
       <ToastContainer />
       </div>

@@ -1,4 +1,5 @@
 'use client'
+import { AppModal } from '@/app/components/shared/MemberStyle';
 import React from 'react'
 import Image from 'next/image'
 import api from '../../api/api';
@@ -7,9 +8,6 @@ import { useRouter } from 'next/navigation';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import logo from '@/public/images/icon-white.png'
-import Modal from 'react-modal';
-import on from '@/public/icons/on.svg'
-import off from '@/public/icons/off.svg'
 
 export default function cadastroIgreja() {
     const [nome, setNome] = useState<string>('');
@@ -26,7 +24,7 @@ export default function cadastroIgreja() {
     const router = useRouter();
 
     const [modalIsOpen, setModalIsOpen] = useState(false);
-    
+
     const openModal = () => {
         if (nome === "" || nome === null || cnpj === "" || cnpj === null || data_fundacao === "" || data_fundacao === null || ministerio === "" || ministerio === null || setor === "" || setor === null || cep === "" || cep === null || endereco === "" || endereco === null || bairro === "" || bairro === null || cidade === "" || cidade === null) {
             toast.warn('Preencha todos os campos!', {
@@ -43,7 +41,7 @@ export default function cadastroIgreja() {
             setModalIsOpen(true);
         }
     };
-    
+
     const closeModal = () => {
         setModalIsOpen(false);
     };
@@ -111,7 +109,7 @@ export default function cadastroIgreja() {
             });
         }
 
-        
+
         if (!aceitoTermos) { 
             toast.error('Você deve aceitar os termos de uso.', {
                 position: "top-center",
@@ -125,7 +123,7 @@ export default function cadastroIgreja() {
             });
             return;
         }
-        
+
 
         try {
             if (nome === "" || cnpj === "" || data_fundacao === "" || ministerio === "" || setor === "" || cep === "" || endereco === "" || bairro === "" || cidade === ""){
@@ -157,10 +155,10 @@ export default function cadastroIgreja() {
     }
 
   return (
-    <main className='overflow-hidden'>
-        <div className='bg-azul min-h-screen flex justify-center'>
-            <div className='flex justify-center items-center'>
-                <div>
+    <main className='registration-page'>
+        <div className='bg-azul min-h-screen flex justify-center px-4 py-8'>
+            <div className='flex justify-center items-center w-full'>
+                <div className='w-full max-w-xl'>
                     <div className='flex justify-center'>
                         <Image src={logo} width={75} height={10} alt=''/>
                         <h2 className='ml-3 font-extrabold text-4xl text-white text1'>OBREIRO<br/>DIGITAL</h2>
@@ -171,7 +169,7 @@ export default function cadastroIgreja() {
                             <h1 className='text-white text-4xl mt-10 text1 flex justify-center'>Cadastro de Igreja</h1>
                             <p className='text-white text-xl text2 mt-2 flex justify-center mb-6'>Cadastre sua igreja para começar a usar o Obreiro Digital!</p>
                         </div>
-                        <div className='flex flex-col justify-center items-center'>
+                        <div className='registration-fields flex flex-col justify-center items-stretch'>
                             <div className='flex flex-col'>
                                 <label className='text-white text1 text-xl mt-2 mb-1'>Nome</label>
 
@@ -185,7 +183,7 @@ export default function cadastroIgreja() {
                                     required
                                 />
                             </div>
-                            
+
                             <div className='flex'>
                                 <div className='flex flex-col'>
                                     <label className='text-white text1 text-xl mt-2 mb-1'>CNPJ</label>
@@ -310,13 +308,13 @@ export default function cadastroIgreja() {
                                 </div>
                             </div>
 
-                            <button type='submit' className='border-2 rounded-lg h-12 w-96 mt-3 border-white text2 text-white active:bg-white active:text-azul' onClick={openModal}>Cadastrar</button>
+                            <button type='submit' className='border-2 rounded-lg h-12 w-full mt-3 border-white text2 text-white active:bg-white active:text-azul' onClick={openModal}>Cadastrar</button>
                             <ToastContainer />
                         </div>
                     </div>
                 </div>
 
-                <Modal
+                <AppModal
                     className="text-white flex flex-col" 
                     isOpen={modalIsOpen} 
                     onRequestClose={closeModal}
@@ -326,7 +324,7 @@ export default function cadastroIgreja() {
                         <h2 className='text-white text1 text-4xl flex justify-center'>Termos de uso</h2>
 
                         <div className='flex flex-col justify-center self-center bg-white p-10 py-5 mt-[2vh] rounded-lg max-h-[45vh] overflow-y-auto'>
-                            <div className='mt-[127vh]'>
+                            <div>
                                 <h3 className='text1 text-black text-lg'>1. Consentimento</h3>
                                 <p className='text2 text-black leading-4 mt-1'>Ao utilizar o Sistema, você expressa seu<br/>consentimento para a coleta, armazenamento,<br/>processamento e uso dos seus dados pessoais de <br/>acordo com os termos estabelecidos neste Termo. <br/>Caso não concorde com estes termos, por favor, não <br/>prossiga utilizando o Sistema.</p>
                             </div>
@@ -423,9 +421,9 @@ export default function cadastroIgreja() {
                             <span className='text2 text-white text-lg ml-2'>Li e concordo com os termos de uso.</span>
                         </div>
 
-                        <button type='button' disabled={!aceitoTermos} className={`border-2 rounded-lg h-12 w-[55vh] mt-3 border-white text2 text-white ${!aceitoTermos ? 'opacity-50 cursor-not-allowed' : 'active:bg-white active:text-azul'}`} onClick={handleRegister}>Avançar</button>
+                        <button type='button' disabled={!aceitoTermos} className={`border-2 rounded-lg h-12 w-full mt-3 border-white text2 text-white ${!aceitoTermos ? 'opacity-50 cursor-not-allowed' : 'active:bg-white active:text-azul'}`} onClick={handleRegister}>Avançar</button>
                     </div>
-                </Modal>
+                </AppModal>
             </div>
         </div>
     </main>

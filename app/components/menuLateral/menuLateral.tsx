@@ -1,284 +1,187 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+
+import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import logo from "@/public/images/icon.png";
 import perfilPastor from "@/public/images/Pastor 1.png";
-import inicio from "@/public/icons/inicio.png";
-import evento from "@/public/icons/evento.png";
-import membros from "@/public/icons/groups_black_24dp(1).svg";
-import igreja from "@/public/icons/igreja.svg";
-import financas from "@/public/icons/financas.png";
-import relatorio from "@/public/icons/relatorios.png";
-import pedidos from "@/public/icons/pedidos.png";
-import estoque from "@/public/icons/inventory_2_black_24dp.svg";
-import config from "@/public/icons/config.png";
-import hamburger from "@/public/icons/hamburguer.svg";
 import { isMatriz } from "@/app/utils/auth";
+
+import {
+  Home,
+  Calendar,
+  Users,
+  Church,
+  DollarSign,
+  FileText,
+  Package,
+  Settings,
+  Menu,
+  X,
+} from "lucide-react";
+
+type MenuItem = {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  onlyMatriz?: boolean;
+  hideForMatriz?: boolean;
+};
 
 export default function MenuLateral() {
   const [nome, setNome] = useState("");
   const [cargo, setCargo] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     setNome(sessionStorage.getItem("nome") || "");
     setCargo(sessionStorage.getItem("cargo") || "");
+    setMounted(true);
   }, []);
 
-  const itemVariants = {
-    open: {
-      opacity: 1,
-      x: 0,
-      transition: {
-        duration: 0.6,
-      },
+  const matriz = useMemo(() => {
+    if (!mounted) return false;
+    return isMatriz();
+  }, [mounted]);
+
+  const menuItems: MenuItem[] = [
+    {
+      href: "/pages/inicio",
+      label: "Início",
+      icon: Home,
     },
-    closed: {
-      opacity: 1,
-      x: "-2%",
-      transition: {
-        duration: 0.6,
-      },
+    {
+      href: "/pages/eventos",
+      label: "Eventos",
+      icon: Calendar,
     },
-  };
+    {
+      href: "/pages/igrejas",
+      label: "Igrejas",
+      icon: Church,
+      onlyMatriz: true,
+    },
+    {
+      href: "/pages/membros",
+      label: "Membros",
+      icon: Users,
+      hideForMatriz: true,
+    },
+    {
+      href: "/pages/financeiro",
+      label: "Financeiro",
+      icon: DollarSign,
+    },
+    {
+      href: "/pages/relatorios",
+      label: "Relatórios",
+      icon: FileText,
+    },
+    {
+      href: "/pages/pedidos",
+      label: "Pedidos",
+      icon: Package,
+    },
+    {
+      href: "/pages/estoque",
+      label: "Estoque",
+      icon: Package,
+    },
+    {
+      href: "/pages/configuracoes",
+      label: "Configurações",
+      icon: Settings,
+    },
+  ];
+
+  const visibleItems = menuItems.filter((item) => {
+    if (item.onlyMatriz && !matriz) return false;
+    if (item.hideForMatriz && matriz) return false;
+    return true;
+  });
 
   return (
-    <motion.main
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 1 }}
-      className=""
+    <>
+    <button
+      type="button"
+      className="sidebar-trigger"
+      onClick={() => setOpen(true)}
+      aria-label="Abrir menu"
+      aria-expanded={open}
+      aria-controls="menu-lateral"
     >
-      <div className="ml-6 fixed inset-y-0 left-0 sm:w-[20vh] md:w-20 lg:w-64 overflow-y-hidden lg:sticky lg:h-screen z-50">
-        <div className="">
-          <div className="lg:hidden mt-12">
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="focus:outline-none"
-            >
-              <svg
-                width="55"
-                height="51"
-                viewBox="0 0 45 41"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <rect width="45" height="41" rx="5" fill="#5271FF" />
-                <line
-                  x1="9.94128"
-                  y1="10"
-                  x2="35.0589"
-                  y2="10"
-                  stroke="white"
-                  stroke-width="4"
-                  stroke-linecap="round"
-                />
-                <line
-                  x1="9.94128"
-                  y1="20"
-                  x2="35.0589"
-                  y2="20"
-                  stroke="white"
-                  stroke-width="4"
-                  stroke-linecap="round"
-                />
-                <line
-                  x1="9.94128"
-                  y1="30"
-                  x2="35.0589"
-                  y2="30"
-                  stroke="white"
-                  stroke-width="4"
-                  stroke-linecap="round"
-                />
-              </svg>
+      <Menu aria-hidden="true" size={24} />
+    </button>
+    {open && <button type="button" className="sidebar-backdrop" onClick={() => setOpen(false)} aria-label="Fechar menu" />}
+    <aside id="menu-lateral" className={`app-sidebar fixed inset-y-0 left-0 z-50 h-screen w-64 overflow-y-auto border-r border-gray-200 bg-white shadow-xl ${open ? "is-open" : ""}`}>
+      <div className="flex h-full flex-col">
+        {/* Topo */}
+        <div className="flex min-h-[80px] items-center justify-center border-b border-gray-100 px-3 lg:justify-start lg:px-6">
+          <div className="flex items-center justify-center lg:justify-start">
+            <Image
+              src={logo}
+              width={42}
+              height={42}
+              alt="Obreiro Digital"
+              className="flex-shrink-0"
+              priority
+            />
+            <button type="button" className="sidebar-close" onClick={() => setOpen(false)} aria-label="Fechar menu">
+              <X aria-hidden="true" size={22} />
             </button>
           </div>
+        </div>
 
-          <motion.div
-            initial="closed"
-            animate={menuOpen ? "open" : "closed"}
-            variants={itemVariants}
-          >
-            <div
-              className={`lg:ml-6 mt-14 ${
-                menuOpen ? "block" : "hidden"
-              } lg:block`}
-            >
-              <Image src={logo} width={45} height={40} alt="" />
+        {/* Perfil */}
+        <div className="border-b border-gray-100 px-3 py-4">
+          <div className="flex items-center justify-center lg:justify-start lg:space-x-3">
+            <Image
+              src={perfilPastor}
+              width={48}
+              height={48}
+              alt={`Foto de ${nome || "usuário"}`}
+              className="rounded-full border-2 border-azul flex-shrink-0"
+            />
+
+            <div className="hidden min-w-0 flex-1 lg:block">
+              <h2 className="text1 truncate text-sm font-bold text-black">
+                {nome}
+              </h2>
+              <h3 className="text2 truncate text-xs text-gray-600">
+                {cargo}
+              </h3>
             </div>
-          </motion.div>
-
-          <motion.div
-            initial="closed"
-            animate={menuOpen ? "open" : "closed"}
-            variants={itemVariants}
-          >
-            <div
-              className={`lg:ml-6 mt-[8vh] flex ${
-                menuOpen ? "block" : "hidden"
-              } sm:flex-col md:flex-col lg:flex`}
-            >
-              <Image src={perfilPastor} width={60} height={50} alt="" />
-              <div className="flex flex-col justify-center mt-4">
-                <h2 className="font-bold text-black text-xl text1">{nome}</h2>
-                <h3 className="font-bold text-black text-lg text2">{cargo}</h3>
-              </div>
-            </div>
-          </motion.div>
-
-          <div
-            className={`ml-5 mt-7 sm:mt-12 md:mt-12 ${
-              menuOpen ? "block" : "hidden"
-            } lg:block`}
-          >
-            <motion.div
-              initial="closed"
-              animate={menuOpen ? "open" : "closed"}
-              variants={itemVariants}
-            >
-              <Link className="flex w-[13vh]" href={"/../../pages/inicio"}>
-                <Image src={inicio} width={30} height={30} alt="" />
-                <p className="ml-4 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block">
-                  Início
-                </p>
-              </Link>
-            </motion.div>
-
-            <motion.div
-              initial="closed"
-              animate={menuOpen ? "open" : "closed"}
-              variants={itemVariants}
-            >
-              <Link
-                className="flex mt-7 w-[16vh]"
-                href={"/../../pages/eventos"}
-              >
-                <Image src={evento} width={30} height={30} alt="" />
-                <p className="ml-4 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block">
-                  Eventos
-                </p>
-              </Link>
-            </motion.div>
-          </div>
-
-          <div
-            className={`ml-5 mt-[7vh] ${
-              menuOpen ? "block" : "hidden"
-            } lg:block`}
-          >
-            {isMatriz() ? (
-              <>
-                <motion.div
-                  initial="closed"
-                  animate={menuOpen ? "open" : "closed"}
-                  variants={itemVariants}
-                >
-                  <Link
-                    className="flex mt-7 w-[18vh]"
-                    href={"/../../pages/igrejas"}
-                  >
-                    <Image src={igreja} width={35} height={0} alt="" />
-                    <p className="ml-3 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block">
-                      Igrejas
-                    </p>
-                  </Link>
-                </motion.div>
-              </>
-            ) : (
-              <>
-                <motion.div
-                  initial="closed"
-                  animate={menuOpen ? "open" : "closed"}
-                  variants={itemVariants}
-                >
-                  <Link
-                    className="flex mt-7 w-[18vh]"
-                    href={"/../../pages/membros"}
-                  >
-                    <Image src={membros} width={35} height={0} alt="" />
-                    <p className="ml-3 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block">
-                      Membros
-                    </p>
-                  </Link>
-                </motion.div>
-              </>
-            )}
-
-            <motion.div
-              initial="closed"
-              animate={menuOpen ? "open" : "closed"}
-              variants={itemVariants}
-            >
-              <Link
-                className="flex mt-7 w-[19vh]"
-                href={"/../../pages/financeiro"}
-              >
-                <Image src={financas} width={30} height={30} alt="" />
-                <p className="ml-4 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block">
-                  Financeiro
-                </p>
-              </Link>
-            </motion.div>
-
-            {/* <Link className='flex mt-7 w-[17vh]' href={'/../../pages/relatorio'}>
-              <Image src={relatorio} width={30} height={30} alt=''/>
-              <p className='ml-4 font-bold text-2xl text1'>Relatório</p>
-              </Link> */}
-
-            <motion.div
-              initial="closed"
-              animate={menuOpen ? "open" : "closed"}
-              variants={itemVariants}
-            >
-              <Link
-                className="flex mt-7 w-[16vh]"
-                href={"/../../pages/pedidos"}
-              >
-                <Image src={pedidos} width={30} height={30} alt="" />
-                <p className="ml-4 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block">
-                  Pedidos
-                </p>
-              </Link>
-            </motion.div>
-
-            <motion.div
-              initial="closed"
-              animate={menuOpen ? "open" : "closed"}
-              variants={itemVariants}
-            >
-              <Link
-                className="flex mt-7 w-[16vh]"
-                href={"/../../pages/estoque"}
-              >
-                <Image src={estoque} width={35} height={30} alt="" />
-                <p className="ml-3 font-bold text-2xl text-black text1 sm:hidden md:hidden lg:block">
-                  Estoque
-                </p>
-              </Link>
-            </motion.div>
-
-            <motion.div
-              initial="closed"
-              animate={menuOpen ? "open" : "closed"}
-              variants={itemVariants}
-            >
-              <Link
-                className="flex mt-7 w-[16vh]"
-                href={"/../../pages/configuracoes"}
-              >
-                <Image src={config} width={30} height={30} alt="" />
-                <p className="ml-4 font-bold text-2xl text1 sm:hidden md:hidden lg:block">
-                  Configurações
-                </p>
-              </Link>
-            </motion.div>
           </div>
         </div>
+
+        {/* Navegação */}
+        <nav className="flex-1 py-4">
+          <div className="space-y-2 px-2">
+            {visibleItems.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={item.label}
+                  aria-label={item.label}
+                  onClick={() => setOpen(false)}
+                  className="group flex h-12 items-center justify-start rounded-xl px-4 text-sm font-medium text-gray-700 transition-all duration-200 hover:bg-blue-50 hover:text-azul"
+                >
+                  <Icon className="h-6 w-6 flex-shrink-0 text-gray-600 transition-colors duration-200 group-hover:text-azul" />
+
+                  <span className="text1 ml-3 block min-w-0 truncate">
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
       </div>
-    </motion.main>
+    </aside>
+    </>
   );
 }

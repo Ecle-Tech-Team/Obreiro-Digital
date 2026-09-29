@@ -1,19 +1,15 @@
 "use client";
+import { AddButton, AppModal, FilterButton, PageTitle, SearchField } from '@/app/components/shared/MemberStyle';
 import React, { useState, useEffect, useRef } from "react";
+import { ChevronDown, Search, X } from "lucide-react";
 import api from "@/app/api/api";
 import MenuInferior from "@/app/components/menuInferior/menuInferior";
 import MenuSuperior from "@/app/components/menuSuperior/menuSuperior";
 import AvisosCardMobile from "@/app/components/avisosCardMobile/avisosCardMobile";
 import { format } from "date-fns";
-import Image from "next/image";
 import Link from "next/link";
-import Modal from "react-modal";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import seta from "@/public/icons/seta-down.svg";
-import filter from "@/public/icons/filter.png";
-import close from "@/public/icons/close.svg";
-import lupa from "@/public/icons/lupa.svg";
 
 interface Aviso {
   id_aviso: number;
@@ -34,7 +30,7 @@ export default function avisosMobile() {
   const [editConteudo, setEditConteudo] = useState<string>("");
 
   const [selectedAviso, setSelectedAviso] = useState<Aviso | null>(null);
-  
+
   const [modalType, setModalType] = useState<"new" | "edit" | null>(null);
   const [modalIsOpen, setModalIsOpen] = useState(false);
 
@@ -292,24 +288,20 @@ export default function avisosMobile() {
   };
 
   return (
-    <main>
+    <main className="mobile-page">
       <div>
         <div>
           <MenuSuperior />
           <MenuInferior />
         </div>
 
-        <div className="flex">
-          <div className="mt-5 relative sm:left-[2vh]" ref={dropdownRef}>
-            <button onClick={toggleDropdown} className="ml-2 flex">
-              <h1 className="text-black text1 sm:mr-[1vh] sm:text-3xl md:text-4xl lg:text-5xl">
-                Avisos
-              </h1>
-              <Image
-                src={seta}
+        <div className="mobile-list-header">
+          <div className="relative" ref={dropdownRef}>
+            <button onClick={toggleDropdown} className="flex items-center gap-2">
+              <PageTitle>Avisos</PageTitle>
+              <ChevronDown
                 width={21}
-                height={21}
-                alt="Arrow Icon"
+                height={21} aria-label="Arrow Icon"
                 className={`${
                   isDropdownOpen ? "rotate-180" : ""
                 } transition-transform`}
@@ -327,40 +319,36 @@ export default function avisosMobile() {
               </div>
             )}
           </div>
-          <div className="flex">
-            <div className="mt-5 relative sm:left-[6vh] md:left-[20vh] lg:left-[54vh]">
-              <div className="flex mb-4 items-center gap-5">
+          <div className="flex min-w-0">
+            <div className="relative">
+              <div className="mobile-list-controls">
                 {/* Botão de filtro */}
                 <div className="flex gap-2">
-                  <button
+                  <FilterButton
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    className="flex items-center justify-center px-2 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
-                  >
-                    <Image src={filter} width={30} height={30} alt="Filtrar" />
-                  </button>
+
+                   />
                 </div>
 
                 {/* Campo de pesquisa */}
                 <div className="flex-1">
-                  <button
+                  <SearchField
+                    readOnly
+                    className="cursor-pointer"
+                    value={searchTerm}
+                    placeholder="Pesquisar avisos..."
+                    aria-label="Abrir pesquisa de avisos"
                     onClick={() => setSearchModalIsOpen(true)}
-                    className="bg-azul  py-[1.2vh] px-4 rounded-lg"
-                  >
-                    <Image src={lupa} width={23} height={30} alt="Pesquisar" />
-                  </button>
+                    onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSearchModalIsOpen(true); } }}
+                  />
                 </div>
 
                 {/* Botão de novo pedido */}
-                <button
-                  className="bg-azul text-3xl text2 text-white py-1 px-4 rounded-lg"
-                  onClick={() => openModal("new")}
-                >
-                  +
-                </button>
+                <AddButton onClick={() => openModal("new")}>Novo Aviso</AddButton>
 
                 {/* Dropdown de filtros */}
                 {isFilterOpen && (
-                  <div className="absolute right-100 top-16 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
+                  <div className="od-filter-menu absolute right-100 top-16 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
                     <button
                       className={`block w-full text-left px-4 py-2 ${
                         sortCriteria === "recent"
@@ -437,8 +425,8 @@ export default function avisosMobile() {
           </div>
         </div>
 
-        <div className="flex justify-center">
-          <div className="bg-white shadow-xl rounded-xl self-center mt-4 w-[40vh] h-[70vh] max-h-[70vh] p-10 overflow-y-scroll">
+        <div className="px-4">
+          <div className="bg-white shadow-xl rounded-xl mt-4 w-full min-w-0 max-h-[65vh] p-4 sm:p-6 overflow-y-auto">
             <div className="grid grid-cols-1 gap-[3vh]">
               {sortedAvisos.length === 0 ? (
                 <p className="text-center text-black text1 text-4xl mt-5 text-gray-4]">
@@ -462,7 +450,7 @@ export default function avisosMobile() {
           </div>
         </div>
 
-        <Modal
+        <AppModal
           className="text-white flex flex-col bg-black bg-opacity-0"
           isOpen={searchModalIsOpen}
           onRequestClose={() => setSearchModalIsOpen(false)}
@@ -470,21 +458,18 @@ export default function avisosMobile() {
         >
           <div className="flex flex-col justify-center self-center bg-white mt-[15vh] rounded-lg shadow-xl">
             <div className="cursor-pointer flex place-content-start rounded-lg">
-              <Image
+              <X
                 onClick={() => setSearchModalIsOpen(false)}
-                src={close}
                 width={40}
-                height={40}
-                alt="close Icon"
+                height={40} aria-label="close Icon"
                 className="bg-red-500 hover:bg-red-600 rounded-tl-lg"
               />
             </div>
 
             <div className="flex flex-row gap-3 px-5 py-2 mt-3">
-              <input
+              <SearchField
                 type="text"
                 placeholder="Digite o nome, categoria ou data..."
-                className="px-4 py-3 rounded-lg text2 text-slate-500 border focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -496,7 +481,7 @@ export default function avisosMobile() {
                   setSearchModalIsOpen(false);
                 }}
               >
-                <Image src={lupa} width={23} height={20} alt="Pesquisar" />
+                <Search width={23} height={20} aria-label="Pesquisar" />
               </button>
             </div>
 
@@ -511,9 +496,9 @@ export default function avisosMobile() {
               Limpar
             </button>
           </div>
-        </Modal>
+        </AppModal>
         {/* Modal Novo Aviso */}
-        <Modal
+        <AppModal
           className="text-white flex flex-col"
           isOpen={modalIsOpen && modalType === "new"}
           onRequestClose={closeModal}
@@ -521,12 +506,10 @@ export default function avisosMobile() {
         >
           <div className="flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl">
             <div className="cursor-pointer flex place-content-end rounded-lg">
-              <Image
+              <X
                 onClick={closeModal}
-                src={close}
                 width={40}
-                height={40}
-                alt="close Icon"
+                height={40} aria-label="close Icon"
                 className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
               />
             </div>
@@ -590,10 +573,10 @@ export default function avisosMobile() {
               </button>
             </div>
           </div>
-        </Modal>
+        </AppModal>
 
         {/* Modal Editar Aviso */}
-        <Modal
+        <AppModal
           className="text-white flex flex-col"
           isOpen={modalIsOpen && modalType === "edit"}
           onRequestClose={closeModal}
@@ -601,12 +584,10 @@ export default function avisosMobile() {
         >
           <div className={`flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl ${isReadOnlyAviso ? "pb-20" : ""}`}>
             <div className="cursor-pointer flex place-content-end rounded-lg">
-              <Image
+              <X
                 onClick={closeModal}
-                src={close}
                 width={40}
-                height={40}
-                alt="close Icon"
+                height={40} aria-label="close Icon"
                 className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
               />
             </div>
@@ -652,7 +633,7 @@ export default function avisosMobile() {
               </div>
             )}
           </div>
-        </Modal>
+        </AppModal>
         <ToastContainer />
       </div>
     </main>

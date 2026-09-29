@@ -1,11 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { CalendarDays, Package, Users } from "lucide-react";
 import api from "@/app/api/api";
 import MenuInferior from "@/app/components/menuInferior/menuInferior";
 import MenuSuperior from "@/app/components/menuSuperior/menuSuperior";
-import eventos from "@/public/icons/evento.svg";
-import visitantes from "@/public/icons/visitantes.svg";
-import pedidos from "@/public/icons/pedidos.svg";
 import Image from "next/image";
 import logo from "@/public/images/icon.png";
 import Link from "next/link";
@@ -114,7 +112,7 @@ export default function inicioMobile() {
   }, []);
 
   return (
-    <main>
+    <main className="mobile-page">
       <div>
         <div>
           <MenuSuperior />
@@ -133,12 +131,12 @@ export default function inicioMobile() {
             </h2>
           </div>
 
-          <div className="flex flex-col">
-            <div className="flex">
-              <div className="bg-white shadow-xl w-[20vh] rounded-xl py-2 mt-6">
+          <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-4 mt-6">
+            <div className="contents">
+              <div className="bg-white shadow-xl min-w-0 rounded-xl p-4">
                 <Link href={"/../../pages/eventosMobile"}>
                   <div className="ml-4 mt-3">
-                    <Image src={eventos} width={25} height={25} alt="" />
+                    <CalendarDays size={28} className="text-azul" aria-hidden="true" />
                     <h4 className="text3 text-xl text-black mt-1">Eventos</h4>
                   </div>
 
@@ -151,10 +149,10 @@ export default function inicioMobile() {
                 </Link>
               </div>
 
-              <div className="bg-white shadow-xl w-[20vh] rounded-xl py-2 mt-6 ml-8">
+              <div className="bg-white shadow-xl min-w-0 rounded-xl p-4">
                 <Link href={"/../../pages/visitantesMobile"}>
                   <div className="ml-4 mt-3">
-                    <Image src={visitantes} width={40} height={40} alt="" />
+                    <Users size={28} className="text-azul" aria-hidden="true" />
                     <h4 className="text3 text-xl text-black mt-1">
                       Visitantes
                     </h4>
@@ -172,11 +170,11 @@ export default function inicioMobile() {
               </div>
             </div>
 
-            <div className="flex">
-              <div className="bg-white shadow-xl w-[20vh] h-[37vh] rounded-xl py-2 mt-6">
+            <div className="contents">
+              <div className="bg-white shadow-xl min-w-0 rounded-xl p-4">
                 <Link href={"/../../pages/pedidosMobile"}>
                   <div className="ml-4 mt-3">
-                    <Image src={pedidos} width={25} height={25} alt="" />
+                    <Package size={28} className="text-azul" aria-hidden="true" />
                     <h4 className="text3 text-xl text-black mt-1">Pedidos</h4>
                   </div>
 
@@ -212,7 +210,7 @@ export default function inicioMobile() {
                 </Link>
               </div>
 
-              <div className="bg-white shadow-xl w-[20vh] h-[37vh] rounded-xl py-2 ml-9 mt-6">
+              <div className="bg-white shadow-xl min-w-0 rounded-xl p-4">
                 <div className="ml-4 mt-3">
                   <Image src={logo} width={30} height={30} alt="" />
                   <h4 className="text3 text-xl text-black mt-1">
@@ -231,7 +229,7 @@ export default function inicioMobile() {
                 </p>
 
                 <Link
-                  className="bg-azul text2 text-lg text-white rounded-lg py-0.5 px-7 ml-4"
+                  className="inline-block bg-azul text2 text-lg text-white rounded-lg py-1 px-4 ml-4"
                   href={"https://www.instagram.com/obreirodigital/"}
                 >
                   Acesse Já

@@ -1,30 +1,31 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
-import { format } from "date-fns";
+
+import { AddButton, AppModal, FilterButton, PageTitle, SearchField } from '@/app/components/shared/MemberStyle';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { format, parseISO } from "date-fns";
+import Link from "next/link";
+import Modal from "react-modal";
+import { toast, ToastContainer } from "react-toastify";
+import {
+  CalendarDays,
+  Cast,
+  ChevronDown,
+  X,
+} from "lucide-react";
+
 import MenuLateral from "@/app/components/menuLateral/menuLateral";
 import EventosCard from "@/app/components/eventosCard/eventosCard";
-import Image from "next/image";
-import Link from "next/link";
 import api from "../../api/api";
-import { toast, ToastContainer } from "react-toastify";
+
 import "react-toastify/dist/ReactToastify.css";
-import Modal from "react-modal";
-import seta from "@/public/icons/seta-down.svg";
-import close from "@/public/icons/close.svg";
-import cast from "@/public/icons/cast.svg";
-import filter from "@/public/icons/filter.png";
 
-interface Igreja {
-  id_igreja: number;
-  nome: string;
-}
-
-interface User {
-  id_user: number;
-  id_igreja: number;
-}
-
-interface Eventos {
+interface Evento {
   id_evento: number;
   nome: string;
   data_inicio: string;
@@ -38,446 +39,394 @@ interface Eventos {
   tipo_evento?: "matriz" | "local";
 }
 
+type SortCriteria = "recent" | "oldest" | "name-asc" | "name-desc";
+type ModalType = "new" | "edit" | null;
+
+const toastConfig = {
+  position: "top-center" as const,
+  autoClose: 1500,
+  hideProgressBar: false,
+  closeOnClick: true,
+  pauseOnHover: true,
+  draggable: true,
+  progress: undefined,
+  theme: "colored" as const,
+};
+
+const inputClass =
+  "text2 w-full rounded-lg px-4 py-3 text-black outline-none border border-transparent focus:border-blue-300 focus:ring-2 focus:ring-blue-200 disabled:cursor-not-allowed disabled:bg-slate-100";
+
+function toInputDate(value: string) {
+  if (!value) return "";
+  return value.slice(0, 10);
+}
+
+function toInputTime(value: string) {
+  if (!value) return "";
+  return value.slice(0, 5);
+}
+
+function formatDateCard(value: string) {
+  if (!value) return "";
+  try {
+    return format(parseISO(value.slice(0, 10)), "dd/MM/yyyy");
+  } catch {
+    return value;
+  }
+}
+
+function formatTimeCard(value: string) {
+  if (!value) return "";
+  return value.slice(0, 5);
+}
+
 export default function eventos() {
-  const [nome, setNome] = useState<string>("");
-  const [local, setLocal] = useState<string>("");
-  const [data_inicio, setDataInicio] = useState<string>("");
-  const [horario_inicio, setHorarioInicio] = useState<string>("");
-  const [data_fim, setDataFim] = useState<string>("");
-  const [horario_fim, setHorarioFim] = useState<string>("");
+  const [nome, setNome] = useState("");
+  const [local, setLocal] = useState("");
+  const [dataInicio, setDataInicio] = useState("");
+  const [horarioInicio, setHorarioInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
+  const [horarioFim, setHorarioFim] = useState("");
   const [tipoEvento, setTipoEvento] = useState<"local" | "matriz">("local");
 
-  const [editNome, setEditNome] = useState<string>("");
-  const [editLocal, setEditLocal] = useState<string>("");
-  const [editDataInicio, setEditDataInicio] = useState<string>("");
-  const [editHorarioInicio, setEditHorarioInicio] = useState<string>("");
-  const [editDataFim, setEditDataFim] = useState<string>("");
-  const [editHorarioFim, setEditHorarioFim] = useState<string>("");
-
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [eventoToDelete, setEventoToDelete] = useState<number | null>(null);
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [allEventos, setAllEventos] = useState<Eventos[]>([]); // Lista completa
-  const [filteredEventos, setFilteredEventos] = useState<Eventos[]>([]); // Lista filtrada
-
-  const handleDeleteClick = (id_evento: number) => {
-    setEventoToDelete(id_evento);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!eventoToDelete) return;
-
-    try {
-      await api.delete(`/evento/${eventoToDelete}`);
-      const notifyDelete = () => {
-        toast.success("Evento deletado com sucesso!", {
-          position: "top-center",
-          autoClose: 1500,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "colored",
-        });
-      };
-
-      setEventos(eventos.filter((m) => m.id_evento !== eventoToDelete));
-      notifyDelete();
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-    } catch (error) {
-      toast.error("Erro ao remover evento.");
-    } finally {
-      setIsDeleteModalOpen(false);
-      setEventoToDelete(null);
-    }
-  };
-  const [eventos, setEventos] = useState<Eventos[]>([]);
-
-  const [user, setUser] = useState<User | null>(null);
+  const [editNome, setEditNome] = useState("");
+  const [editLocal, setEditLocal] = useState("");
+  const [editDataInicio, setEditDataInicio] = useState("");
+  const [editHorarioInicio, setEditHorarioInicio] = useState("");
+  const [editDataFim, setEditDataFim] = useState("");
+  const [editHorarioFim, setEditHorarioFim] = useState("");
 
   const [cargoUsuario, setCargoUsuario] = useState<string | null>(null);
   const [idIgreja, setIdIgreja] = useState<string | null>(null);
   const [idMatriz, setIdMatriz] = useState<string | null>(null);
 
+  const [allEventos, setAllEventos] = useState<Evento[]>([]);
+  const [filteredEventos, setFilteredEventos] = useState<Evento[]>([]);
+  const [selectedEvento, setSelectedEvento] = useState<Evento | null>(null);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortCriteria, setSortCriteria] = useState<SortCriteria>("recent");
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  const [modalType, setModalType] = useState<ModalType>(null);
+  const [modalIsOpen, setModalIsOpen] = useState(false);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [eventoToDelete, setEventoToDelete] = useState<number | null>(null);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const cargo = sessionStorage.getItem("cargo");
-    const id_igreja = sessionStorage.getItem("id_igreja");
-    const id_matriz = sessionStorage.getItem("id_matriz");
-    setCargoUsuario(cargo);
-    setIdIgreja(id_igreja);
-    setIdMatriz(id_matriz);
+    Modal.setAppElement("body");
   }, []);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const id_igreja = sessionStorage.getItem("id_igreja");
+    const cargo = sessionStorage.getItem("cargo");
+    const igreja = sessionStorage.getItem("id_igreja");
+    const matriz = sessionStorage.getItem("id_matriz");
 
-        const eventoResponse = await api.get(`/evento/matriz/${id_igreja}`);
-        setAllEventos(eventoResponse.data);
-        setFilteredEventos(eventoResponse.data);
-        console.log("ID Igreja recebido:", id_igreja);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
+    setCargoUsuario(cargo);
+    setIdIgreja(igreja);
+    setIdMatriz(matriz);
+  }, []);
+
+  const loadEventos = useCallback(async () => {
+    try {
+      const igreja = sessionStorage.getItem("id_igreja");
+
+      if (!igreja) {
+        setAllEventos([]);
+        setFilteredEventos([]);
+        return;
+      }
+
+      const response = await api.get(`/evento/matriz/${igreja}`);
+      const eventos = Array.isArray(response.data) ? response.data : [];
+
+      setAllEventos(eventos);
+      setFilteredEventos(eventos);
+    } catch (error) {
+      console.error("Erro ao buscar eventos:", error);
+      toast.error("Erro ao carregar eventos.", toastConfig);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadEventos();
+  }, [loadEventos]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+
+      if (
+        filterRef.current &&
+        !filterRef.current.contains(event.target as Node)
+      ) {
+        setIsFilterOpen(false);
       }
     };
 
-    fetchUserData();
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
-  const [igreja, setIgreja] = useState<Igreja[]>([]);
+  useEffect(() => {
+    const term = searchTerm.trim().toLowerCase();
 
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-
-  const handleClickOutside = (event: MouseEvent) => {
-    if (
-      dropdownRef.current &&
-      !dropdownRef.current.contains(event.target as Node)
-    ) {
-      setIsDropdownOpen(false);
-    }
-  };
-
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
-
-    if (term.trim() === "") {
+    if (!term) {
       setFilteredEventos(allEventos);
       return;
     }
 
-    const lowercasedTerm = term.toLowerCase();
-
     const filtered = allEventos.filter((evento) => {
-      // Converte todos os campos para string antes de verificar
-      const nomeStr = evento.nome ? evento.nome.toString().toLowerCase() : "";
-      const codStr = evento.local ? evento.local.toString().toLowerCase() : "";
-      const dataInicioStr = evento.data_inicio
-        ? evento.data_inicio.toString()
-        : "";
-      const dataFimStr = evento.data_fim ? evento.data_fim.toString() : "";
+      const nomeStr = evento.nome?.toLowerCase() || "";
+      const localStr = evento.local?.toLowerCase() || "";
+      const dataInicioStr = evento.data_inicio || "";
+      const dataFimStr = evento.data_fim || "";
 
       return (
-        nomeStr.includes(lowercasedTerm) ||
-        codStr.includes(lowercasedTerm) ||
-        dataInicioStr.includes(lowercasedTerm) ||
-        dataFimStr.includes(lowercasedTerm)
+        nomeStr.includes(term) ||
+        localStr.includes(term) ||
+        dataInicioStr.includes(term) ||
+        dataFimStr.includes(term)
       );
     });
 
     setFilteredEventos(filtered);
-  };
+  }, [searchTerm, allEventos]);
 
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [sortCriteria, setSortCriteria] = useState<
-    "recent" | "oldest" | "name-asc" | "name-desc"
-  >("recent");
-
-  const sortEventos = (eventos: Eventos[]) => {
-    const sorted = [...eventos];
+  const sortedEventos = useMemo(() => {
+    const sorted = [...filteredEventos];
 
     switch (sortCriteria) {
       case "recent":
-        // Adicionados recentemente (maior ID primeiro)
         return sorted.sort((a, b) => b.id_evento - a.id_evento);
-
       case "oldest":
-        // Adicionados há mais tempo (menor ID primeiro)
         return sorted.sort((a, b) => a.id_evento - b.id_evento);
-
       case "name-asc":
-        // Ordem alfabética A-Z
         return sorted.sort((a, b) => a.nome.localeCompare(b.nome));
-
       case "name-desc":
-        // Ordem alfabética Z-A
         return sorted.sort((a, b) => b.nome.localeCompare(a.nome));
-
       default:
         return sorted;
     }
-  };
+  }, [filteredEventos, sortCriteria]);
 
-  const sortedEventos = sortEventos(filteredEventos);
+  const isReadOnlyEvento =
+    !!selectedEvento &&
+    selectedEvento.id_matriz != null &&
+    cargoUsuario !== "Pastor Matriz";
 
-  const [modalType, setModalType] = useState<"new" | "edit" | null>(null);
-  const [modalIsOpen, setModalIsOpen] = useState(false);
+  function resetNewForm() {
+    setNome("");
+    setLocal("");
+    setDataInicio("");
+    setHorarioInicio("");
+    setDataFim("");
+    setHorarioFim("");
+    setTipoEvento("local");
+  }
 
-  const openModal = (type: "new" | "edit", eventos?: Eventos) => {
-    setModalType(type);
-    if (type === "new") {
-      setNome("");
-      setLocal("");
-      setDataInicio("");
-      setHorarioInicio("");
-      setDataFim("");
-      setHorarioFim("");
-    } else if (type === "edit" && eventos) {
-      setSelectedEvento(eventos);
-      setEditNome(eventos.nome);
-      setEditLocal(eventos.local);
-      setEditDataInicio(format(new Date(eventos.data_inicio), "yyyy-MM-dd"));
-      setEditHorarioInicio(eventos.horario_inicio);
-      setEditDataFim(format(new Date(eventos.data_fim), "yyyy-MM-dd"));
-      setEditHorarioFim(eventos.horario_fim);
-    }
-    setModalIsOpen(true);
-  };
-
-  const closeModal = () => {
-    setModalIsOpen(false);
-    setModalType(null);
+  function resetEditForm() {
     setEditNome("");
     setEditLocal("");
     setEditDataInicio("");
     setEditHorarioInicio("");
     setEditDataFim("");
     setEditHorarioFim("");
-  };
+  }
 
-  const [selectedEvento, setSelectedEvento] = useState<Eventos | null>(null);
+  function openModal(type: Exclude<ModalType, null>, evento?: Evento) {
+    setModalType(type);
 
-  useEffect(() => {
-    if (selectedEvento) {
-      setNome(selectedEvento.nome || "");
-      setLocal(selectedEvento.local || "");
-      setDataInicio(selectedEvento.data_inicio || "");
-      setHorarioInicio(selectedEvento.horario_inicio || "");
-      setDataFim(selectedEvento.data_fim || "");
-      setHorarioFim(selectedEvento.horario_fim || "");
+    if (type === "new") {
+      setSelectedEvento(null);
+      resetNewForm();
     }
-  }, [selectedEvento]);
 
-  const isReadOnlyEvento = selectedEvento?.id_matriz !== null && cargoUsuario !== "Pastor Matriz";
+    if (type === "edit" && evento) {
+      setSelectedEvento(evento);
+      setEditNome(evento.nome || "");
+      setEditLocal(evento.local || "");
+      setEditDataInicio(toInputDate(evento.data_inicio));
+      setEditHorarioInicio(toInputTime(evento.horario_inicio));
+      setEditDataFim(toInputDate(evento.data_fim));
+      setEditHorarioFim(toInputTime(evento.horario_fim));
+    }
 
-  async function handleRegister(event: React.FormEvent) {
-    event.preventDefault();
+    setModalIsOpen(true);
+  }
 
-    const notifySuccess = () => {
-      toast.success("Evento cadastrado com sucesso!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
+  function closeModal() {
+    setModalIsOpen(false);
+    setModalType(null);
+    setSelectedEvento(null);
+    resetNewForm();
+    resetEditForm();
+  }
 
-    const notifyWarn = () => {
-      toast.warn("Todos os campos devem ser preenchidos!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
+  function handleDeleteClick(id_evento: number) {
+    setEventoToDelete(id_evento);
+    setIsDeleteModalOpen(true);
+  }
 
-    const notifyError = () => {
-      toast.error("Erro na cadastro, Tente novamente.", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
+  async function handleDeleteConfirm() {
+    if (eventoToDelete === null) return;
 
     try {
-      if (
-        nome === "" ||
-        local === "" ||
-        data_inicio === "" ||
-        horario_inicio === "" ||
-        data_fim === "" ||
-        horario_fim === ""
-      ) {
-        notifyWarn();
-        return;
-      } else {
-        const body: any = {
-          nome,
-          local,
-          data_inicio,
-          horario_inicio,
-          data_fim,
-          horario_fim,
-        };
-
-        if (tipoEvento === "matriz" && cargoUsuario === "Pastor Matriz") {
-          body.is_global = true;
-          body.id_matriz = idMatriz ?? idIgreja; // fallback
-        } else {
-          body.is_global = false;
-          body.id_matriz = null;
-        }
-
-        console.log("Enviando evento:", body);
-
-        const response = await api.post("/evento", body);
-
-        notifySuccess();
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
-      }
+      await api.delete(`/evento/${eventoToDelete}`);
+      await loadEventos();
+      toast.success("Evento deletado com sucesso!", toastConfig);
     } catch (error) {
-      notifyError();
+      console.error("Erro ao excluir evento:", error);
+      toast.error("Erro ao remover evento.", toastConfig);
+    } finally {
+      setIsDeleteModalOpen(false);
+      setEventoToDelete(null);
     }
   }
 
-  const handleUpdate = async (eventos: Eventos | null) => {
-    const notifySuccess = () => {
-      toast.success("Evento atualizado com sucesso!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
+  async function handleRegister(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
 
-    const notifyWarn = () => {
-      toast.warn("Todos os campos devem ser preenchidos!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
+    if (
+      !nome.trim() ||
+      !local.trim() ||
+      !dataInicio ||
+      !horarioInicio ||
+      !dataFim ||
+      !horarioFim
+    ) {
+      toast.warn("Todos os campos devem ser preenchidos!", toastConfig);
+      return;
+    }
 
-    const notifyError = () => {
-      toast.error("Erro na atualização, Tente novamente.", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
+    try {
+      const body: Record<string, unknown> = {
+        nome: nome.trim(),
+        local: local.trim(),
+        data_inicio: dataInicio,
+        horario_inicio: horarioInicio,
+        data_fim: dataFim,
+        horario_fim: horarioFim,
+      };
+
+      if (tipoEvento === "matriz" && cargoUsuario === "Pastor Matriz") {
+        body.is_global = true;
+        body.id_matriz = idMatriz ?? idIgreja;
+      } else {
+        body.is_global = false;
+        body.id_matriz = null;
+      }
+
+      await api.post("/evento", body);
+      await loadEventos();
+
+      toast.success("Evento cadastrado com sucesso!", toastConfig);
+      closeModal();
+    } catch (error) {
+      console.error("Erro ao cadastrar evento:", error);
+      toast.error("Erro no cadastro. Tente novamente.", toastConfig);
+    }
+  }
+
+  async function handleUpdate(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedEvento) return;
+
+    if (
+      !editNome.trim() ||
+      !editLocal.trim() ||
+      !editDataInicio ||
+      !editHorarioInicio ||
+      !editDataFim ||
+      !editHorarioFim
+    ) {
+      toast.warn("Todos os campos devem ser preenchidos!", toastConfig);
+      return;
+    }
+
+    const dados = {
+      nome: editNome.trim(),
+      local: editLocal.trim(),
+      data_inicio: editDataInicio,
+      horario_inicio: editHorarioInicio,
+      data_fim: editDataFim,
+      horario_fim: editHorarioFim,
     };
 
     try {
-      if (!eventos) {
-        console.error("No selected financas for update");
-        return;
-      }
+      await api.put(`/evento/${selectedEvento.id_evento}`, dados);
+      await loadEventos();
 
-      if (
-        !editNome ||
-        !editLocal ||
-        !editDataInicio ||
-        !editHorarioInicio ||
-        !data_fim ||
-        !horario_fim
-      ) {
-        notifyWarn();
-        return;
-      }
-
-      const dados = {
-        nome: editNome,
-        local: editLocal,
-        data_inicio: editDataInicio,
-        horario_inicio: editHorarioInicio,
-        data_fim: editDataFim,
-        horario_fim: editHorarioFim,
-      };
-
-      setEventos((prevEventos) =>
-        prevEventos.map((u) =>
-          u.id_evento === eventos.id_evento ? { ...u, ...dados } : u
-        )
-      );
-
-      const response = await api.put(`/evento/${eventos.id_evento}`, dados);
-
-      notifySuccess();
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      toast.success("Evento atualizado com sucesso!", toastConfig);
       closeModal();
-      setSelectedEvento(null);
     } catch (error) {
-      console.error("Error updating eventos:", error);
-      notifyError();
+      console.error("Erro ao atualizar evento:", error);
+      toast.error("Erro na atualização. Tente novamente.", toastConfig);
     }
-  };
+  }
 
   return (
-    <main>
-      <div className="flex">
+    <div className="min-h-screen bg-fundo">
+      <div className="flex flex-col lg:flex-row">
         <MenuLateral />
-        <div className="sm:ml-[12vh] md:ml-[20vh] lg:ml-[5vh] mr-[10vh] mb-[5vh]">
-          <div className="flex mt-12">
-            <Link
-              href={"/../../pages/inicio"}
-              className="text-cinza text-lg text3"
-            >
-              Início &#62;
-            </Link>
-            <Link
-              href={"/../../pages/financeiro"}
-              className="text-cinza text-lg text3 ml-2"
-            >
-              Eventos &#62;
-            </Link>
-          </div>
 
-          <div className="flex">
-            <div
-              className="mt-10 relative sm:right-20 md:right-2"
-              ref={dropdownRef}
-            >
-              <button onClick={toggleDropdown} className="ml-2 flex">
-                <h1 className="text-black text1 sm:mr-[2vh]  sm:text-4xl md:text-4xl lg:text-5xl">
-                  Eventos
-                </h1>
-                <Image
-                  src={seta}
-                  width={24}
-                  height={24}
-                  alt="Arrow Icon"
-                  className={`${
-                    isDropdownOpen ? "rotate-180" : ""
-                  } transition-transform`}
-                />
-              </button>
+        <div className="app-content">
+          <nav className="mb-6 lg:mb-8" aria-label="Navegação">
+            <ol className="flex flex-wrap items-center text-sm text-gray-600">
+              <li>
+                <Link
+                  href="/pages/inicio"
+                  className="text3 transition-colors duration-200 hover:text-azul"
+                >
+                  Início
+                </Link>
+              </li>
+              <li className="mx-2">&#62;</li>
+              <li className="text3 font-semibold text-azul">
+                <span aria-current="page">Eventos</span>
+              </li>
+            </ol>
+          </nav>
+
+          <div className="mb-6 flex flex-col gap-4 lg:mb-8">
+            <div className="relative" ref={dropdownRef}>
+              <div onClick={() => setIsDropdownOpen((prev) => !prev)} className="flex items-center cursor-pointer">
+                <PageTitle>Eventos</PageTitle>
+
+                <button
+                  type="button"
+                  className="ml-2 rounded-full p-2 transition-colors duration-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-azul focus:ring-opacity-50 lg:ml-4"
+                  aria-label="Menu de navegação"
+                  aria-expanded={isDropdownOpen}
+                >
+                  <ChevronDown
+                    className={`h-5 w-5 transition-transform duration-200 ${
+                      isDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+              </div>
 
               {isDropdownOpen && (
-                <div className="mt-4 absolute bg-white shadow-lg rounded-lg z-50 w-52">
+                <div className="absolute left-0 top-full z-50 mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-xl xs:w-56 sm:w-64">
                   <Link
-                    href={"/../../pages/avisos"}
-                    className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
+                    href="/pages/avisos"
+                    className="text1 block px-4 py-3 text-sm text-gray-700 transition-colors duration-200 hover:bg-blue-50 hover:text-azul sm:text-base"
+                    onClick={() => setIsDropdownOpen(false)}
                   >
                     Avisos
                   </Link>
@@ -485,468 +434,468 @@ export default function eventos() {
               )}
             </div>
 
-            <div className="flex">
-              <div className="mt-10 relative sm:right-[5vh] md:left-[20vh] lg:left-[42.8vh]">
-                <div className="flex mb-4">
-                  {/* Botão de filtro */}
-                  <div className="flex gap-5 relative">
-                    <Link
-                      className="flex bg-azul items-center justify-center px-5 py-2 cursor-pointer rounded-lg focus:outline-none"
-                      href={"/../../pages/apresentacao"}
-                    >
-                      <Image src={cast} width={30} height={30} alt="Filtrar" />
-                    </Link>
-                    <button
-                      onClick={() => setIsFilterOpen(!isFilterOpen)}
-                      className="flex items-center justify-center px-5 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
-                    >
-                      <Image
-                        src={filter}
-                        width={30}
-                        height={30}
-                        alt="Filtrar"
-                      />
-                    </button>
-                    <div className="flex-1">
-                      <input
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="w-full flex-1">
+                <div className="relative">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <SearchField
                         type="text"
                         placeholder="Pesquisar eventos..."
-                        className="sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-xl md:text-lg lg:text-xl text-gray-600 pl-5 text2 text-left content-center justify-center rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
+
                         value={searchTerm}
-                        onChange={(e) => handleSearch(e.target.value)}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        aria-label="Pesquisar eventos"
                       />
                     </div>
-                    {/* Dropdown de filtros */}
-                    {isFilterOpen && (
-                      <div className="absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "recent"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("recent");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Adicionados recentemente
-                        </button>
 
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "oldest"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("oldest");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Adicionados antigamente
-                        </button>
+                    <div className="relative" ref={filterRef}>
+                      <FilterButton
+                        type="button"
+                        onClick={() => setIsFilterOpen((prev) => !prev)}
 
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "name-asc"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("name-asc");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Nome A-Z
-                        </button>
+                        aria-label="Filtrar resultados"
+                        aria-expanded={isFilterOpen}
+                       />
 
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "name-desc"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("name-desc");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Nome Z-A
-                        </button>
-                      </div>
-                    )}
+                      {isFilterOpen && (
+                        <div className="od-filter-menu absolute right-0 top-full z-10 mt-2 w-48 rounded-xl border border-gray-200 bg-white shadow-xl xs:w-56">
+                          <div className="py-2">
+                            <button
+                              type="button"
+                              className={`w-full px-4 py-2 text-left text-sm ${
+                                sortCriteria === "recent"
+                                  ? "bg-blue-50 text-azul font-semibold"
+                                  : "text-gray-700 hover:bg-gray-50"
+                              }`}
+                              onClick={() => {
+                                setSortCriteria("recent");
+                                setIsFilterOpen(false);
+                              }}
+                            >
+                              Adicionados recentemente
+                            </button>
+
+                            <button
+                              type="button"
+                              className={`w-full px-4 py-2 text-left text-sm ${
+                                sortCriteria === "oldest"
+                                  ? "bg-blue-50 text-azul font-semibold"
+                                  : "text-gray-700 hover:bg-gray-50"
+                              }`}
+                              onClick={() => {
+                                setSortCriteria("oldest");
+                                setIsFilterOpen(false);
+                              }}
+                            >
+                              Adicionados antigamente
+                            </button>
+
+                            <button
+                              type="button"
+                              className={`w-full px-4 py-2 text-left text-sm ${
+                                sortCriteria === "name-asc"
+                                  ? "bg-blue-50 text-azul font-semibold"
+                                  : "text-gray-700 hover:bg-gray-50"
+                              }`}
+                              onClick={() => {
+                                setSortCriteria("name-asc");
+                                setIsFilterOpen(false);
+                              }}
+                            >
+                              Nome A-Z
+                            </button>
+
+                            <button
+                              type="button"
+                              className={`w-full px-4 py-2 text-left text-sm ${
+                                sortCriteria === "name-desc"
+                                  ? "bg-blue-50 text-azul font-semibold"
+                                  : "text-gray-700 hover:bg-gray-50"
+                              }`}
+                              onClick={() => {
+                                setSortCriteria("name-desc");
+                                setIsFilterOpen(false);
+                              }}
+                            >
+                              Nome Z-A
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="flex relative sm:right-[10vh] md:left-[35vh] lg:left-[43.8vh]">
-                <div className="mt-10 ml-1 flex justify-center">
-                  <p
-                    className="bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400"
-                    onClick={() => openModal("new")}
-                  >
-                    Novo Evento +
-                  </p>
-                </div>
+
+              <div className="flex w-full gap-3 md:w-auto">
+                <Link
+                  href="/pages/apresentacao"
+                  aria-label="Ir para apresentação"
+                  className="flex h-[52px] w-[52px] items-center justify-center rounded-xl bg-azul text-white shadow-md transition-all duration-200 hover:bg-blue-600 hover:shadow-lg"
+                >
+                  <Cast className="h-5 w-5" />
+                </Link>
+
+                <AddButton
+                  type="button"
+                  onClick={() => openModal("new")}
+                  className="w-full xs:w-auto"
+                >
+                  Novo Evento
+                </AddButton>
               </div>
             </div>
           </div>
 
-          <div className="pr-2">
-            <div className="bg-white space-x-16 shadow-xl absolute rounded-xl top-[24%] sm:left-[2vh] md:left-[20vh] lg:left-[35vh] h-[72vh] max-h-[72vh] max-w-[151vh] overflow-y-auto overflow-x-auto">
-              <div className="m-9 grid md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-3 gap-[4vh]">
+          <div className="mt-6 lg:mt-8">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+              <div className="p-4 sm:p-6">
                 {sortedEventos.length === 0 ? (
-                  <p className="text-center text-black text1 text-4xl mt-5 text-gray-4]">
-                    Nenhum evento encontrado.
-                  </p>
+                  <div className="py-12 text-center lg:py-16">
+                    <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 lg:h-20 lg:w-20">
+                      <CalendarDays className="h-8 w-8 text-gray-400 lg:h-10 lg:w-10" />
+                    </div>
+                    <h3 className="text1 mb-2 text-xl text-gray-600 lg:text-2xl">
+                      Nenhum evento encontrado
+                    </h3>
+                    <p className="text2 text-gray-500">
+                      {searchTerm
+                        ? "Tente ajustar sua busca"
+                        : "Adicione seu primeiro evento"}
+                    </p>
+                  </div>
                 ) : (
-                  sortedEventos.map((evento) => (
-                    <EventosCard
-                      key={evento.id_evento}
-                      h4={evento.local}
-                      h3={evento.nome}
-                      data_inicio={format(
-                        new Date(evento.data_inicio),
-                        "dd/MM/yyyy"
-                      )}
-                      hora_inicio={format(
-                        new Date(`1970-01-01T${evento.horario_inicio}`),
-                        "HH:mm"
-                      )}
-                      data_fim={format(new Date(evento.data_fim), "dd/MM/yyyy")}
-                      hora_fim={format(
-                        new Date(`1970-01-01T${evento.horario_fim}`),
-                        "HH:mm"
-                      )}
-                      tipo_evento={
-                        evento.tipo_evento ??
-                        (evento.is_global ? "matriz" : "local")
-                      }
-                      onClick={() => openModal("edit", evento)}
-                      onDelete={() => handleDeleteClick(evento.id_evento)}
-                    />
-                  ))
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    {sortedEventos.map((evento) => (
+                      <EventosCard
+                        key={evento.id_evento}
+                        h3={evento.nome}
+                        h4={evento.local}
+                        data_inicio={formatDateCard(evento.data_inicio)}
+                        hora_inicio={formatTimeCard(evento.horario_inicio)}
+                        data_fim={formatDateCard(evento.data_fim)}
+                        hora_fim={formatTimeCard(evento.horario_fim)}
+                        tipo_evento={
+                          evento.tipo_evento ??
+                          (Boolean(evento.is_global) ? "matriz" : "local")
+                        }
+                        onClick={() => openModal("edit", evento)}
+                        onDelete={() => handleDeleteClick(evento.id_evento)}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
           </div>
-
-          <Modal
-            isOpen={isDeleteModalOpen}
-            onRequestClose={() => setIsDeleteModalOpen(false)}
-            contentLabel="Confirmar exclusão"
-            className="fixed inset-0 flex items-center justify-center p-4"
-            overlayClassName="fixed inset-0 bg-black bg-opacity-40"
-          >
-            <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-              <h2 className="text1 text-xl text-black font-bold mb-4">
-                Confirmar Exclusão
-              </h2>
-              <p className="text2 text-gray-600 mb-6">
-                Você tem certeza que deseja remover este evento?
-              </p>
-              <div className="flex justify-end space-x-4">
-                <button
-                  onClick={() => setIsDeleteModalOpen(false)}
-                  className="text2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleDeleteConfirm}
-                  className="text2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                >
-                  Confirmar
-                </button>
-              </div>
-            </div>
-          </Modal>
-
-          <Modal
-            className="text-white flex flex-col"
-            isOpen={modalIsOpen && modalType === "new"}
-            onRequestClose={closeModal}
-            contentLabel="Novo Evento"
-          >
-            <div className="flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl">
-              <div className="cursor-pointer flex place-content-end rounded-lg">
-                <Image
-                  onClick={closeModal}
-                  src={close}
-                  width={40}
-                  height={40}
-                  alt="close Icon"
-                  className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
-                />
-              </div>
-              <h2 className="text-white text1 text-4xl flex justify-center">
-                Novo Evento
-              </h2>
-
-              <div className="flex flex-col px-10">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Nome
-                </label>
-
-                <input
-                  type="text"
-                  className="px-4 py-3 rounded-lg text2 text-slate-500"
-                  placeholder="Digite o Nome..."
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  maxLength={150}
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col px-10">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Local
-                </label>
-
-                <input
-                  type="text"
-                  className="px-4 py-3 rounded-lg text2 text-slate-500"
-                  placeholder="Digite o Local..."
-                  value={local}
-                  onChange={(e) => setLocal(e.target.value)}
-                  maxLength={150}
-                  required
-                />
-              </div>
-
-              <div className="flex px-10">
-                <div className="flex flex-col mr-5">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Data de Início
-                  </label>
-
-                  <input
-                    type="date"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    placeholder="Digite a Data..."
-                    value={data_inicio}
-                    onChange={(e) => setDataInicio(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Horário de Início
-                  </label>
-
-                  <input
-                    type="time"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    placeholder="Digite o Horário..."
-                    value={horario_inicio}
-                    onChange={(e) => setHorarioInicio(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="flex px-10">
-                <div className="flex flex-col mr-5">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Data de Término
-                  </label>
-
-                  <input
-                    type="date"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    placeholder="Digite a Data..."
-                    value={data_fim}
-                    onChange={(e) => setDataFim(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col mr-5">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Horário de Término
-                  </label>
-
-                  <input
-                    type="time"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    placeholder="Digite o Horário..."
-                    value={horario_fim}
-                    onChange={(e) => setHorarioFim(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              {cargoUsuario === "Pastor Matriz" && (
-                <div className="flex flex-col px-10">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Tipo Evento
-                  </label>
-
-                  <select
-                    className="px-4 py-3 rounded-lg text2 text-slate-500 bg-white"
-                    value={tipoEvento}
-                    onChange={(e) =>
-                      setTipoEvento(e.target.value as "local" | "matriz")
-                    }
-                    required
-                  >
-                    <option disabled>Escolha o Tipo do Evento</option>
-                    <option value="local">Evento Local</option>
-                    <option value="matriz">Evento da Matriz</option>
-                  </select>
-                </div>
-              )}
-              <div className="flex flex-col px-10 pb-10">
-                <button
-                  className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"
-                  onClick={handleRegister}
-                >
-                  Enviar
-                </button>
-              </div>
-            </div>
-          </Modal>
-
-          <Modal
-            className="text-white flex flex-col"
-            isOpen={modalIsOpen && modalType === "edit"}
-            onRequestClose={closeModal}
-            contentLabel="Ver Evento"
-          >
-            <div className={`flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl ${isReadOnlyEvento ? "pb-20" : ""}`}>
-              <div className="cursor-pointer flex place-content-end rounded-lg">
-                <Image
-                  onClick={closeModal}
-                  src={close}
-                  width={40}
-                  height={40}
-                  alt="close Icon"
-                  className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
-                />
-              </div>
-              <h2 className="text-white text1 text-4xl flex justify-center">
-                Ver Evento
-              </h2>
-
-              <div className="flex flex-col px-10">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Nome
-                </label>
-
-                <input
-                  type="text"
-                  className="px-4 py-3 rounded-lg text2 text-slate-500"
-                  placeholder="Digite o Nome..."
-                  value={editNome}
-                  onChange={(e) => setEditNome(e.target.value)}
-                  maxLength={150}
-                  required
-                  readOnly={isReadOnlyEvento}
-                />
-              </div>
-
-              <div className="flex flex-col px-10">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Local
-                </label>
-
-                <input
-                  type="text"
-                  className="px-4 py-3 rounded-lg text2 text-slate-500"
-                  placeholder="Digite o Local..."
-                  value={editLocal}
-                  onChange={(e) => setEditLocal(e.target.value)}
-                  maxLength={150}
-                  required
-                  readOnly={isReadOnlyEvento}
-                />
-              </div>
-
-              <div className="flex px-10">
-                <div className="flex flex-col mr-5">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Data de Início
-                  </label>
-
-                  <input
-                    type="date"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    placeholder="Digite a Data..."
-                    value={editDataInicio}
-                    onChange={(e) => setEditDataInicio(e.target.value)}
-                    required
-                    readOnly={isReadOnlyEvento}
-                  />
-                </div>
-
-                <div className="flex flex-col">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Horário de Início
-                  </label>
-
-                  <input
-                    type="time"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    placeholder="Digite o Horário..."
-                    value={editHorarioInicio}
-                    onChange={(e) => setEditHorarioInicio(e.target.value)}
-                    required
-                    readOnly={isReadOnlyEvento}
-                  />
-                </div>
-              </div>
-
-              <div className="flex px-10">
-                <div className="flex flex-col mr-5">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Data de Término
-                  </label>
-
-                  <input
-                    type="date"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    placeholder="Digite a Data..."
-                    value={editDataFim}
-                    onChange={(e) => setEditDataFim(e.target.value)}
-                    required
-                    readOnly={isReadOnlyEvento}
-                  />
-                </div>
-
-                <div className="flex flex-col">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Horário de Término
-                  </label>
-
-                  <input
-                    type="time"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    placeholder="Digite o Horário..."
-                    value={editHorarioFim}
-                    onChange={(e) => setEditHorarioFim(e.target.value)}
-                    required
-                    readOnly={isReadOnlyEvento}
-                  />
-                </div>
-              </div>
-              {!isReadOnlyEvento && (
-                <div className="flex flex-col px-10 pb-10">
-                  <button
-                    className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"
-                    onClick={() => selectedEvento && handleUpdate(selectedEvento)}
-                  >
-                    Atualizar
-                  </button>
-                </div>
-              )}
-            </div>
-          </Modal>
         </div>
-        <ToastContainer />
       </div>
-    </main>
+
+      <ToastContainer />
+
+      <AppModal
+        isOpen={isDeleteModalOpen}
+        onRequestClose={() => setIsDeleteModalOpen(false)}
+        contentLabel="Confirmar exclusão"
+        className="fixed inset-0 flex items-center justify-center p-4"
+        overlayClassName="fixed inset-0 bg-white bg-opacity-70 z-50"
+      >
+        <div className="w-full max-w-sm rounded-lg bg-white p-6">
+          <h2 className="text1 mb-4 text-xl font-bold text-black">
+            Confirmar Exclusão
+          </h2>
+          <p className="text2 mb-6 text-gray-600">
+            Você tem certeza que deseja remover este evento?
+          </p>
+          <div className="flex justify-end space-x-4">
+            <button
+              type="button"
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="text2 rounded px-4 py-2 text-gray-600 hover:bg-gray-100"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteConfirm}
+              className="text2 rounded bg-red-500 px-4 py-2 text-white hover:bg-red-600"
+            >
+              Confirmar
+            </button>
+          </div>
+        </div>
+      </AppModal>
+
+      <AppModal
+        className="text-white flex flex-col"
+        isOpen={modalIsOpen && modalType === "new"}
+        onRequestClose={closeModal}
+        contentLabel="Novo Evento"
+        overlayClassName="fixed inset-0 z-50 bg-black/40"
+      >
+        <div className="mx-auto mt-[5vh] flex max-w-[90vw] flex-col justify-center rounded-lg bg-azul shadow-xl xs:mt-[10vh] xs:max-w-md sm:mt-[15vh] sm:max-w-lg lg:max-w-2xl">
+          <div className="flex place-content-start rounded-lg">
+            <button
+              type="button"
+              onClick={closeModal}
+              className="flex items-center justify-center rounded-tl-lg bg-red-500 p-2 hover:bg-red-600 xs:p-3"
+              aria-label="Fechar modal"
+            >
+              <X className="h-5 w-5 text-white xs:h-6 xs:w-6" />
+            </button>
+          </div>
+
+          <h2 className="text1 mt-4 flex justify-center text-2xl text-white xs:mt-6 xs:text-3xl sm:text-4xl">
+            Novo Evento
+          </h2>
+
+          <form onSubmit={handleRegister}>
+            <div className="flex flex-col px-4 xs:px-6 sm:px-8 lg:px-10">
+              <label className="text1 mt-4 mb-1 text-base text-white xs:mt-5 xs:text-lg sm:text-xl">
+                Nome
+              </label>
+              <input
+                type="text"
+                className={inputClass}
+                placeholder="Digite o nome..."
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                maxLength={150}
+                required
+              />
+            </div>
+
+            <div className="flex flex-col px-4 xs:px-6 sm:px-8 lg:px-10">
+              <label className="text1 mt-4 mb-1 text-base text-white xs:mt-5 xs:text-lg sm:text-xl">
+                Local
+              </label>
+              <input
+                type="text"
+                className={inputClass}
+                placeholder="Digite o local..."
+                value={local}
+                onChange={(e) => setLocal(e.target.value)}
+                maxLength={150}
+                required
+              />
+            </div>
+
+            <div className="flex flex-col gap-4 px-4 xs:px-6 sm:flex-row sm:px-8 lg:px-10">
+              <div className="flex flex-1 flex-col">
+                <label className="text1 mt-5 mb-1 text-base text-white sm:text-xl">
+                  Data de Início
+                </label>
+                <input
+                  type="date"
+                  className={inputClass}
+                  value={dataInicio}
+                  onChange={(e) => setDataInicio(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="flex flex-1 flex-col">
+                <label className="text1 mt-5 mb-1 text-base text-white sm:text-xl">
+                  Horário de Início
+                </label>
+                <input
+                  type="time"
+                  className={inputClass}
+                  value={horarioInicio}
+                  onChange={(e) => setHorarioInicio(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 px-4 xs:px-6 sm:flex-row sm:px-8 lg:px-10">
+              <div className="flex flex-1 flex-col">
+                <label className="text1 mt-5 mb-1 text-base text-white sm:text-xl">
+                  Data de Término
+                </label>
+                <input
+                  type="date"
+                  className={inputClass}
+                  value={dataFim}
+                  onChange={(e) => setDataFim(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="flex flex-1 flex-col">
+                <label className="text1 mt-5 mb-1 text-base text-white sm:text-xl">
+                  Horário de Término
+                </label>
+                <input
+                  type="time"
+                  className={inputClass}
+                  value={horarioFim}
+                  onChange={(e) => setHorarioFim(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            {cargoUsuario === "Pastor Matriz" && (
+              <div className="flex flex-col px-4 xs:px-6 sm:px-8 lg:px-10">
+                <label className="text1 mt-5 mb-1 text-base text-white sm:text-xl">
+                  Tipo de Evento
+                </label>
+                <select
+                  className={inputClass}
+                  value={tipoEvento}
+                  onChange={(e) =>
+                    setTipoEvento(e.target.value as "local" | "matriz")
+                  }
+                >
+                  <option value="local">Evento Local</option>
+                  <option value="matriz">Evento da Matriz</option>
+                </select>
+              </div>
+            )}
+
+            <div className="flex flex-col px-4 pb-6 xs:px-6 xs:pb-8 sm:px-8 sm:pb-10 lg:px-10">
+              <button
+                type="submit"
+                className="text2 mt-6 rounded-lg border-2 px-4 py-2 text-base text-white transition-colors duration-200 hover:bg-blue-600 xs:mt-7 xs:py-3 xs:text-lg"
+              >
+                Enviar
+              </button>
+            </div>
+          </form>
+        </div>
+      </AppModal>
+
+      <AppModal
+        className="text-white flex flex-col"
+        isOpen={modalIsOpen && modalType === "edit"}
+        onRequestClose={closeModal}
+        contentLabel="Editar Evento"
+        overlayClassName="fixed inset-0 z-50 bg-black/40"
+      >
+        <div className="mx-auto mt-[5vh] flex max-w-[90vw] flex-col justify-center rounded-lg bg-azul shadow-xl xs:mt-[10vh] xs:max-w-md sm:mt-[15vh] sm:max-w-lg lg:max-w-2xl">
+          <div className="flex place-content-start rounded-lg">
+            <button
+              type="button"
+              onClick={closeModal}
+              className="flex items-center justify-center rounded-tl-lg bg-red-500 p-2 hover:bg-red-600 xs:p-3"
+              aria-label="Fechar modal"
+            >
+              <X className="h-5 w-5 text-white xs:h-6 xs:w-6" />
+            </button>
+          </div>
+
+          <h2 className="text1 mt-4 flex justify-center text-2xl text-white xs:mt-6 xs:text-3xl sm:text-4xl">
+            {isReadOnlyEvento ? "Ver Evento" : "Editar Evento"}
+          </h2>
+
+          <form onSubmit={handleUpdate}>
+            <div className="flex flex-col px-4 xs:px-6 sm:px-8 lg:px-10">
+              <label className="text1 mt-4 mb-1 text-base text-white xs:mt-5 xs:text-lg sm:text-xl">
+                Nome
+              </label>
+              <input
+                type="text"
+                className={inputClass}
+                placeholder="Digite o nome..."
+                value={editNome}
+                onChange={(e) => setEditNome(e.target.value)}
+                maxLength={150}
+                required
+                disabled={isReadOnlyEvento}
+              />
+            </div>
+
+            <div className="flex flex-col px-4 xs:px-6 sm:px-8 lg:px-10">
+              <label className="text1 mt-4 mb-1 text-base text-white xs:mt-5 xs:text-lg sm:text-xl">
+                Local
+              </label>
+              <input
+                type="text"
+                className={inputClass}
+                placeholder="Digite o local..."
+                value={editLocal}
+                onChange={(e) => setEditLocal(e.target.value)}
+                maxLength={150}
+                required
+                disabled={isReadOnlyEvento}
+              />
+            </div>
+
+            <div className="flex flex-col gap-4 px-4 xs:px-6 sm:flex-row sm:px-8 lg:px-10">
+              <div className="flex flex-1 flex-col">
+                <label className="text1 mt-5 mb-1 text-base text-white sm:text-xl">
+                  Data de Início
+                </label>
+                <input
+                  type="date"
+                  className={inputClass}
+                  value={editDataInicio}
+                  onChange={(e) => setEditDataInicio(e.target.value)}
+                  required
+                  disabled={isReadOnlyEvento}
+                />
+              </div>
+
+              <div className="flex flex-1 flex-col">
+                <label className="text1 mt-5 mb-1 text-base text-white sm:text-xl">
+                  Horário de Início
+                </label>
+                <input
+                  type="time"
+                  className={inputClass}
+                  value={editHorarioInicio}
+                  onChange={(e) => setEditHorarioInicio(e.target.value)}
+                  required
+                  disabled={isReadOnlyEvento}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 px-4 xs:px-6 sm:flex-row sm:px-8 lg:px-10">
+              <div className="flex flex-1 flex-col">
+                <label className="text1 mt-5 mb-1 text-base text-white sm:text-xl">
+                  Data de Término
+                </label>
+                <input
+                  type="date"
+                  className={inputClass}
+                  value={editDataFim}
+                  onChange={(e) => setEditDataFim(e.target.value)}
+                  required
+                  disabled={isReadOnlyEvento}
+                />
+              </div>
+
+              <div className="flex flex-1 flex-col">
+                <label className="text1 mt-5 mb-1 text-base text-white sm:text-xl">
+                  Horário de Término
+                </label>
+                <input
+                  type="time"
+                  className={inputClass}
+                  value={editHorarioFim}
+                  onChange={(e) => setEditHorarioFim(e.target.value)}
+                  required
+                  disabled={isReadOnlyEvento}
+                />
+              </div>
+            </div>
+
+            {!isReadOnlyEvento && (
+              <div className="flex flex-col px-4 pb-6 xs:px-6 xs:pb-8 sm:px-8 sm:pb-10 lg:px-10">
+                <button
+                  type="submit"
+                  className="text2 mt-6 rounded-lg border-2 px-4 py-2 text-base text-white transition-colors duration-200 hover:bg-blue-600 xs:mt-7 xs:py-3 xs:text-lg"
+                >
+                  Atualizar
+                </button>
+              </div>
+            )}
+          </form>
+        </div>
+      </AppModal>
+    </div>
   );
 }

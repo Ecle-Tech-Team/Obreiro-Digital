@@ -1,18 +1,30 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
-import { format } from "date-fns";
-import MenuLateral from "@/app/components/menuLateral/menuLateral";
+
+import { AddButton, AppModal, DataTable, FilterButton, PageTitle, SearchField } from '@/app/components/shared/MemberStyle';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { format, parseISO } from "date-fns";
 import Link from "next/link";
-import Image from "next/image";
-import api from "../../api/api";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import Modal from "react-modal";
-import seta from "@/public/icons/seta-down.svg";
-import close from "@/public/icons/close.svg";
-import lixo from "@/public/icons/delete.svg";
-import filter from "@/public/icons/filter.png";
+import { toast, ToastContainer } from "react-toastify";
+import {
+  Calendar,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Phone,
+  Trash2,
+  UserPlus,
+  X,
+} from "lucide-react";
+
+import MemberFormModal, {
+  MemberFormData,
+} from "@/app/components/memberFormModal/memberFormModal";
+import MenuLateral from "@/app/components/menuLateral/menuLateral";
 import { isMatriz } from "@/app/utils/auth";
+import api from "../../api/api";
+
+import "react-toastify/dist/ReactToastify.css";
 
 interface Igreja {
   id_igreja: number;
@@ -40,7 +52,22 @@ interface User {
   id_igreja: number;
 }
 
-export default function membros() {
+type SortCriteria = "recent" | "oldest" | "name-asc" | "name-desc" | "birth";
+
+function formatBirthDate(dateString: string) {
+  try {
+    return format(parseISO(dateString), "dd/MM/yyyy");
+  } catch {
+    return dateString;
+  }
+}
+
+function toInputDate(dateString: string) {
+  if (!dateString) return "";
+  return dateString.slice(0, 10);
+}
+
+export default function MembrosPage() {
   const [cod_membro, setCodMembro] = useState<string>("");
   const [nome, setNome] = useState<string>("");
   const [birth, setBirth] = useState<string>("");
@@ -52,72 +79,60 @@ export default function membros() {
   const [editNome, setEditNome] = useState<string>("");
   const [editBirth, setEditBirth] = useState<string>("");
   const [editNovoConvertido, setEditNovoConvertido] = useState<"Sim" | "Não">(
-    "Não"
+    "Não",
   );
   const [editNumero, setEditNumero] = useState<string>("");
   const [editNomeDepartamento, setEditNomeDepartamento] = useState<number>(0);
 
   const [departamento, setDepartamento] = useState<Departamento[]>([]);
+  const [igreja, setIgreja] = useState<Igreja[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+
+  const [allMembros, setAllMembros] = useState<Membro[]>([]);
+  const [filteredMembros, setFilteredMembros] = useState<Membro[]>([]);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortCriteria, setSortCriteria] = useState<SortCriteria>("recent");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  const [modalType, setModalType] = useState<"new" | "edit" | null>(null);
+  const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<Membro | null>(null);
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<number | null>(null);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [allMembros, setAllMembros] = useState<Membro[]>([]); // Lista completa
-  const [filteredMembros, setFilteredMembros] = useState<Membro[]>([]); // Lista filtrada
-  const handleDeleteClick = (id_membro: number) => {
-    setMemberToDelete(id_membro);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!memberToDelete) return;
-
-    try {
-      await api.delete(`/membro/${memberToDelete}`);
-      const notifyDelete = () => {
-        toast.success("Membro deletado com sucesso!", {
-          position: "top-center",
-          autoClose: 1500,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "colored",
-        });
-      };
-
-      // Atualizar todas as listas de estado
-      setMembro(prev => prev.filter((m) => m.id_membro !== memberToDelete));
-      setAllMembros(prev => prev.filter((m) => m.id_membro !== memberToDelete));
-      setFilteredMembros(prev => prev.filter((m) => m.id_membro !== memberToDelete));
-      notifyDelete();
-    } catch (error) {
-      toast.error("Erro ao remover membro.");
-    } finally {
-      setIsDeleteModalOpen(false);
-      setMemberToDelete(null);
-    }
-  };
-
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
 
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-
-  const handleClickOutside = (event: MouseEvent) => {
-    if (
-      dropdownRef.current &&
-      !dropdownRef.current.contains(event.target as Node)
-    ) {
-      setIsDropdownOpen(false);
-    }
-  };
+  const specialCharactersRegex = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/;
+  const validNameRegex = /^[a-zA-ZÀ-ÿ\s'-]+$/;
 
   useEffect(() => {
+    Modal.setAppElement("body");
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+
+      if (
+        filterRef.current &&
+        !filterRef.current.contains(event.target as Node)
+      ) {
+        setIsFilterOpen(false);
+      }
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -130,35 +145,27 @@ export default function membros() {
         const response = await api.get("/departamento");
         setDepartamento(response.data);
       } catch (error) {
-        console.error("Error fetching users:", error);
+        console.error("Error fetching departamentos:", error);
       }
     };
 
     fetchDepartamentos();
   }, []);
 
-  const [membros, setMembro] = useState<Membro[]>([]);
-
-  const [user, setUser] = useState<User | null>(null);
-
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchMembros = async () => {
       try {
         const id_igreja = sessionStorage.getItem("id_igreja");
-
         const membroResponse = await api.get(`/membro/igreja/${id_igreja}`);
         setAllMembros(membroResponse.data);
         setFilteredMembros(membroResponse.data);
-        console.log("ID Igreja recebido:", id_igreja);
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.error("Error fetching membros:", error);
       }
     };
 
-    fetchUserData();
+    fetchMembros();
   }, []);
-
-  const [igreja, setIgreja] = useState<Igreja[]>([]);
 
   useEffect(() => {
     const fetchIgrejas = async () => {
@@ -173,444 +180,518 @@ export default function membros() {
     fetchIgrejas();
   }, []);
 
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
-
-    if (term.trim() === "") {
+  useEffect(() => {
+    if (!searchTerm.trim()) {
       setFilteredMembros(allMembros);
+      setCurrentPage(1);
       return;
     }
 
-    const lowercasedTerm = term.toLowerCase();
+    const lower = searchTerm.toLowerCase();
 
     const filtered = allMembros.filter((membro) => {
-      // Converte todos os campos para string antes de verificar
-      const nomeStr = membro.nome ? membro.nome.toString().toLowerCase() : "";
-      const codStr = membro.cod_membro
-        ? membro.cod_membro.toString().toLowerCase()
-        : "";
-      const numeroStr = membro.numero ? membro.numero.toString() : "";
+      const nomeStr = membro.nome?.toLowerCase() || "";
+      const codStr = membro.cod_membro?.toLowerCase() || "";
+      const numeroStr = membro.numero || "";
 
       return (
-        nomeStr.includes(lowercasedTerm) ||
-        codStr.includes(lowercasedTerm) ||
-        numeroStr.includes(lowercasedTerm)
+        nomeStr.includes(lower) ||
+        codStr.includes(lower) ||
+        numeroStr.includes(lower)
       );
     });
 
     setFilteredMembros(filtered);
-  };
+    setCurrentPage(1);
+  }, [searchTerm, allMembros]);
 
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [sortCriteria, setSortCriteria] = useState<
-    "recent" | "oldest" | "name-asc" | "name-desc" | "birth"
-  >("recent");
+  useEffect(() => {
+    if (selectedMember) {
+      setEditCodMembro(selectedMember.cod_membro || "");
+      setEditNome(selectedMember.nome || "");
+      setEditBirth(toInputDate(selectedMember.birth || ""));
+      setEditNumero(selectedMember.numero || "");
+      setEditNovoConvertido(
+        selectedMember.novo_convertido === "Sim" ? "Sim" : "Não",
+      );
+      setEditNomeDepartamento(selectedMember.id_departamento || 0);
+    }
+  }, [selectedMember]);
 
-  const sortMembros = (membros: Membro[]) => {
-    const sorted = [...membros];
+  const sortedMembros = useMemo(() => {
+    const sorted = [...filteredMembros];
 
     switch (sortCriteria) {
       case "recent":
-        // Adicionados recentemente (maior ID primeiro)
         return sorted.sort((a, b) => b.id_membro - a.id_membro);
-
       case "oldest":
-        // Adicionados há mais tempo (menor ID primeiro)
         return sorted.sort((a, b) => a.id_membro - b.id_membro);
-
       case "name-asc":
-        // Ordem alfabética A-Z
         return sorted.sort((a, b) => a.nome.localeCompare(b.nome));
-
       case "name-desc":
-        // Ordem alfabética Z-A
         return sorted.sort((a, b) => b.nome.localeCompare(a.nome));
-
       case "birth":
-        // Por data de nascimento (mais jovens primeiro)
         return sorted.sort(
-          (a, b) => new Date(b.birth).getTime() - new Date(a.birth).getTime()
+          (a, b) => new Date(b.birth).getTime() - new Date(a.birth).getTime(),
         );
-
       default:
         return sorted;
     }
+  }, [filteredMembros, sortCriteria]);
+
+  const totalPages = Math.ceil(sortedMembros.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedMembros = sortedMembros.slice(startIndex, endIndex);
+
+  const notifySuccess = (message: string) => {
+    toast.success(message, {
+      position: "top-center",
+      autoClose: 1500,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "colored",
+    });
   };
 
-  const sortedMembros = sortMembros(filteredMembros);
+  const notifyWarn = (message: string) => {
+    toast.warn(message, {
+      position: "top-center",
+      autoClose: 1500,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "colored",
+    });
+  };
 
-  const [modalType, setModalType] = useState<"new" | "edit" | null>(null);
+  const notifyError = (message: string) => {
+    toast.error(message, {
+      position: "top-center",
+      autoClose: 1500,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "colored",
+    });
+  };
 
-  const [modalIsOpen, setModalIsOpen] = useState(false);
+  const notifyTypingError = () => {
+    notifyError("O nome não pode conter caracteres especiais.");
+  };
+
+  const notifyTypingErrorSpecial = () => {
+    notifyError(
+      "O nome contém caracteres inválidos. Use apenas letras, acentos, espaços, hífens e apóstrofos.",
+    );
+  };
+
+  const resetNewForm = () => {
+    setCodMembro("");
+    setNome("");
+    setBirth("");
+    setNumero("");
+    setNovoConvertido("Sim");
+    setNomeDepartamento(0);
+  };
+
+  const resetEditForm = () => {
+    setEditCodMembro("");
+    setEditNome("");
+    setEditBirth("");
+    setEditNumero("");
+    setEditNovoConvertido("Não");
+    setEditNomeDepartamento(0);
+  };
 
   const openModal = (type: "new" | "edit", membro?: Membro) => {
     setModalType(type);
+
     if (type === "new") {
-      setCodMembro("");
-      setNome("");
-      setBirth("");
-      setNumero("");
-      setNovoConvertido("Sim");
-      setNomeDepartamento(0);
+      setSelectedMember(null);
+      resetNewForm();
     } else if (type === "edit" && membro) {
       setSelectedMember(membro);
-      setEditCodMembro(membro.cod_membro);
-      setEditNome(membro.nome);
-      setEditBirth(format(new Date(membro.birth), "yyyy-MM-dd"));
-      setEditNumero(membro.numero);
-      setEditNovoConvertido(membro.novo_convertido === "Sim" ? "Sim" : "Não");
-      setEditNomeDepartamento(membro.id_departamento);
     }
+
     setModalIsOpen(true);
   };
 
   const closeModal = () => {
     setModalIsOpen(false);
     setModalType(null);
+    setSelectedMember(null);
+    resetEditForm();
   };
 
-  const notifyTypingError = () => {
-    toast.error("O nome não pode conter caracteres especiais.", {
-      position: "top-center",
-      autoClose: 1500,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "colored",
-    });
+  const handleDeleteClick = (id_membro: number) => {
+    setMemberToDelete(id_membro);
+    setIsDeleteModalOpen(true);
   };
 
-  const notifyTypingErrorSpecial = () => {
-    toast.error("O nome contém caracteres inválidos. Use apenas letras, acentos, espaços, hífens e apóstrofos.", {
-      position: "top-center",
-      autoClose: 1500,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "colored",
-    });
-  };
+  const handleDeleteConfirm = async () => {
+    if (!memberToDelete) return;
 
-  const [selectedMember, setSelectedMember] = useState<Membro | null>(null);
+    try {
+      await api.delete(`/membro/${memberToDelete}`);
 
-  useEffect(() => {
-    if (selectedMember) {
-      setCodMembro(selectedMember.cod_membro || "");
-      setNome(selectedMember.nome || "");
-      setBirth(selectedMember.birth || "");
-      setNumero(selectedMember.numero || "");
-      setNovoConvertido(
-        selectedMember.novo_convertido === "Sim" ? "Sim" : "Não"
+      setAllMembros((prev) =>
+        prev.filter((m) => m.id_membro !== memberToDelete),
       );
-      setNomeDepartamento(selectedMember.id_departamento || 0);
+      setFilteredMembros((prev) =>
+        prev.filter((m) => m.id_membro !== memberToDelete),
+      );
+
+      notifySuccess("Membro deletado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao remover membro:", error);
+      notifyError("Erro ao remover membro.");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setMemberToDelete(null);
     }
-  }, [selectedMember]);
+  };
 
-  async function handleRegister(event: React.FormEvent) {
+  async function handleRegister(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const specialCharactersRegex = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/;
-    // Permite letras (incluindo acentos), números, espaços, hífens e apóstrofos
-    const validNameRegex = /^[\p{L}\p{M}\s'-]+$/u;
-
-    const notifySuccess = () => {
-      toast.success("Membro cadastrado com sucesso!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyWarn = () => {
-      toast.warn("Todos os campos devem ser preenchidos!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyError = () => {
-      toast.error("Erro no cadastro, Tente novamente.", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
 
     try {
       if (
-        nome === "" ||
+        nome.trim() === "" ||
         birth === "" ||
-        numero === "" ||
+        numero.trim() === "" ||
         nome_departamento === 0
       ) {
-        notifyWarn();
+        notifyWarn("Todos os campos devem ser preenchidos!");
         return;
-      } else if (specialCharactersRegex.test(nome)) {
+      }
+
+      if (specialCharactersRegex.test(nome)) {
         notifyTypingError();
         return;
-      } else if (!validNameRegex.test(nome.trim())) {
-        notifyTypingErrorSpecial();
-        return;
-      } else {
-        const data = {
-          cod_membro,
-          nome,
-          birth,
-          novo_convertido,
-          numero,
-          id_departamento: nome_departamento,
-        };
-
-        const response = await api.post("/membro", data);
-
-        // Atualizar a lista de membros localmente
-        const novoMembro = response.data;
-        setAllMembros(prev => [...prev, novoMembro]);
-        setFilteredMembros(prev => [...prev, novoMembro]);
-
-        notifySuccess();
-
-        // Fechar modal após sucesso
-        setTimeout(() => {
-          closeModal();
-          // Resetar formulário
-          setCodMembro("");
-          setNome("");
-          setBirth("");
-          setNumero("");
-          setNovoConvertido("Sim");
-          setNomeDepartamento(0);
-        }, 1500);
-      }
-    } catch {
-      notifyError();
-    }
-  }
-
-  const handleUpdate = async (membro: Membro | null) => {
-    const notifySuccess = () => {
-      toast.success("Membro atualizado com sucesso!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyWarn = () => {
-      toast.warn("Todos os campos devem ser preenchidos!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyError = () => {
-      toast.error("Erro na atualização, Tente novamente.", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    try {
-      if (!membro) {
-        console.error("No selected member for update");
-        return;
       }
 
-      if (
-        !editCodMembro ||
-        !editNome ||
-        !editBirth ||
-        !editNumero ||
-        !editNovoConvertido ||
-        !editNomeDepartamento
-      ) {
-        console.error("Erro ao atualizar o membro:", membro);
-        notifyWarn();
-        return;
-      }
-
-      // Validação do nome (mesma validação do cadastro)
-      if (specialCharactersRegex.test(editNome)) {
-        notifyTypingError();
-        return;
-      } else if (!validNameRegex.test(editNome.trim())) {
+      if (!validNameRegex.test(nome.trim())) {
         notifyTypingErrorSpecial();
         return;
       }
 
       const data = {
-        cod_membro: editCodMembro,
-        nome: editNome,
+        cod_membro,
+        nome: nome.trim(),
+        birth,
+        novo_convertido,
+        numero: numero.trim(),
+        id_departamento: nome_departamento,
+      };
+
+      const response = await api.post("/membro", data);
+      const novoMembro = response.data;
+
+      setAllMembros((prev) => [...prev, novoMembro]);
+      setFilteredMembros((prev) => [...prev, novoMembro]);
+
+      notifySuccess("Membro cadastrado com sucesso!");
+
+      setTimeout(() => {
+        closeModal();
+        resetNewForm();
+      }, 1500);
+    } catch (error) {
+      console.error("Erro no cadastro:", error);
+      notifyError("Erro no cadastro, tente novamente.");
+    }
+  }
+
+  const handleUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    try {
+      if (!selectedMember) {
+        console.error("No selected member for update");
+        return;
+      }
+
+      if (
+        !editCodMembro.trim() ||
+        !editNome.trim() ||
+        !editBirth ||
+        !editNumero.trim() ||
+        !editNovoConvertido ||
+        editNomeDepartamento === 0
+      ) {
+        notifyWarn("Todos os campos devem ser preenchidos!");
+        return;
+      }
+
+      if (specialCharactersRegex.test(editNome)) {
+        notifyTypingError();
+        return;
+      }
+
+      if (!validNameRegex.test(editNome.trim())) {
+        notifyTypingErrorSpecial();
+        return;
+      }
+
+      const data = {
+        cod_membro: editCodMembro.trim(),
+        nome: editNome.trim(),
         birth: editBirth,
-        numero: editNumero,
+        numero: editNumero.trim(),
         novo_convertido: editNovoConvertido,
         id_departamento: editNomeDepartamento,
       };
 
-      console.log("Dados enviados para atualização:", data);
-
       const response = await api.put(
-        `/membro/${membro.id_membro}/${membro.id_igreja}`,
-        data
+        `/membro/${selectedMember.id_membro}/${selectedMember.id_igreja}`,
+        data,
       );
 
-      notifySuccess();
-
-      // Atualizar o membro na lista localmente
       const membroAtualizado = response.data;
-      setAllMembros(prev => prev.map(m =>
-        m.id_membro === membro.id_membro ? { ...m, ...membroAtualizado } : m
-      ));
-      setFilteredMembros(prev => prev.map(m =>
-        m.id_membro === membro.id_membro ? { ...m, ...membroAtualizado } : m
-      ));
 
-      // Fechar modal após sucesso
+      setAllMembros((prev) =>
+        prev.map((m) =>
+          m.id_membro === selectedMember.id_membro
+            ? { ...m, ...membroAtualizado }
+            : m,
+        ),
+      );
+
+      setFilteredMembros((prev) =>
+        prev.map((m) =>
+          m.id_membro === selectedMember.id_membro
+            ? { ...m, ...membroAtualizado }
+            : m,
+        ),
+      );
+
+      notifySuccess("Membro atualizado com sucesso!");
+
       setTimeout(() => {
         closeModal();
-        setSelectedMember(null);
       }, 1500);
     } catch (error) {
       console.error("Error updating member:", error);
-      notifyError();
+      notifyError("Erro na atualização, tente novamente.");
     }
   };
 
+  const renderPaginationButtons = () => {
+    return Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+      let pageNum;
+
+      if (totalPages <= 5) {
+        pageNum = i + 1;
+      } else if (currentPage <= 3) {
+        pageNum = i + 1;
+      } else if (currentPage >= totalPages - 2) {
+        pageNum = totalPages - 4 + i;
+      } else {
+        pageNum = currentPage - 2 + i;
+      }
+
+      return (
+        <button
+          key={pageNum}
+          onClick={() => setCurrentPage(pageNum)}
+          className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors duration-200 ${
+            currentPage === pageNum
+              ? "bg-azul text-white"
+              : "text-gray-700 hover:bg-gray-100"
+          }`}
+        >
+          {pageNum}
+        </button>
+      );
+    });
+  };
+
+  function handleNewFormChange(
+    field: keyof MemberFormData,
+    value: string | number,
+  ) {
+    switch (field) {
+      case "cod_membro":
+        setCodMembro(String(value));
+        break;
+      case "nome":
+        setNome(String(value));
+        break;
+      case "birth":
+        setBirth(String(value));
+        break;
+      case "novo_convertido":
+        setNovoConvertido(value as "Sim" | "Não");
+        break;
+      case "numero":
+        setNumero(String(value));
+        break;
+      case "id_departamento":
+        setNomeDepartamento(Number(value));
+        break;
+    }
+  }
+
+  function handleEditFormChange(
+    field: keyof MemberFormData,
+    value: string | number,
+  ) {
+    switch (field) {
+      case "cod_membro":
+        setEditCodMembro(String(value));
+        break;
+      case "nome":
+        setEditNome(String(value));
+        break;
+      case "birth":
+        setEditBirth(String(value));
+        break;
+      case "novo_convertido":
+        setEditNovoConvertido(value as "Sim" | "Não");
+        break;
+      case "numero":
+        setEditNumero(String(value));
+        break;
+      case "id_departamento":
+        setEditNomeDepartamento(Number(value));
+        break;
+    }
+  }
+
+  const newMemberFormData: MemberFormData = {
+    cod_membro,
+    nome,
+    birth,
+    novo_convertido,
+    numero,
+    id_departamento: nome_departamento,
+  };
+
+  const editMemberFormData: MemberFormData = {
+    cod_membro: editCodMembro,
+    nome: editNome,
+    birth: editBirth,
+    novo_convertido: editNovoConvertido,
+    numero: editNumero,
+    id_departamento: editNomeDepartamento,
+  };
+
   return (
-    <main>
-      <div className="flex">
-        <MenuLateral />
-        <div className="sm:ml-[10vh] md:ml-[20vh] lg:ml-[5vh] mr-[10vh] mb-[5vh]">
-          <div className="flex mt-12">
+    <div className="min-h-screen bg-fundo">
+    <MenuLateral />
+
+    <main className="app-content min-h-screen">
+      <nav className="mb-6 lg:mb-8" aria-label="Navegação">
+        <ol className="flex flex-wrap items-center text-sm text-gray-600">
+          <li>
             <Link
-              href={"/../../pages/inicio"}
-              className="text-cinza text-lg text3"
+              href="/pages/inicio"
+              className="text3 transition-colors duration-200 hover:text-azul"
             >
-              Início &#62;
+              Início
             </Link>
-            <Link
-              href={"/../../pages/membros"}
-              className="text-cinza text-lg text3 ml-2"
+          </li>
+          <li className="mx-2">&#62;</li>
+          <li className="text3 font-semibold text-azul">
+            <span aria-current="page">Membros</span>
+          </li>
+        </ol>
+      </nav>
+
+      <div className="mb-6 flex flex-col gap-4 lg:mb-8">
+        <div className="relative" ref={dropdownRef}>
+          <div
+            onClick={() => setIsDropdownOpen((prev) => !prev)}
+            className="flex cursor-pointer items-center"
+          >
+            <PageTitle>Membros</PageTitle>
+
+            <button
+              className="ml-2 rounded-full p-2 transition-colors duration-200 hover:bg-gray-100 focus:outline-none lg:ml-4"
+              aria-label="Menu de navegação"
+              aria-expanded={isDropdownOpen}
+              type="button"
             >
-              Membros &#62;
-            </Link>
+              <ChevronDown
+                className={`h-5 w-5 transition-transform duration-200 ${
+                  isDropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
           </div>
 
-          <div className="flex">
-            <div
-              className="mt-10 relative sm:right-20 md:right-2"
-              ref={dropdownRef}
-            >
-              <button onClick={toggleDropdown} className="ml-2 flex">
-                <h1 className="text-black text1 sm:mr-[2vh]  sm:text-4xl md:text-4xl lg:text-5xl">
-                  Membros
-                </h1>
-                <Image
-                  src={seta}
-                  width={24}
-                  height={24}
-                  alt="Arrow Icon"
-                  className={`${
-                    isDropdownOpen ? "rotate-180" : ""
-                  } transition-transform`}
-                />
-              </button>
-
-              {isDropdownOpen && (
-                <div className="mt-4 absolute bg-white shadow-lg rounded-lg z-50">  
-                {isMatriz() && (            
-                  <Link
-                    href={"/../../pages/igrejas"}
-                    className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
-                  >
-                    Igreja
-                  </Link>                
-                )}
-                  <Link
-                    href={"/../../pages/obreiros"}
-                    className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
-                    >
-                    Obreiros
-                  </Link>
-                  <Link
-                    href={"/../../pages/departamentos"}
-                    className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
-                  >
-                    Departamentos
-                  </Link>
-                </div>
+          {isDropdownOpen && (
+            <div className="absolute left-0 top-full z-50 mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-xl xs:w-56 sm:w-64">
+              {isMatriz() && (
+                <Link
+                  href="/pages/igrejas"
+                  className="block border-b border-gray-100 px-4 py-3 text-sm text-gray-700 transition-colors duration-200 hover:bg-blue-50 hover:text-azul sm:text-base"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  Igrejas
+                </Link>
               )}
-            </div>
 
-            <div className="flex">
-              <div className="mt-10 relative sm:right-[5vh] md:left-[20vh] lg:left-[54vh]">
-                <div className="flex mb-4">
-                  {/* Botão de filtro */}
-                  <div className="flex gap-5 relative">
-                    <button
-                      onClick={() => setIsFilterOpen(!isFilterOpen)}
-                      className="flex items-center justify-center px-5 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
-                    >
-                      <Image
-                        src={filter}
-                        width={30}
-                        height={30}
-                        alt="Filtrar"
-                      />
-                    </button>
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        placeholder="Pesquisar membros..."
-                        className="sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-xl md:text-lg lg:text-xl text-gray-600 pl-5 text2 text-left content-center justify-center rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={searchTerm}
-                        onChange={(e) => handleSearch(e.target.value)}
-                      />
-                    </div>
-                    {/* Dropdown de filtros */}
-                    {isFilterOpen && (
-                      <div className="absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
+              <Link
+                href="/pages/obreiros"
+                className="text1 block border-b border-gray-100 px-4 py-3 text-sm text-gray-700 transition-colors duration-200 hover:bg-blue-50 hover:text-azul sm:text-base"
+                onClick={() => setIsDropdownOpen(false)}
+              >
+                Obreiros
+              </Link>
+
+              <Link
+                href="/pages/departamentos"
+                className="text1 block px-4 py-3 text-sm text-gray-700 transition-colors duration-200 hover:bg-blue-50 hover:text-azul sm:text-base"
+                onClick={() => setIsDropdownOpen(false)}
+              >
+                Departamentos
+              </Link>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="w-full flex-1">
+            <div className="relative">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <SearchField
+                    type="text"
+                    placeholder="Pesquisar membros..."
+
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    aria-label="Pesquisar membros"
+                  />
+                </div>
+
+                <div className="relative" ref={filterRef}>
+                  <FilterButton
+                    type="button"
+                    onClick={() => setIsFilterOpen((prev) => !prev)}
+
+                    aria-label="Filtrar resultados"
+                    aria-expanded={isFilterOpen}
+                   />
+
+                  {isFilterOpen && (
+                    <div className="od-filter-menu absolute right-0 top-full z-10 mt-2 w-48 rounded-xl border border-gray-200 bg-white shadow-xl xs:w-56">
+                      <div className="py-2">
                         <button
-                          className={`block w-full text-left px-4 py-2 ${
+                          type="button"
+                          className={`w-full px-4 py-2 text-left text-sm ${
                             sortCriteria === "recent"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
+                              ? "bg-blue-50 font-semibold text-azul"
+                              : "text-gray-700 hover:bg-gray-50"
                           }`}
                           onClick={() => {
                             setSortCriteria("recent");
@@ -621,10 +702,11 @@ export default function membros() {
                         </button>
 
                         <button
-                          className={`block w-full text-left px-4 py-2 ${
+                          type="button"
+                          className={`w-full px-4 py-2 text-left text-sm ${
                             sortCriteria === "oldest"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
+                              ? "bg-blue-50 font-semibold text-azul"
+                              : "text-gray-700 hover:bg-gray-50"
                           }`}
                           onClick={() => {
                             setSortCriteria("oldest");
@@ -635,10 +717,11 @@ export default function membros() {
                         </button>
 
                         <button
-                          className={`block w-full text-left px-4 py-2 ${
+                          type="button"
+                          className={`w-full px-4 py-2 text-left text-sm ${
                             sortCriteria === "name-asc"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
+                              ? "bg-blue-50 font-semibold text-azul"
+                              : "text-gray-700 hover:bg-gray-50"
                           }`}
                           onClick={() => {
                             setSortCriteria("name-asc");
@@ -649,10 +732,11 @@ export default function membros() {
                         </button>
 
                         <button
-                          className={`block w-full text-left px-4 py-2 ${
+                          type="button"
+                          className={`w-full px-4 py-2 text-left text-sm ${
                             sortCriteria === "name-desc"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
+                              ? "bg-blue-50 font-semibold text-azul"
+                              : "text-gray-700 hover:bg-gray-50"
                           }`}
                           onClick={() => {
                             setSortCriteria("name-desc");
@@ -663,10 +747,11 @@ export default function membros() {
                         </button>
 
                         <button
-                          className={`block w-full text-left px-4 py-2 ${
+                          type="button"
+                          className={`w-full px-4 py-2 text-left text-sm ${
                             sortCriteria === "birth"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
+                              ? "bg-blue-50 font-semibold text-azul"
+                              : "text-gray-700 hover:bg-gray-50"
                           }`}
                           onClick={() => {
                             setSortCriteria("birth");
@@ -676,408 +761,254 @@ export default function membros() {
                           Data de nascimento
                         </button>
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex relative sm:right-[10vh] md:left-[35vh] lg:left-[56vh]">
-                <div className="mt-10 ml-1 flex justify-center">
-                  <p
-                    className="bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400"
-                    onClick={() => openModal("new")}
-                  >
-                    Novo Membro +
-                  </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="ml-[20vh] pr-2">
-              <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] sm:left-[2vh] md:left-[20vh] lg:left-[35vh] h-[72vh] max-h-[72vh] overflow-y-auto overflow-x-auto">
-                {sortedMembros.length === 0 ? (
-                  <p className="text-center text-black text1 text-4xl mt-5 text-gray-4 px-[40.5vh]">
-                    Nenhum membro encontrado.
-                  </p>
-                ) : (
-                  <table className="text-black w-[160vh]">
-                    <thead className="sticky top-0">
-                      <tr className="bg-azul text-white rounded-xl">
-                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2 ">
-                          Cód. Membro
-                        </th>
-                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-40 py-2">
-                          Nome
-                        </th>
-                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[7.8vh] py-2">
-                          Numero
-                        </th>
-                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2">
-                          Data de Nascimento
-                        </th>
-                        <th className="sm:px-1 md:px-1 lg:px-1 py-2"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedMembros.map((members) => (
-                        <tr
-                          key={members.id_membro}
-                          onClick={() => members && openModal("edit", members)}
-                          className="cursor-pointer hover:bg-slate-200"
-                        >
-                          <td className="text-center text2 text-xl py-3">
-                            {members.cod_membro}
-                          </td>
-                          <td className="text-center text2 text-xl">
-                            {members.nome}
-                          </td>
-                          <td className="text-center text2 text-xl">
-                            {members.numero}
-                          </td>
-                          <td className="text-center text2 text-xl">
-                            {format(new Date(members.birth), "dd/MM/yyyy")}
-                          </td>
-                          <td className="text-center">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteClick(members.id_membro);
-                              }}
-                              className="px-2 py-1 mr-5 bg-red-500 text-white rounded hover:bg-red-600"
-                            >
-                              <Image
-                                src={lixo}
-                                width={30}
-                                height={40}
-                                alt="lixo Icon"
-                              />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-
-            <Modal
-              isOpen={isDeleteModalOpen}
-              onRequestClose={() => setIsDeleteModalOpen(false)}
-              contentLabel="Confirmar exclusão"
-              className="fixed inset-0 flex items-center justify-center p-4"
-              overlayClassName="fixed inset-0 bg-white bg-opacity-70"
-            >
-              <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-                <h2 className="text1 text-xl text-black font-bold mb-4">
-                  Confirmar Exclusão
-                </h2>
-                <p className="text2 text-gray-600 mb-6">
-                  Você tem certeza que deseja remover este membro?
-                </p>
-                <div className="flex justify-end space-x-4">
-                  <button
-                    onClick={() => setIsDeleteModalOpen(false)}
-                    className="text2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={handleDeleteConfirm}
-                    className="text2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                  >
-                    Confirmar
-                  </button>
-                </div>
-              </div>
-            </Modal>
-
-            <Modal
-              className="text-white flex flex-col"
-              isOpen={modalIsOpen && modalType === "new"}
-              onRequestClose={closeModal}
-              contentLabel="Novo Membro"
-            >
-              <div className="flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl">
-                <div className="cursor-pointer flex place-content-start rounded-lg">
-                  <Image
-                    onClick={closeModal}
-                    src={close}
-                    width={40}
-                    height={40}
-                    alt="close Icon"
-                    className="bg-red-500 hover:bg-red-600 rounded-tl-lg"
-                  />
-                </div>
-
-                <h2 className="text-white text1 text-4xl flex justify-center">
-                  Novo Membro
-                </h2>
-
-                <div className="flex flex-col px-10">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Cód. Membro
-                  </label>
-
-                  <input
-                    type="text"
-                    className="px-4 py-3 rounded-lg text2 text-black"
-                    placeholder="Digite o Código..."
-                    value={cod_membro}
-                    onChange={(e) => setCodMembro(e.target.value)}
-                    maxLength={16}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col px-10">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Nome
-                  </label>
-
-                  <input
-                    type="text"
-                    className="px-4 py-3 rounded-lg text2 text-black"
-                    placeholder="Digite o Nome..."
-                    value={nome}
-                    onChange={(e) => setNome(e.target.value)}
-                    maxLength={150}
-                    required
-                  />
-                </div>
-
-                <div className="flex px-10">
-                  <div className="flex flex-col">
-                    <label className="text-white text1 text-xl mt-5 mb-1">
-                      Data de Nascimento
-                    </label>
-
-                    <input
-                      type="date"
-                      className="px-4 py-3 rounded-lg text2 text-black"
-                      placeholder="Selecione a Data..."
-                      value={birth}
-                      onChange={(e) => setBirth(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="flex flex-col ml-7">
-                    <label className="text-white text1 text-xl mt-5 mt mb-1">
-                      Novo Convertido
-                    </label>
-
-                    <select
-                      className="px-4 py-3 rounded-lg text2 bg-white text-black"
-                      value={novo_convertido}
-                      onChange={(e) =>
-                        setNovoConvertido(e.target.value as "Sim" | "Não")
-                      }
-                    >
-                      <option value="Sim">Sim</option>
-                      <option value="Não">Não</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex flex-col px-10">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Número
-                  </label>
-
-                  <input
-                    type="text"
-                    className="px-4 py-3 rounded-lg text2 text-black"
-                    placeholder="Digite o Número..."
-                    value={numero}
-                    onChange={(e) => setNumero(e.target.value)}
-                    maxLength={11}
-                    required
-                  />
-                </div>
-
-                <div className="flex px-10">
-                  <div className="flex flex-col">
-                    <label className="text-white text1 text-xl mt-5 mb-1">
-                      Departamento
-                    </label>
-
-                    <select
-                      className="px-4 py-3 rounded-lg text2 bg-white text-black"
-                      value={nome_departamento}
-                      onChange={(e) =>
-                        setNomeDepartamento(Number(e.target.value))
-                      }
-                    >
-                      <option value={0} disabled>
-                        Selecione um departamento
-                      </option>
-                      {departamento.map((departamento) => (
-                        <option
-                          key={departamento.id_departamento}
-                          value={departamento.id_departamento}
-                        >
-                          {departamento.nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex flex-col px-10 pb-10">
-                  <button
-                    className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"
-                    onClick={handleRegister}
-                  >
-                    Enviar
-                  </button>
-                </div>
-              </div>
-            </Modal>
-            <Modal
-              className="text-white flex flex-col"
-              isOpen={modalIsOpen && modalType === "edit"}
-              onRequestClose={closeModal}
-              contentLabel="Editar Membro"
-            >
-              <div className="flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl">
-                <div className="cursor-pointer flex place-content-start rounded-lg">
-                  <Image
-                    onClick={closeModal}
-                    src={close}
-                    width={40}
-                    height={40}
-                    alt="close Icon"
-                    className="bg-red-500 hover:bg-red-600 rounded-tl-lg"
-                  />
-                </div>
-                <h2 className="text-white text1 text-4xl flex justify-center">
-                  Editar Membro
-                </h2>
-
-                <div className="flex flex-col px-10">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Cód. Membro
-                  </label>
-
-                  <input
-                    type="text"
-                    className="px-4 py-3 rounded-lg text2 text-black"
-                    placeholder="Digite o Código..."
-                    value={editCodMembro}
-                    onChange={(e) => setEditCodMembro(e.target.value)}
-                    maxLength={16}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col px-10">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Nome
-                  </label>
-
-                  <input
-                    type="text"
-                    className="px-4 py-3 rounded-lg text2 text-black"
-                    placeholder="Digite o Nome..."
-                    value={editNome}
-                    onChange={(e) => setEditNome(e.target.value)}
-                    maxLength={150}
-                    required
-                  />
-                </div>
-
-                <div className="flex px-10">
-                  <div className="flex flex-col">
-                    <label className="text-white text1 text-xl mt-5 mb-1">
-                      Data de Nascimento
-                    </label>
-
-                    <input
-                      type="date"
-                      className="px-4 py-3 rounded-lg text2 text-black"
-                      placeholder="Selecione a Data..."
-                      value={editBirth}
-                      onChange={(e) => setEditBirth(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="flex flex-col ml-7">
-                    <label className="text-white text1 text-xl mt-5 mt mb-1">
-                      Novo Convertido
-                    </label>
-
-                    <select
-                      className="px-4 py-3 rounded-lg text2 bg-white text-black"
-                      value={editNovoConvertido}
-                      onChange={(e) =>
-                        setEditNovoConvertido(e.target.value as "Sim" | "Não")
-                      }
-                    >
-                      <option value="Sim">Sim</option>
-                      <option value="Não">Não</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex flex-col px-10 ">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Número
-                  </label>
-
-                  <input
-                    type="text"
-                    className="px-4 py-3 rounded-lg text2 text-black"
-                    placeholder="Digite o Número..."
-                    value={editNumero}
-                    onChange={(e) => setEditNumero(e.target.value)}
-                    maxLength={25}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col px-10">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Departamento
-                  </label>
-
-                  <select
-                    className="px-4 py-3 rounded-lg text2 bg-white text-black"
-                    value={editNomeDepartamento}
-                    onChange={(e) =>
-                      setEditNomeDepartamento(Number(e.target.value))
-                    }
-                  >
-                    <option value="" disabled>
-                      Selecione um departamento
-                    </option>
-                    {departamento.map((departamentos) => (
-                      <option
-                        key={departamentos.id_departamento}
-                        value={departamentos.id_departamento}
-                      >
-                        {departamentos.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col px-10 pb-10">
-                  <button
-                    className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"
-                    onClick={() =>
-                      selectedMember && handleUpdate(selectedMember)
-                    }
-                  >
-                    Enviar
-                  </button>
-                </div>
-              </div>
-            </Modal>
+          <div className="w-full md:w-auto">
+            <AddButton
+              type="button"
+              onClick={() => openModal("new")}
+              className="w-full md:w-auto"
+            >              
+              Novo Membro
+            </AddButton>
           </div>
         </div>
-        <ToastContainer />
+
+        <div className="mt-6 lg:mt-8">
+          {sortedMembros.length === 0 ? (
+            <div className="py-12 text-center lg:py-16">
+              <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 lg:h-20 lg:w-20">
+                <UserPlus className="h-8 w-8 text-gray-400 lg:h-10 lg:w-10" />
+              </div>
+              <h3 className="text1 mb-2 text-xl text-gray-600 lg:text-2xl">
+                Nenhum membro encontrado
+              </h3>
+              <p className="text2 text-gray-500">
+                {searchTerm
+                  ? "Tente ajustar sua busca"
+                  : "Adicione seu primeiro membro"}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+              <div className="hidden overflow-x-auto lg:block">
+                <DataTable className="w-full">
+                  <thead className="bg-azul">
+                    <tr>
+                      <th className="text1 px-6 py-4 text-left text-sm font-semibold text-white">
+                        Cód. Membro
+                      </th>
+                      <th className="text1 px-6 py-4 text-left text-sm font-semibold text-white">
+                        Nome
+                      </th>
+                      <th className="text1 px-6 py-4 text-left text-sm font-semibold text-white">
+                        Telefone
+                      </th>
+                      <th className="text1 px-6 py-4 text-left text-sm font-semibold text-white">
+                        Data de Nascimento
+                      </th>
+                      <th className="text1 px-6 py-4 text-left text-sm font-semibold text-white">
+                        Ações
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-gray-100">
+                    {paginatedMembros.map((member) => (
+                      <tr
+                        key={member.id_membro}
+                        onClick={() => openModal("edit", member)}
+                        className="cursor-pointer transition-colors duration-150 hover:bg-blue-50"
+                      >
+                        <td className="text2 px-6 py-4 text-gray-700">
+                          {member.cod_membro}
+                        </td>
+                        <td className="text2 px-6 py-4 font-medium text-gray-800">
+                          {member.nome}
+                        </td>
+                        <td className="text2 px-6 py-4 text-gray-700">
+                          {member.numero}
+                        </td>
+                        <td className="text2 px-6 py-4 text-gray-700">
+                          {formatBirthDate(member.birth)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(member.id_membro);
+                            }}
+                            className="rounded-lg bg-red-50 p-2 text-red-600 transition-colors duration-200 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+                            aria-label="Excluir membro"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </DataTable>
+              </div>
+
+              <div className="divide-y divide-gray-100 lg:hidden">
+                {paginatedMembros.map((member) => (
+                  <div
+                    key={member.id_membro}
+                    onClick={() => openModal("edit", member)}
+                    className="cursor-pointer p-4 transition-colors duration-150 hover:bg-blue-50"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="mb-2 flex items-center">
+                          <span className="text2 rounded bg-gray-100 px-2 py-1 text-xs text-gray-500">
+                            {member.cod_membro}
+                          </span>
+                        </div>
+
+                        <h3 className="text1 mb-1 font-semibold text-gray-800">
+                          {member.nome}
+                        </h3>
+
+                        <div className="text2 flex flex-wrap gap-2 text-sm text-gray-600">
+                          <span className="flex items-center">
+                            <Phone className="mr-1 h-4 w-4" />
+                            {member.numero}
+                          </span>
+
+                          <span className="flex items-center">
+                            <Calendar className="mr-1 h-4 w-4" />
+                            {formatBirthDate(member.birth)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(member.id_membro);
+                        }}
+                        className="ml-2 rounded-lg bg-red-50 p-2 text-red-600 transition-colors duration-200 hover:bg-red-100"
+                        aria-label="Excluir membro"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {sortedMembros.length > itemsPerPage && (
+                <div className="mt-6 flex flex-col items-center justify-between gap-4 p-4 xs:flex-row xs:p-6">
+                  <div className="text2 text-sm text-gray-600">
+                    Mostrando {startIndex + 1}-
+                    {Math.min(endIndex, sortedMembros.length)} de{" "}
+                    {sortedMembros.length} membros
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(prev - 1, 1))
+                      }
+                      disabled={currentPage === 1}
+                      className="rounded-lg border border-gray-300 px-3 py-2 text-gray-700 transition-colors duration-200 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-label="Página anterior"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {renderPaginationButtons()}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                      }
+                      disabled={currentPage === totalPages}
+                      className="rounded-lg border border-gray-300 px-3 py-2 text-gray-700 transition-colors duration-200 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-label="Próxima página"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <AppModal
+          isOpen={isDeleteModalOpen}
+          onRequestClose={() => setIsDeleteModalOpen(false)}
+          contentLabel="Confirmar exclusão"
+          className="fixed inset-0 flex items-center justify-center p-4"
+          overlayClassName="fixed inset-0 bg-white bg-opacity-70"
+        >
+          <div className="w-full max-w-sm rounded-lg bg-white p-6">
+            <h2 className="text1 mb-4 text-xl font-bold text-black">
+              Confirmar Exclusão
+            </h2>
+            <p className="text2 mb-6 text-gray-600">
+              Você tem certeza que deseja remover este membro?
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="text2 rounded px-4 py-2 text-gray-600 hover:bg-gray-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteConfirm}
+                className="text2 rounded bg-red-500 px-4 py-2 text-white hover:bg-red-600"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </AppModal>
+
+        <MemberFormModal
+          isOpen={modalIsOpen && modalType === "new"}
+          mode="new"
+          title="Novo Membro"
+          subtitle="Cadastre um membro com nome, contato e departamento."
+          submitLabel="Cadastrar membro"
+          departamentos={departamento}
+          formData={newMemberFormData}
+          onChange={handleNewFormChange}
+          onClose={closeModal}
+          onSubmit={handleRegister}
+        />
+
+        <MemberFormModal
+          isOpen={modalIsOpen && modalType === "edit"}
+          mode="edit"
+          title="Editar Membro"
+          subtitle="Atualize as informações do membro selecionado."
+          submitLabel="Salvar alterações"
+          departamentos={departamento}
+          formData={editMemberFormData}
+          onChange={handleEditFormChange}
+          onClose={closeModal}
+          onSubmit={handleUpdate}
+        />
       </div>
-    </main>
+
+      <ToastContainer />
+      </main>
+    </div>
   );
 }

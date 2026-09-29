@@ -1,19 +1,13 @@
 "use client";
+import { AddButton, AppModal, DataTable, FilterButton, ModalCloseButton, PageTitle, SearchField } from '@/app/components/shared/MemberStyle';
 import React, { useState, useEffect, useRef } from "react";
+import { ChevronDown, Eye, EyeOff, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import MenuLateral from "@/app/components/menuLateral/menuLateral";
 import Link from "next/link";
-import Image from "next/image";
-import Modal from "react-modal";
 import api from "../../api/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import seta from "@/public/icons/seta-down.svg";
-import close from "@/public/icons/close.svg";
-import lixo from "@/public/icons/delete.svg";
-import on from "@/public/icons/on.svg";
-import off from "@/public/icons/off.svg";
-import filter from "@/public/icons/filter.png";
 import { isMatriz } from "@/app/utils/auth";
 
 interface Igreja {
@@ -462,42 +456,27 @@ export default function obreiros() {
     <main>
       <div className="flex">
         <MenuLateral />
-        <div className="sm:ml-[10vh] md:ml-[20vh] lg:ml-[5vh] mr-[10vh] mb-[5vh]">
-          <div className="flex mt-12">
-            <Link
-              href={"/../../pages/inicio"}
-              className="text-cinza text-lg text3"
-            >
-              Início
-            </Link>
-            <Link
-              href={"/../../pages/membros"}
-              className="text-cinza text-lg text3 ml-2"
-            >
-              Membros
-            </Link>
-            <Link
-              href={"/../../pages/obreiros"}
-              className="text-cinza text-lg text3 ml-2"
-            >
-              Obreiros
-            </Link>
-          </div>
+        <div className="app-content">
+          <nav className="mb-6 md:mb-0" aria-label="Navegação">
+            <ol className="flex flex-wrap items-center text-sm text-gray-600">
+              <li><Link href={"/../../pages/inicio"} className="text3 transition-colors hover:text-azul">Início</Link></li>
+              <li className="mx-2" aria-hidden="true">&#62;</li>
+              <li><Link href={"/../../pages/membros"} className="text3 transition-colors hover:text-azul">Membros</Link></li>
+              <li className="mx-2" aria-hidden="true">&#62;</li>
+              <li className="text3 font-semibold text-azul" aria-current="page">Obreiros</li>
+            </ol>
+          </nav>
 
-          <div className="flex">
+          <div className="page-toolbar od-reference-toolbar mt-6">
             <div
-              className="mt-10 relative sm:right-20 md:right-2"
+              className="relative min-w-0"
               ref={dropdownRef}
             >
-              <button onClick={toggleDropdown} className="ml-2 flex">
-                <h1 className="text-black text1 sm:mr-[2vh] sm:text-4xl md:text-4xl lg:text-5xl">
-                  Obreiros
-                </h1>
-                <Image
-                  src={seta}
+              <button onClick={toggleDropdown} className="flex items-center gap-2">
+                <PageTitle>Obreiros</PageTitle>
+                <ChevronDown
                   width={24}
-                  height={24}
-                  alt="Arrow Icon"
+                  height={24} aria-label="Arrow Icon"
                   className={`${
                     isDropdownOpen ? "rotate-180" : ""
                   } transition-transform`}
@@ -529,34 +508,27 @@ export default function obreiros() {
                 </div>
               )}
             </div>
-            <div className="flex">
-              <div className="mt-10 relative sm:right-[5vh] md:left-[20vh] lg:left-[54vh]">
-                <div className="flex mb-4">
+            <div className="page-toolbar-actions">
+              <div className="relative flex min-w-0 flex-1">
+                <div className="flex w-full min-w-0">
                   {/* Botão de filtro */}
-                  <div className="flex gap-5 relative">
-                    <button
+                  <div className="od-list-controls relative flex w-full min-w-0 items-center gap-2">
+                    <FilterButton
                       onClick={() => setIsFilterOpen(!isFilterOpen)}
-                      className="flex items-center justify-center px-5 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
-                    >
-                      <Image
-                        src={filter}
-                        width={30}
-                        height={30}
-                        alt="Filtrar"
-                      />
-                    </button>
+
+                     />
                     <div className="flex-1">
-                      <input
+                      <SearchField
                         type="text"
                         placeholder="Pesquisar obreiros..."
-                        className="sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-xl md:text-lg lg:text-xl text-gray-600 pl-5 text2 text-left content-center justify-center rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
+
                         value={searchTerm}
                         onChange={(e) => handleSearch(e.target.value)}
                       />
                     </div>
                     {/* Dropdown de filtros */}
                     {isFilterOpen && (
-                      <div className="absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
+                      <div className="od-filter-menu absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
                         <button
                           className={`block w-full text-left px-4 py-2 ${
                             sortCriteria === "recent"
@@ -631,21 +603,16 @@ export default function obreiros() {
                   </div>
                 </div>
               </div>
-              <div className="flex relative sm:right-[10vh] md:left-[35vh] lg:left-[56vh]">
-                <div className="mt-10 ml-1 flex justify-center">
-                  <p
-                    className="bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400"
-                    onClick={() => openModal("new")}
-                  >
-                    Novo Obreiro +
-                  </p>
+              <div className="flex min-w-0">
+                <div className="flex justify-center">
+                  <AddButton onClick={() => openModal("new")}>Novo Obreiro</AddButton>
                 </div>
               </div>
             </div>
 
-            <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] sm:left-[2vh] md:left-[20vh] lg:left-[35vh] h-[72vh] max-h-[72vh] overflow-y-auto overflow-x-auto">
+            <div className="page-table-scroll mt-4 max-h-[70vh]">
               {sortedUsers.length > 0 ? (
-                <table className="text-black w-[160vh]">
+                <DataTable className="text-black">
                   <thead className="sticky top-0">
                     <tr className="bg-azul text-white rounded-xl">
                       <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[7.1vh] py-2">
@@ -673,22 +640,22 @@ export default function obreiros() {
                         onClick={() => openModal("edit", obreiro)}
                         className="cursor-pointer hover:bg-slate-200"
                       >
-                        <td className="text-center text2 text-xl py-3">
+                        <td data-label="Cód. Membro" className="text-center text2 text-xl py-3">
                           {obreiro.cod_membro}
                         </td>
-                        <td className="text-center text2 text-xl">
+                        <td data-label="Nome" className="text-center text2 text-xl">
                           {obreiro.nome}
                         </td>
-                        <td className="text-center text2 text-xl">
+                        <td data-label="Nascimento" className="text-center text2 text-xl">
                           {format(new Date(obreiro.birth), "dd/MM/yyyy")}
                         </td>
-                        <td className="text-center text2 text-xl">
+                        <td data-label="Email" className="text-center text2 text-xl">
                           {obreiro.email}
                         </td>
-                        <td className="text-center text2 text-xl">
+                        <td data-label="Cargo" className="text-center text2 text-xl">
                           {obreiro.cargo}
                         </td>
-                        <td className="text-center">
+                        <td data-label="Ações" className="text-center">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -696,18 +663,16 @@ export default function obreiros() {
                             }}
                             className="px-2 py-1 mr-5 bg-red-500 text-white rounded hover:bg-red-600"
                           >
-                            <Image
-                              src={lixo}
+                            <Trash2
                               width={30}
-                              height={40}
-                              alt="lixo Icon"
+                              height={40} aria-label="lixo Icon"
                             />
                           </button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </DataTable>
               ) : (
                 <p className="text-center text-black text1 text-4xl mt-5 text-gray-4">
                   Nenhum obreiro encontrado.
@@ -716,7 +681,7 @@ export default function obreiros() {
             </div>
           </div>
 
-          <Modal
+          <AppModal
             isOpen={isDeleteModalOpen}
             onRequestClose={() => setIsDeleteModalOpen(false)}
             contentLabel="Confirmar exclusão"
@@ -745,25 +710,16 @@ export default function obreiros() {
                 </button>
               </div>
             </div>
-          </Modal>
+          </AppModal>
 
-          <Modal
+          <AppModal
             className="text-white flex flex-col"
             isOpen={modalIsOpen && modalType === "new"}
             onRequestClose={closeModal}
             contentLabel="Novo Obreiro"
           >
             <div className="flex flex-col justify-center self-center bg-azul mt-[10vh] rounded-lg shadow-xl">
-              <div className="cursor-pointer flex place-content-end rounded-lg">
-                <Image
-                  onClick={closeModal}
-                  src={close}
-                  width={40}
-                  height={40}
-                  alt="close Icon"
-                  className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
-                />
-              </div>
+              <ModalCloseButton onClick={closeModal} />
 
               <h2 className="text-white text1 text-4xl flex justify-center">
                 Novo Obreiro
@@ -818,7 +774,7 @@ export default function obreiros() {
                 <label className="text-white text1 text-xl mt-5 mb-1">
                   Senha
                 </label>
-                <div className="flex">
+                <div className="od-password-row flex">
                   <input
                     type={showPassword ? "text" : "password"}
                     className="pl-4 py-3 rounded-lg text2 text-slate-500"
@@ -832,12 +788,7 @@ export default function obreiros() {
                     className="ml-[1vh]"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    <Image
-                      src={showPassword ? on : off}
-                      width={40}
-                      height={40}
-                      alt={showPassword ? "Open" : "Closed"}
-                    />
+                    {showPassword ? <Eye size={28} aria-hidden="true" /> : <EyeOff size={28} aria-hidden="true" />}
                   </button>
                 </div>
               </div>
@@ -884,25 +835,16 @@ export default function obreiros() {
                 </button>
               </div>
             </div>
-          </Modal>
+          </AppModal>
 
-          <Modal
+          <AppModal
             className="text-white flex flex-col"
             isOpen={modalIsOpen && modalType === "edit"}
             onRequestClose={closeModal}
             contentLabel="Editar Obreiro"
           >
             <div className="flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl">
-              <div className="cursor-pointer flex place-content-end rounded-lg">
-                <Image
-                  onClick={closeModal}
-                  src={close}
-                  width={40}
-                  height={40}
-                  alt="close Icon"
-                  className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
-                />
-              </div>
+              <ModalCloseButton onClick={closeModal} />
 
               <h2 className="text-white text1 text-4xl flex justify-center">
                 Editar Obreiro
@@ -957,7 +899,7 @@ export default function obreiros() {
                 <label className="text-white text1 text-xl mt-5 mb-1">
                   Senha
                 </label>
-                <div className="flex">
+                <div className="od-password-row flex">
                   <input
                     type={showPassword ? "text" : "password"}
                     className="px-4 py-3 rounded-lg text2 text-slate-500"
@@ -971,12 +913,7 @@ export default function obreiros() {
                     className="ml-[1vh]"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    <Image
-                      src={showPassword ? on : off}
-                      width={40}
-                      height={40}
-                      alt={showPassword ? "Open" : "Closed"}
-                    />
+                    {showPassword ? <Eye size={28} aria-hidden="true" /> : <EyeOff size={28} aria-hidden="true" />}
                   </button>
                 </div>
               </div>
@@ -1022,7 +959,7 @@ export default function obreiros() {
                 </button>
               </div>
             </div>
-          </Modal>
+          </AppModal>
         </div>
         <ToastContainer />
       </div>

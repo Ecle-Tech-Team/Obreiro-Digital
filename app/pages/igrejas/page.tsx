@@ -1,18 +1,14 @@
 "use client";
+import { AddButton, DataTable, FilterButton, PageTitle, SearchField } from '@/app/components/shared/MemberStyle';
 import React, { useState, useEffect, useRef } from "react";
+import { ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import MenuLateral from "@/app/components/menuLateral/menuLateral";
 import ModalIgrejaDetalhes from "@/app/components/igrejaModal/ModalIgreja";
 import Link from "next/link";
-import Image from "next/image";
 import api from "../../api/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Modal from "react-modal";
-import seta from "@/public/icons/seta-down.svg";
-import close from "@/public/icons/close.svg";
-import lixo from "@/public/icons/delete.svg";
-import filter from "@/public/icons/filter.png";
 
 interface Igreja {
   id_igreja: number;
@@ -191,8 +187,8 @@ export default function Igrejas({ igrejas } : { igrejas: Igreja[] }) {
     <main>
       <div className="flex">
         <MenuLateral />
-        <div className="sm:ml-[10vh] md:ml-[20vh] lg:ml-[5vh] mr-[10vh] mb-[5vh]">
-          <div className="flex mt-12">
+        <div className="app-content">
+          <div className="od-breadcrumb pt-2">
             <Link
               href={"/../../pages/inicio"}
               className="text-cinza text-lg text3"
@@ -207,20 +203,16 @@ export default function Igrejas({ igrejas } : { igrejas: Igreja[] }) {
             </Link>
           </div>
 
-          <div className="flex">
+          <div className="page-toolbar mt-6">
             <div
-              className="mt-10 relative sm:right-20 md:right-2"
+              className="relative min-w-0"
               ref={dropdownRef}
             >
-              <button onClick={toggleDropdown} className="ml-2 flex">
-                <h1 className="text-black text1 sm:mr-[2vh]  sm:text-4xl md:text-4xl lg:text-5xl">
-                  Igrejas
-                </h1>
-                <Image
-                  src={seta}
+              <button onClick={toggleDropdown} className="flex items-center gap-2">
+                <PageTitle>Igrejas</PageTitle>
+                <ChevronDown
                   width={24}
-                  height={24}
-                  alt="Arrow Icon"
+                  height={24} aria-label="Arrow Icon"
                   className={`${
                     isDropdownOpen ? "rotate-180" : ""
                   } transition-transform`}
@@ -250,34 +242,27 @@ export default function Igrejas({ igrejas } : { igrejas: Igreja[] }) {
                 </div>
               )}
             </div>
-            <div className="flex">
-              <div className="mt-10 relative sm:right-[5vh] md:left-[20vh] lg:left-[63vh]">
-                <div className="flex mb-4">
+            <div className="page-toolbar-actions">
+              <div className="relative flex min-w-0 flex-1">
+                <div className="flex w-full min-w-0">
                   {/* Botão de filtro */}
-                  <div className="flex gap-5 relative">
-                    <button
+                  <div className="od-list-controls relative flex w-full min-w-0 items-center gap-2">
+                    <FilterButton
                       onClick={() => setIsFilterOpen(!isFilterOpen)}
-                      className="flex items-center justify-center px-5 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
-                    >
-                      <Image
-                        src={filter}
-                        width={30}
-                        height={30}
-                        alt="Filtrar"
-                      />
-                    </button>
+
+                     />
                     <div className="flex-1">
-                      <input
+                      <SearchField
                         type="text"
                         placeholder="Pesquisar igrejas..."
-                        className="sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-xl md:text-lg lg:text-xl text-gray-600 pl-5 text2 text-left content-center justify-center rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
+
                         value={searchTerm}
                         onChange={(e) => handleSearch(e.target.value)}
                       />
                     </div>
                     {/* Dropdown de filtros */}
                     {isFilterOpen && (
-                      <div className="absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
+                      <div className="od-filter-menu absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
                         <button
                           className={`block w-full text-left px-4 py-2 ${
                             sortCriteria === "recent"
@@ -352,27 +337,22 @@ export default function Igrejas({ igrejas } : { igrejas: Igreja[] }) {
                   </div>
                 </div>
               </div>
-              <div className="flex relative sm:right-[10vh] md:left-[35vh] lg:left-[64.4vh]">
-                <div className="mt-10 ml-1 flex justify-center">
-                  <p
-                    className="bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400"
-                    // onClick={() => openModal("new")}
-                  >
-                    Nova Igreja +
-                  </p>
+              <div className="flex min-w-0">
+                <div className="flex justify-center">
+                  <AddButton>Nova Igreja</AddButton>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="ml-[20vh] pr-2">
-            <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] sm:left-[2vh] md:left-[20vh] lg:left-[35vh] h-[72vh] max-h-[72vh] overflow-y-auto overflow-x-auto">
+          <div className="mt-6 min-w-0">
+            <div className="page-table-scroll max-h-[70vh]">
               {sortedIgrejas.length === 0 ? (
-                <p className="text-center text-black text1 text-4xl mt-5 text-gray-4 px-[40.5vh]">
+                <p className="p-6 text-center text-black text1 text-xl sm:text-2xl">
                   Nenhuma igreja encontrada.
                 </p>
               ) : (
-                <table className="text-black w-[160vh]">
+                <DataTable className="text-black">
                   <thead className="sticky top-0">
                     <tr className="bg-azul text-white rounded-xl">
                       <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[12vh] py-2">
@@ -399,25 +379,25 @@ export default function Igrejas({ igrejas } : { igrejas: Igreja[] }) {
                         onClick={() => setModalIgreja(igreja)}
                         className="cursor-pointer hover:bg-slate-200"
                       >
-                        <td className="text-center text2 text-xl">
+                        <td data-label="CNPJ" className="text-center text2 text-xl">
                           {igreja.cnpj}
                         </td>
-                        <td className="text-center text2 text-xl py-3">
+                        <td data-label="Nome" className="text-center text2 text-xl py-3">
                           {igreja.nome}
                         </td>
-                        <td className="text-center text2 text-xl">
+                        <td data-label="Cidade" className="text-center text2 text-xl">
                           {igreja.cidade}
                         </td>
-                        <td className="text-center text2 text-xl">
+                        <td data-label="Bairro" className="text-center text2 text-xl">
                           {igreja.bairro}
                         </td>
-                        <td className="text-center text2 text-xl">
+                        <td data-label="Setor" className="text-center text2 text-xl">
                           {igreja.setor}
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </DataTable>
               )}
             </div>
           </div>

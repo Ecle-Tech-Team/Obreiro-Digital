@@ -1,21 +1,13 @@
 'use client'
+import { AddButton, AppModal, DataTable, PageTitle } from '@/app/components/shared/MemberStyle';
 import React, { useState, useEffect } from 'react'
+import { Eye, EyeOff, Wallet } from "lucide-react";
 import { format } from 'date-fns';
 import MenuLateral from '@/app/components/menuLateral/menuLateral'
-import Image from 'next/image';
 import Link from 'next/link'
 import api from '../../api/api';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Modal from 'react-modal';
-import onWhite from '@/public/icons/on.svg'
-import offWhite from '@/public/icons/off.svg'
-import onBlack from '@/public/icons/on-black.svg'
-import offBlack from '@/public/icons/off-black.svg'
-import saldoImg from '@/public/icons/saldo-white.svg'
-import gastos from '@/public/icons/gastos.svg'
-import entradas from '@/public/icons/entradas.svg'
-import doacoes from '@/public/icons/doacoes.svg'
 
 interface Saldo {
   id_saldo: number;
@@ -48,7 +40,7 @@ export default function financeiro() {
   const [saldoVisivel, setSaldoVisivel] = useState(false);
   const [gastoVisivel, setGastoVisivel] = useState(false);
   const [entradaVisivel, setEntradaVisivel] = useState(false);
-  
+
   const [tipo, setTipo] = useState<string>('')
   const [categoria, setCategoria] = useState<string>('')
   const [valor, setValor] = useState<string>('')
@@ -64,7 +56,7 @@ export default function financeiro() {
   const [editNomeIgreja, setEditNomeIgreja] = useState<number>(0)
 
   const [saldoAtual, setSaldo] = useState<Saldo | null>(null);
-  
+
   useEffect(() => {
     const fetchSaldo = async () => {
       try {
@@ -118,7 +110,6 @@ export default function financeiro() {
 
     fetchIgrejas()
   }, []);
-
 
   const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
   const [modalIsOpen, setModalIsOpen] = useState(false);
@@ -245,7 +236,7 @@ export default function financeiro() {
         theme: 'colored',
       });
     };
-  
+
     const notifyWarn = () => {
       toast.warn('Todos os campos devem ser preenchidos!', {
         position: 'top-center',
@@ -258,7 +249,7 @@ export default function financeiro() {
         theme: 'colored',
       });
     };
-  
+
     const notifyError = () => {
       toast.error('Erro na atualização, Tente novamente.', {
         position: 'top-center',
@@ -295,7 +286,7 @@ export default function financeiro() {
       const response = await api.put(`/financas/${financas?.id_financas}/${financas?.id_igreja}`, dados);
 
       notifySuccess();
-  
+
       closeModal();
       setSelectedFinancas(null);
     } catch (error) {
@@ -305,40 +296,43 @@ export default function financeiro() {
   }
 
   return (
-    <main>
-      <div className='flex'>
+    <main className="min-h-screen bg-gray-100">
+      <div className="flex flex-col md:flex-row">
         <MenuLateral/>
-        <div className='ml-[20vh]'>
-          <div className='flex mt-12'>
-            <Link href={'/../../pages/inicio'} className='text-cinza text-lg text3'>Início &#62;</Link>
-            <Link href={'/../../pages/financeiro'} className='text-cinza text-lg text3 ml-2'>Financeiro &#62;</Link>
+        <div className="app-content">
+          <div className="od-breadcrumb mt-8 xs:mt-10 sm:mt-12">
+            <Link href={'/../../pages/inicio'} className='text-gray-600 text-sm xs:text-base lg:text-lg text3 hover:text-azul transition-colors duration-200'>Início</Link>
+            <span className="text-gray-400 mx-2">&#62;</span>
+            <span className="text-azul text-sm xs:text-base lg:text-lg text3 font-semibold">Financeiro</span>
           </div>
 
-          <div className='flex'>            
-            <div className='mt-10 flex'>
-              <h1 className='text-black text1 text-5xl'>Financeiro</h1>
-              <button onClick={() => {
-                setAllVisible(!allVisible);
-                setSaldoVisivel(!allVisible); 
-                setEntradaVisivel(!allVisible); 
-                setGastoVisivel(!allVisible); 
-              }}>
-                <Image className='absolute left-[80vh] top-[13.2vh]' src={allVisible ? onBlack : offBlack} width={50} height={50} alt=''/>
+          <div className="page-toolbar mt-6 justify-between">
+            <div className="flex items-center">
+              <PageTitle>Financeiro</PageTitle>
+              <button
+                onClick={() => {
+                  setAllVisible(!allVisible);
+                  setSaldoVisivel(!allVisible);
+                  setEntradaVisivel(!allVisible);
+                  setGastoVisivel(!allVisible);
+                }}
+                className="ml-3 xs:ml-4 p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                aria-label={allVisible ? "Ocultar todos" : "Mostrar todos"}
+              >
+                {allVisible ? <Eye size={32} aria-hidden="true" /> : <EyeOff size={32} aria-hidden="true" />}
               </button>
             </div>
 
-            <div className='flex mt-10 ml-10 relative left-[70.6vh]'>
-              <p className='bg-azul px-10 py-2.5 text-white text2 text-3xl rounded-xl cursor-pointer' onClick={() => openModal('new')}>
-                Nova Movimentação +
-              </p>
+            <div className='flex'>
+              <AddButton onClick={() => openModal('new')}>Nova Movimentação</AddButton>
             </div>
 
           </div>
 
-          <div className='flex mt-10'>
-            <div className='bg-azul py-5 pl-8 w-[30vh] rounded-xl'>
+          <div className='mt-6'>
+            <div className='bg-azul w-full rounded-xl p-5 sm:max-w-xs'>
               <div>
-                <Image src={saldoImg} width={40} height={40} alt=''/>
+                <Wallet size={36} className="text-white" aria-hidden="true"/>
                 <h3 className='text-white text1 text-3xl mr-6 mt-2'>Saldo</h3>
               </div>
               <div className='flex mt-2'>              
@@ -346,18 +340,18 @@ export default function financeiro() {
                 <p className='text-white text2 text-xl'>R$ {saldoAtual.saldo}</p>
               )}
                 <button className='ml-3 mr-6' onClick={() => setSaldoVisivel(!saldoVisivel)}>
-                  <Image src={saldoVisivel ? onWhite : offWhite} width={30} height={30} alt=''/>
+                  {saldoVisivel ? <Eye size={26} className="text-white" aria-hidden="true" /> : <EyeOff size={26} className="text-white" aria-hidden="true" />}
                 </button>
               </div>
             </div>                   
           </div>
 
-          <div className='ml-[20vh]'>
-            <div className="space-x-16 shadow-xl absolute rounded-xl mt-10 left-[50vh] h-[54vh] max-h-[54vh] overflow-y-auto overflow-x-hidden">
+          <div className='mt-6 min-w-0'>
+            <div className="page-table-scroll max-h-[65vh]">
               {financas.length === 0 ? (
                 <p className="text-center text-black text1 text-4xl mt-5 text-gray-4">Nenhuma movimentação encontrada.</p>
               ) : (            
-                <table className='text-black'>
+                <DataTable className='text-black'>
                   <thead className='sticky top-0'>
                     <tr className='bg-azul text-white rounded-xl'>
                       <th className='text1 text-white text-2xl px-[13.9vh] py-2'>Tipo</th>
@@ -369,31 +363,31 @@ export default function financeiro() {
                   <tbody>
                     {financas.map((mov) => (                    
                       <tr key={mov.id_financas} onClick={() => mov && openModal('edit', mov)} className='cursor-pointer hover:bg-slate-200'>
-                        <td className='text-center text2 text-xl py-3'>{mov.tipo}</td>
-                        <td className='text-center text2 text-xl py-3'>{mov.categoria}</td>
-                        <td className='text-center text2 text-xl py-3'>{mov.valor}</td>
-                        <td className='text-center text2 text-xl py-3'>{format(new Date(mov.data), 'dd/MM/yyyy')}</td>
+                        <td data-label="Tipo" className='text-center text2 text-xl py-3'>{mov.tipo}</td>
+                        <td data-label="Categoria" className='text-center text2 text-xl py-3'>{mov.categoria}</td>
+                        <td data-label="Valor" className='text-center text2 text-xl py-3'>{mov.valor}</td>
+                        <td data-label="Data" className='text-center text2 text-xl py-3'>{format(new Date(mov.data), 'dd/MM/yyyy')}</td>
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </DataTable>
               )}
             </div>
           </div>
-          
-          <Modal
+
+          <AppModal
             className="text-white flex flex-col" 
             isOpen={modalIsOpen && modalType === 'new'} 
             onRequestClose={closeModal}
             contentLabel="Nova Movimentação"
           >
             <div className='flex flex-col justify-center self-center bg-azul p-10 mt-[15vh] rounded-lg shadow-xl'>
-              
+
               <h2 className='text-white text1 text-4xl flex justify-center'>Nova Movimentação</h2>
 
               <div className='flex flex-col'>
                 <label className='text-white text1 text-xl mt-5 mb-1'>Tipo</label>
-                
+
                 <select 
                   className='px-4 py-3 rounded-lg text2 bg-white text-slate-500' 
                   value={tipo}
@@ -407,7 +401,7 @@ export default function financeiro() {
 
               <div className='flex flex-col'>
                 <label className='text-white text1 text-xl mt-5 mb-1'>Categoria</label>
-                
+
                 <select 
                   className='px-4 py-3 rounded-lg text2 bg-white text-slate-500' 
                   value={categoria}
@@ -489,20 +483,20 @@ export default function financeiro() {
               </div>
 
             </div>
-          </Modal>
-          <Modal
+          </AppModal>
+          <AppModal
             className="text-white flex flex-col" 
             isOpen={modalIsOpen && modalType === 'edit'} 
             onRequestClose={closeModal}
             contentLabel="Editar Movimentação"
           >
             <div className='flex flex-col justify-center self-center bg-azul p-10 mt-[15vh] rounded-lg shadow-xl'>
-              
+
               <h2 className='text-white text1 text-4xl flex justify-center'>Editar Movimentação</h2>
 
               <div className='flex flex-col'>
                 <label className='text-white text1 text-xl mt-5 mb-1'>Tipo</label>
-                
+
                 <select 
                   className='px-4 py-3 rounded-lg text2 bg-white text-slate-500' 
                   value={editTipo}
@@ -516,7 +510,7 @@ export default function financeiro() {
 
               <div className='flex flex-col'>
                 <label className='text-white text1 text-xl mt-5 mb-1'>Categoria</label>
-                
+
                 <select 
                   className='px-4 py-3 rounded-lg text2 bg-white text-slate-500' 
                   value={editCategoria}
@@ -576,7 +570,7 @@ export default function financeiro() {
               </div>
 
             </div>
-          </Modal>
+          </AppModal>
 
         </div>
         <ToastContainer />

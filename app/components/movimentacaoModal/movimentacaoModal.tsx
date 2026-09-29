@@ -1,11 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { ModalSurface } from '@/app/components/shared/MemberStyle';
+import { X } from "lucide-react";
 import api from "@/app/api/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { moverPessoa } from "../../../app/api/api";
-import Image from "next/image";
-import close from "@/public/icons/close.svg";
 
 interface Igreja {
   id_igreja: number;
@@ -84,15 +84,13 @@ export default function ModalMovimentacao({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-md">
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50 p-3">
+      <ModalSurface className="w-full max-w-md max-h-[calc(100dvh-1.5rem)] overflow-y-auto">
         <div className="cursor-pointer flex place-content-end rounded-lg sticky">
-          <Image
+          <X
             onClick={onClose}
-            src={close}
             width={40}
-            height={40}
-            alt="close Icon"
+            height={40} aria-label="close Icon"
             className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
           />
         </div>
@@ -105,7 +103,7 @@ export default function ModalMovimentacao({
           <label className="block mb-2 text1 text-black">Nova Igreja</label>
 
           <select
-            className="sm:h-[5.2vh] md:h-[5.5vh] lg:h-[5vh] sm:w-[21vh] md:w-[41vh] lg:w-[41vh] sm:text-xl md:text-lg lg:text-lg text-gray-600 pl-5 text2 text-left content-center justify-center rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            className="min-h-11 w-full text-base sm:text-lg text-gray-600 px-4 text2 text-left rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             value={novaIgreja}
             onChange={(e) => setNovaIgreja(e.target.value)}
           >
@@ -136,7 +134,7 @@ export default function ModalMovimentacao({
             </button>
           </div>
         </form>
-      </div>
+      </ModalSurface>
       <ToastContainer />
     </div>
   );

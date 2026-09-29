@@ -1,10 +1,7 @@
 import React, { useState, useEffect, FormEvent } from "react";
+import { CalendarDays, Clock3, Trash2 } from "lucide-react";
 import { format } from "date-fns";
-import Image from "next/image";
 import api from "@/app/api/api";
-import data from "@/public/icons/data.svg";
-import relogio from "@/public/icons/relogio.svg";
-import lixo from "@/public/icons/delete.svg";
 
 interface Igreja {
   id_igreja: number;
@@ -55,7 +52,7 @@ export default function EventosCard({
               }}
               className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
             >
-              <Image src={lixo} width={30} height={40} alt="lixo Icon" />
+<Trash2 width={30} height={40} aria-label="lixo Icon" />
             </button>
           )}
         </div>
@@ -77,24 +74,24 @@ export default function EventosCard({
         <div className="flex justify-center">
           <div className="flex flex-col justify-center">
             <div className="flex">
-              <Image src={data} width={20} height={20} alt="" />
+<CalendarDays width={20} height={20} aria-hidden="true" />
               <p className="text-azul text3 ml-1">Início</p>
             </div>
             <p className="text-black text3 text-lg my-2">{data_inicio}</p>
             <div className="flex mt-1">
-              <Image src={relogio} width={20} height={20} alt="" />
+<Clock3 width={20} height={20} aria-hidden="true" />
               <p className="text-black text3 text-xl ml-1">{hora_inicio}</p>
             </div>
           </div>
 
           <div className="flex flex-col ml-2">
             <div className="flex">
-              <Image src={data} width={20} height={20} alt="" />
+<CalendarDays width={20} height={20} aria-hidden="true" />
               <p className="text-azul text3 ml-1">Fim</p>
             </div>
             <p className="text-black text3 text-lg my-2">{data_fim}</p>
             <div className="flex mt-1">
-              <Image src={relogio} width={20} height={20} alt="" />
+<Clock3 width={20} height={20} aria-hidden="true" />
               <p className="text-black text3 text-xl ml-1">{hora_fim}</p>
             </div>
           </div>

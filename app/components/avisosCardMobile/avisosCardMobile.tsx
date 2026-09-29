@@ -1,6 +1,4 @@
 import React, { FormEvent } from "react";
-import Image from "next/image";
-import lixo from "@/public/icons/delete.svg";
 
 interface Igreja {
   id_igreja: number;

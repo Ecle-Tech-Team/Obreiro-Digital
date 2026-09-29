@@ -1,5 +1,5 @@
+import { AppModal, ModalSurface } from '@/app/components/shared/MemberStyle';
 import React from "react";
-import Modal from "react-modal";
 
 interface EventoModalMobileProps {
   isOpen: boolean;
@@ -23,13 +23,13 @@ export default function EventoModalMobile({
   if (!evento) return null;
 
   return (
-    <Modal
+    <AppModal
       isOpen={isOpen}
       onRequestClose={onRequestClose}
-      className="fixed inset-0 flex items-center justify-center z-50"
+      className="fixed inset-0 flex items-center justify-center z-50 p-3"
       overlayClassName="fixed inset-0 bg-black bg-opacity-50"
     >
-      <div className="bg-white px-6 py-10 rounded-xl shadow-lg w-[90vw] max-w-md">
+      <ModalSurface className="w-full max-w-md max-h-[calc(100dvh-1.5rem)] overflow-y-auto break-words px-4 py-6 sm:px-6 sm:py-10">
         <h2 className="text-xl text-center mb-10 text1">Detalhes do Evento</h2>
         <div className="text-sm text-gray-700">
           <p className="mb-5 text3 text-gray-500">
@@ -56,7 +56,7 @@ export default function EventoModalMobile({
             Fechar
           </button>
         </div>
-      </div>
-    </Modal>
+      </ModalSurface>
+    </AppModal>
   );
 }

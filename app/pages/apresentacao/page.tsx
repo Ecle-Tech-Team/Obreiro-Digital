@@ -1,10 +1,9 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { X } from "lucide-react";
 import api from "@/app/api/api";
 import { format } from "date-fns";
 import Link from "next/link";
-import Image from "next/image";
-import close from "@/public/icons/close.svg";
 
 interface Evento {
   id_evento: number;
@@ -99,11 +98,9 @@ export default function Apresentacao() {
       </section>
       <div className="cursor-pointer">
         <Link href={"/../../pages/inicio"}>
-          <Image
-            src={close}
+          <X
             width={40}
-            height={40}
-            alt="close Icon"
+            height={40} aria-label="close Icon"
             className="bg-red-500 hover:bg-red-600 rounded-sm"
           />
         </Link>

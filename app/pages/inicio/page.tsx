@@ -3,17 +3,21 @@ import React, { useState, useEffect } from "react";
 import api from "@/app/api/api";
 import MenuLateral from "@/app/components/menuLateral/menuLateral";
 import Link from "next/link";
-import Image from "next/image";
-import arrow from "@/public/icons/arrow.svg";
-import membros from "@/public/icons/groups_black_24dp(1).svg";
-import evento from "@/public/icons/evento.svg";
-import saldo from "@/public/icons/saldo.svg";
-import visitantes from "@/public/icons/visitantes.svg";
-import pedidos from "@/public/icons/pedidos.svg";
-import igreja from "@/public/icons/igreja.svg";
-import on from "@/public/icons/on-black.svg";
-import off from "@/public/icons/off-black.svg";
-import cast from "@/public/icons/cast.svg";
+// Ícones do lucide-react
+import {
+  Users,
+  Calendar,
+  DollarSign,
+  UserPlus,
+  Package,
+  Church,
+  Eye,
+  EyeOff,
+  Cast,
+  ChevronRight,
+  ChevronDown,
+  Search
+} from "lucide-react";
 
 interface Saldo {
   id_saldo: number;
@@ -195,213 +199,186 @@ export default function inicio() {
       <div className="flex flex-col md:flex-row">
         <MenuLateral />
 
-        <div className="sm:ml-[15vh] md:ml-[30vh] lg:ml-[15vh] mr-[10vh] mb-[5vh]">
-          <div className="flex justify-between items-center mt-12">
-            <Link
-              href={"/../../pages/inicio"}
-              className="text-cinza text-lg text3"
-            >
-              Início &#62;
-            </Link>
+        <div className="app-content">
+          <div className="flex justify-between items-center ">
+            <div className="flex items-center">
+              <Link
+                href={"/../../pages/inicio"}
+                className="text-gray-600 text-sm xs:text-base lg:text-lg text3 hover:text-azul transition-colors duration-200"
+              >
+                Início
+              </Link>
+              <span className="text-gray-400 mx-2">&#62;</span>
+            </div>
 
             <Link
-              className="flex bg-azul items-center justify-center px-5 py-2 cursor-pointer rounded-lg focus:outline-none"
+              className="flex bg-azul items-center justify-center p-2 xs:p-3 cursor-pointer rounded-lg hover:bg-blue-600 active:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-azul focus:ring-offset-2"
               href={"/../../pages/apresentacao"}
+              aria-label="Ir para apresentação"
             >
-              <Image src={cast} width={30} height={30} alt="Filtrar" />
+              <Cast className="w-5 h-5 xs:w-6 xs:h-6 text-white" />
             </Link>
           </div>
 
-          <div className="bg-azul sm:p-8 md:p-10 lg:p-12 rounded-xl mt-2">
-            <h1 className="text-white text1 ml-3 sm:text-2xl md:text-3xl lg:text-5xl">
+          <div className="bg-azul p-4 xs:p-6 sm:p-8 lg:p-10 rounded-xl mt-2">
+            <h1 className="text-white text1 ml-0 xs:ml-2 text-xl xs:text-2xl sm:text-3xl lg:text-4xl xl:text-5xl">
               A Paz {cargo} {nome}!
             </h1>
-            <h3 className="text-white text2 mt-1 ml-3 sm:text-xl md:text-xl lg:text-3xl">
+            <h3 className="text-white text2 mt-1 ml-0 xs:ml-2 text-base xs:text-lg sm:text-xl lg:text-2xl xl:text-3xl">
               Veja as principais informações sobre a sua igreja:
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-6 lg:w-[130vh]">
-            <div className="bg-white shadow-xl rounded-xl p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 xs:gap-6 mt-6">
+            <div className="bg-white shadow-lg rounded-xl p-4 xs:p-6 hover:shadow-xl transition-shadow duration-200">
               <div className="flex items-center">
-                <Image src={membros} width={50} height={50} alt="" />
-                <h4 className="text1 text-black sm:text-xl md:text-xl lg:text-3xl ml-3">
+                <Users className="w-8 h-8 xs:w-10 xs:h-10 text-azul" />
+                <h4 className="text1 text-black text-lg xs:text-xl lg:text-2xl ml-3">
                   Membros
                 </h4>
               </div>
-              <div className="mt-4">
-                <p className="text2 text-azul text-xl">Membros Totais</p>
-                <p className="text2 text-black text-xl">{totalMembros}</p>
+              <div className="mt-3 xs:mt-4">
+                <p className="text2 text-azul text-sm xs:text-base lg:text-lg">Membros Totais</p>
+                <p className="text2 text-black text-xl xs:text-2xl lg:text-3xl font-semibold mt-1">{totalMembros}</p>
               </div>
               <Link
-                className="mt-4 inline-flex items-center"
+                className="mt-3 xs:mt-4 inline-flex items-center group"
                 href={"/../../pages/membros"}
               >
-                <span className="text2 text-blue-500">Ver detalhes</span>
-                <Image
-                  src={arrow}
-                  width={30}
-                  height={30}
-                  alt=""
-                  className="ml-1"
-                />
+                <span className="text2 text-blue-600 group-hover:text-blue-800 transition-colors duration-200 text-sm xs:text-base">Ver detalhes</span>
+                <ChevronRight color="#5271FF" className="w-5 h-5 ml-1 xs:ml-2 group-hover:translate-x-1 hover:text-blue-700 transition-transform duration-200" />
               </Link>
             </div>
 
-            <div className="bg-white shadow-xl rounded-xl p-6">
+            <div className="bg-white shadow-lg rounded-xl p-4 xs:p-6 hover:shadow-xl transition-shadow duration-200">
               <div className="flex items-center">
-                <Image src={evento} width={40} height={40} alt="" />
-                <h4 className="text1 text-black sm:text-xl md:text-xl lg:text-3xl ml-3">
+                <Calendar className="w-7 h-7 xs:w-9 xs:h-9 text-azul" />
+                <h4 className="text1 text-black text-lg xs:text-xl lg:text-2xl ml-3">
                   Eventos
                 </h4>
               </div>
-              <div className="mt-4">
-                <p className="text2 text-azul text-xl">Eventos Totais</p>
-                <p className="text2 text-black text-xl">{totalEventos}</p>
+              <div className="mt-3 xs:mt-4">
+                <p className="text2 text-azul text-sm xs:text-base lg:text-lg">Eventos Totais</p>
+                <p className="text2 text-black text-xl xs:text-2xl lg:text-3xl font-semibold mt-1">{totalEventos}</p>
               </div>
               <Link
-                className="mt-4 inline-flex items-center"
+                className="mt-3 xs:mt-4 inline-flex items-center group"
                 href={"/../../pages/eventos"}
               >
-                <span className="text2 text-blue-500">Ver detalhes</span>
-                <Image
-                  src={arrow}
-                  width={30}
-                  height={30}
-                  alt=""
-                  className="ml-1"
-                />
+                <span className="text2 text-blue-600 group-hover:text-blue-800 transition-colors duration-200 text-sm xs:text-base">Ver detalhes</span>
+                <ChevronRight color="#5271FF" className="w-5 h-5 ml-1 xs:ml-2 group-hover:translate-x-1 hover:text-blue-700 transition-transform duration-200" />
               </Link>
             </div>
 
-            <div className="bg-white shadow-xl rounded-xl p-6 ">
+            <div className="bg-white shadow-lg rounded-xl p-4 xs:p-6 hover:shadow-xl transition-shadow duration-200">
               <div className="flex items-center">
-                <Image src={saldo} width={45} height={45} alt="" />
-                <h4 className="text1 text-black sm:text-xl md:text-xl lg:text-3xl ml-3">
+                <DollarSign className="w-7 h-7 xs:w-9 xs:h-9 text-azul" />
+                <h4 className="text1 text-black text-lg xs:text-xl lg:text-2xl ml-3">
                   Saldo
                 </h4>
               </div>
-              <div className="mt-4">
-                <p className="text2 text-azul text-xl">Saldo Total</p>
-                <p className="text2 text-black text-xl">
+              <div className="mt-3 xs:mt-4">
+                <p className="text2 text-azul text-sm xs:text-base lg:text-lg">Saldo Total</p>
+                <p className="text2 text-black text-xl xs:text-2xl lg:text-3xl font-semibold mt-1">
                   {saldoVisivel && saldoAtual
-                    ? `R$ ${saldoAtual.saldo}`
+                    ? `R$ ${saldoAtual.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : "---"}
                 </p>
               </div>
               <button
-                className="mt-4 inline-flex items-center"
+                className="mt-3 xs:mt-4 inline-flex items-center group"
                 onClick={() => setSaldoVisivel(!saldoVisivel)}
               >
-                <span className="text2 text-blue-500">
+                <span className="text2 text-azul group-hover:text-blue-700 transition-colors duration-200 text-sm xs:text-base">
                   {saldoVisivel ? "Ocultar" : "Mostrar"} saldo
                 </span>
-                <Image
-                  src={saldoVisivel ? on : off}
-                  width={30}
-                  height={30}
-                  alt=""
-                  className="ml-1"
-                />
+                {saldoVisivel ? (
+                  <EyeOff color="#5271FF" className="w-5 h-5 ml-1 xs:ml-2 group-hover:scale-110 hover:text-blue-700 transition-transform duration-200" />
+                ) : (
+                  <Eye color="#5271FF" className="w-5 h-5 ml-1 xs:ml-2 group-hover:scale-110 hover:text-blue-700 transition-transform duration-200" />
+                )}
               </button>
             </div>
 
-            <div className="bg-white shadow-xl rounded-xl p-6">
+            <div className="bg-white shadow-lg rounded-xl p-4 xs:p-6 hover:shadow-xl transition-shadow duration-200">
               <div className="flex items-center">
-                <Image src={visitantes} width={50} height={50} alt="" />
-                <h4 className="text1 text-black sm:text-xl md:text-xl lg:text-3xl ml-3">
+                <UserPlus className="w-8 h-8 xs:w-10 xs:h-10 text-azul" />
+                <h4 className="text1 text-black text-lg xs:text-xl lg:text-2xl ml-3">
                   Visitantes
                 </h4>
               </div>
-              <div className="mt-4">
-                <p className="text2 text-azul text-xl">Visitantes Totais</p>
-                <p className="text2 text-black text-xl">{totalVisitantes}</p>
+              <div className="mt-3 xs:mt-4">
+                <p className="text2 text-azul text-sm xs:text-base lg:text-lg">Visitantes Totais</p>
+                <p className="text2 text-black text-xl xs:text-2xl lg:text-3xl font-semibold mt-1">{totalVisitantes}</p>
               </div>
               <Link
-                className="mt-4 inline-flex items-center"
+                className="mt-3 xs:mt-4 inline-flex items-center group"
                 href={"/../../pages/visitantes"}
               >
-                <span className="text2 text-blue-500">Ver detalhes</span>
-                <Image
-                  src={arrow}
-                  width={30}
-                  height={30}
-                  alt=""
-                  className="ml-1"
-                />
+                <span className="text2 text-blue-600 group-hover:text-blue-800 transition-colors duration-200 text-sm xs:text-base">Ver detalhes</span>
+                <ChevronRight color="#5271FF" className="w-5 h-5 ml-1 xs:ml-2 group-hover:translate-x-1 hover:text-blue-700 transition-transform duration-200" />
               </Link>
             </div>
 
-            <div className="bg-white shadow-xl rounded-xl p-6">
+            <div className="bg-white shadow-lg rounded-xl p-4 xs:p-6 hover:shadow-xl transition-shadow duration-200 col-span-1 xs:col-span-2 lg:col-span-1">
               <div className="flex items-center">
-                <Image src={pedidos} width={40} height={40} alt="" />
-                <h4 className="text1 text-black sm:text-xl md:text-xl lg:text-3xl ml-3">
+                <Package className="w-7 h-7 xs:w-9 xs:h-9 text-azul" />
+                <h4 className="text1 text-black text-lg xs:text-xl lg:text-2xl ml-3">
                   Pedidos
                 </h4>
               </div>
-              <div className="mt-4">
-                <p className="text2 text-verde sm:text-lg md:text-lg lg:text-xl">
-                  Pedidos Entregues
-                </p>
-                <p className="text2 text-black sm:text-lg md:text-lg lg:text-xl">
-                  {pedidosEntregues}
-                </p>
-                <p className="text2 text-amarelo sm:text-lg md:text-lg lg:text-xl mt-4">
-                  Pedidos em Andamento
-                </p>
-                <p className="text2 text-black sm:text-lg md:text-lg lg:text-xl">
-                  {pedidosEmAndamento}
-                </p>
-                <p className="text2 text-vermelho sm:text-lg md:text-lg lg:text-xl mt-4">
-                  Pedidos Recusados
-                </p>
-                <p className="text2 text-black sm:text-lg md:text-lg lg:text-xl">
-                  {pedidosRecusados}
-                </p>
+              <div className="mt-3 xs:mt-4 grid grid-cols-1 xs:grid-cols-3 gap-3 xs:gap-4">
+                <div className="bg-green-50 rounded-lg p-3 xs:p-4">
+                  <p className="text2 text-green-700 text-xs xs:text-sm lg:text-base font-medium">Entregues</p>
+                  <p className="text2 text-black text-lg xs:text-xl lg:text-2xl font-semibold mt-1">{pedidosEntregues}</p>
+                </div>
+                <div className="bg-yellow-50 rounded-lg p-3 xs:p-4">
+                  <p className="text2 text-yellow-700 text-xs xs:text-sm lg:text-base font-medium">Em Andamento</p>
+                  <p className="text2 text-black text-lg xs:text-xl lg:text-2xl font-semibold mt-1">{pedidosEmAndamento}</p>
+                </div>
+                <div className="bg-red-50 rounded-lg p-3 xs:p-4">
+                  <p className="text2 text-red-700 text-xs xs:text-sm lg:text-base font-medium">Recusados</p>
+                  <p className="text2 text-black text-lg xs:text-xl lg:text-2xl font-semibold mt-1">{pedidosRecusados}</p>
+                </div>
               </div>
               <Link
-                className="mt-4 inline-flex items-center"
+                className="mt-4 xs:mt-5 inline-flex items-center group"
                 href={"/../../pages/pedidos"}
               >
-                <span className="text2 text-blue-500">Ver detalhes</span>
-                <Image
-                  src={arrow}
-                  width={30}
-                  height={30}
-                  alt=""
-                  className="ml-1"
-                />
+                <span className="text2 text-azul group-hover:text-blue-700 transition-colors duration-200 text-sm xs:text-base">Ver detalhes</span>
+                <ChevronRight color="#5271FF" className="w-5 h-5 ml-1 xs:ml-2 group-hover:translate-x-1 hover:text-blue-700 transition-transform duration-200" />
               </Link>
             </div>
 
             {cargo === "Pastor Matriz" && (
-              <div className="bg-white shadow-xl rounded-xl p-6">
-                <div className="flex items-center mb-4">
-                  <Image src={igreja} width={50} height={50} alt=""/>
-                  <h4 className="text1 text-black sm:text-xl md:text-xl lg:text-3xl ml-3">
+              <div className="bg-white shadow-lg rounded-xl p-4 xs:p-6 hover:shadow-xl transition-shadow duration-200 col-span-1 xs:col-span-2 lg:col-span-1">
+                <div className="flex items-center">
+                  <Church className="w-8 h-8 xs:w-10 xs:h-10 text-azul" />
+                  <h4 className="text1 text-black text-lg xs:text-xl lg:text-2xl ml-3">
                     Igrejas Subordinadas
                   </h4>
                 </div>
 
-                <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                <div className="mt-3 xs:mt-4 space-y-2 max-h-32 xs:max-h-40 overflow-y-auto pr-2">
                   {igrejasSubordinadas.length > 0 ? (
                     igrejasSubordinadas.slice(0, 4).map((igreja) => (
-                      <p key={igreja.id_igreja} className="text-xl text2 text-black">
-                        {igreja.nome}
-                      </p>
+                      <div key={igreja.id_igreja} className="flex items-center py-2 border-b border-gray-100 last:border-0">
+                        <div className="w-2 h-2 bg-azul rounded-full mr-3"></div>
+                        <p className="text2 text-gray-700 text-sm xs:text-base truncate">{igreja.nome}</p>
+                      </div>
                     ))
                   ) : (
-                    <p className="text2 text-gray-500">Nenhuma subordinada encontrada</p>
+                    <p className="text2 text-gray-500 text-sm xs:text-base py-2">Nenhuma subordinada encontrada</p>
                   )}
                 </div>
-                
-                <div className="mt-4">
-                  <p className="text2 text-azul text-xl">Saldo Total</p>
+
+                <div className="mt-4 xs:mt-5">
+                  <p className="text2 text-azul text-sm xs:text-base lg:text-lg">Saldo Total</p>
                   <p className="text2 text-black text-xl">{igrejasSubordinadas.length}</p>
 
                   <Link className="mt-4 inline-flex items-center" href={"/../../pages/igrejas"}>
                     <span className="text2 text-blue-500">Ver detalhes</span>
-                    <Image src={arrow} width={30} height={30} alt="" className="ml-1"/>
+                    <ChevronDown color="#5271FF" width={30} height={30} className="ml-1"/>
                   </Link>
                 </div>
               </div>

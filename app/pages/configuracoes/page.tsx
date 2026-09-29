@@ -1,21 +1,12 @@
 'use client'
+import { AppModal, PageTitle } from '@/app/components/shared/MemberStyle';
 import React, { useState, useEffect, useRef } from 'react';
+import { Bug, Church, KeyRound, LogOut, Mail, MessageCircle, ShieldCheck, UserRoundX, X } from "lucide-react";
 import MenuLateral from '@/app/components/menuLateral/menuLateral';
 import { format } from 'date-fns';
 import { toast, ToastContainer } from 'react-toastify';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import Modal from 'react-modal';
-import logout from '@/public/icons/logout.svg';
-import close from '@/public/icons/close.svg';
-import igrejaIcon from '@/public/icons/igreja.svg';
-import mailIcon from '@/public/icons/mail.svg';
-import keyIcon from '@/public/icons/key.svg';
-import bugIcon from '@/public/icons/bug.svg';
-import chatIcon from '@/public/icons/chat.svg';
-import shieldIcon from '@/public/icons/shield.svg';
-import apagarContaIcon from '@/public/icons/apagar-conta.svg';
 import api from '@/app/api/api';
 
 interface Igreja {
@@ -35,19 +26,19 @@ export default function configuracoes() {
   const router = useRouter();  
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isPriavcyModalOpen, setIsPrivacyModalOpen] = useState(false);
-  
+
   const handleLogout = () => {
     // Limpar todos os dados de autenticação
     sessionStorage.clear();
     localStorage.clear();
-    
+
     // Redirecionar para a página de login
     router.push('/pages/login');
   };  
 
   const [isIgrejaModalOpen, setIsIgrejaModalOpen] = useState(false);
   const [igrejaData, setIgrejaData] = useState<any>(null);
-  
+
    // Buscar dados da igreja
   const fetchIgrejaData = async () => {
     try {
@@ -56,7 +47,7 @@ export default function configuracoes() {
         console.error('ID da igreja não encontrado');
         return;
       }
-      
+
       const response = await api.get(`/igreja/${id_igreja}`);
       setIgrejaData(response.data);
       setIsIgrejaModalOpen(true);
@@ -77,7 +68,7 @@ export default function configuracoes() {
       theme: 'colored',
     });
   };
-  
+
   const notifySuccessAlterEmail = () => {
     toast.success('Email atualizado com sucesso!', {
       position: 'top-center',
@@ -125,7 +116,7 @@ export default function configuracoes() {
   const [isConfirmPasswordModalOpen, setIsConfirmPasswordModalOpen] = useState(false);
   const [novoPassword, setNovoPassword] = useState('');
   const [confirmarPassword, setConfirmarPassword] = useState('');
-  
+
   const [isBugModalOpen, setIsBugModalOpen] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -188,68 +179,68 @@ export default function configuracoes() {
     <main>
       <div className='flex'>
         <MenuLateral/>
-         <div className='sm:ml-[10vh] md:ml-[20vh] lg:ml-[5vh] mr-[10vh] mb-[5vh]'>
-          <div className='flex mt-12'>
+         <div className='app-content'>
+          <div className='od-breadcrumb pt-2'>
             <Link href={'/../../pages/inicio'} className='text-cinza text-lg text3'>Início &#62;</Link>
             <Link href={'/../../pages/configuracoes'} className='text-cinza text-lg text3 ml-2'>Configurações</Link>
           </div>
 
-          <div className="flex">
-            <div className='mt-10'>
-              <h1 className='text-black text1 text-5xl'>Configurações</h1>
+          <div className="mt-6">
+            <div className='flex flex-wrap items-center justify-between gap-4'>
+              <PageTitle>Configurações</PageTitle>
 
-              <div className='flex ml-10 relative left-[86vh] bottom-12 bg-red-500 hover:bg-red-600 px-8 py-2.5 text-white text-3xl rounded-xl cursor-pointer gap-2'>
+              <div className='flex items-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-base text-white cursor-pointer hover:bg-red-600'>
                 <p className='' onClick={() => setIsLogoutModalOpen(true)}>Encerrar Sessão</p>
-                <Image src={logout} width={32} height={32} alt=''/>
+                <LogOut width={32} height={32} aria-hidden="true"/>
             </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-7 max-w-3xl">
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 xl:gap-6">
             <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={fetchIgrejaData}>
-              <Image src={igrejaIcon} width={32} height={32} alt='' className="text-black" />
+              <Church width={32} height={32} aria-hidden="true" className="text-black" />
               <span className="font-bold text-black">Dados da Igreja</span>
               <span className="text-gray-500 text-sm">Visualizar dados da igreja</span>
             </div>
 
             <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsEmailModalOpen(true)}>
-              <Image src={mailIcon} width={32} height={32} alt='' className="text-black" />
+              <Mail width={32} height={32} aria-hidden="true" className="text-black" />
               <span className="font-bold text-black">Alterar Email</span>
               <span className="text-gray-500 text-sm">Novo email</span>
             </div>
 
             <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsPasswordModalOpen(true)}>
-              <Image src={keyIcon} width={32} height={32} alt='' className="text-black" />
+              <KeyRound width={32} height={32} aria-hidden="true" className="text-black" />
               <span className="font-bold text-black">Alterar Senha</span>
               <span className="text-gray-500 text-sm">Nova senha</span>
             </div>
 
             <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsBugModalOpen(true)}>
-              <Image src={bugIcon} width={32} height={32} alt='' className="text-black" />
+              <Bug width={32} height={32} aria-hidden="true" className="text-black" />
               <span className="font-bold text-black">Relatar Bug</span>
               <span className="text-gray-500 text-sm">Descreva o seu bug</span>
             </div>
 
             <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
-              <Image src={chatIcon} width={32} height={32} alt='' className="text-black" />
+              <MessageCircle width={32} height={32} aria-hidden="true" className="text-black" />
               <span className="font-bold text-black">Solicitar Suporte</span>
               <span className="text-gray-500 text-sm">Solicite suporte técnico</span>
             </div>
 
             <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsPrivacyModalOpen(true)}>
-              <Image src={shieldIcon} width={32} height={32} alt='' className="text-black" />
+              <ShieldCheck width={32} height={32} aria-hidden="true" className="text-black" />
               <span className="font-bold text-black">Privacidade</span>
               <span className="text-gray-500 text-sm">Termos de privacidade</span>
             </div>
-           
+
             <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsDeleteAccountModalOpen(true)}>
-              <Image src={apagarContaIcon} width={32} height={32} alt='' className="text-red-500" />
+              <UserRoundX width={32} height={32} aria-hidden="true" className="text-red-500" />
               <span className="font-bold text-red-500">Apagar Conta</span>
               <span className="text-red-400 text-sm">Deletar sua conta</span>
             </div>
           </div>
 
-          <Modal
+          <AppModal
             isOpen={isLogoutModalOpen}
             onRequestClose={() => setIsLogoutModalOpen(false)}
             contentLabel="Confirmar Logout"
@@ -263,17 +254,15 @@ export default function configuracoes() {
                   onClick={() => setIsLogoutModalOpen(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <X className="h-6 w-6" aria-hidden="true" />
                 </button>
               </div>
-              
+
               <p className="text-gray-600 mb-6">
                 Tem certeza que deseja sair da sua conta? Você será desconectado e
                 precisará fazer login novamente para acessar o sistema.
               </p>
-              
+
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setIsLogoutModalOpen(false)}
@@ -289,9 +278,9 @@ export default function configuracoes() {
                 </button>
               </div>
             </div>
-          </Modal>
+          </AppModal>
 
-          <Modal
+          <AppModal
             isOpen={isIgrejaModalOpen}
             onRequestClose={() => setIsIgrejaModalOpen(false)}
             contentLabel="Dados da Igreja"
@@ -299,11 +288,11 @@ export default function configuracoes() {
           >
             <div className="flex flex-col justify-center self-center bg-azul mt-[1vh] rounded-lg shadow-xl">
                <div className='cursor-pointer flex place-content-end rounded-lg'>
-                  <Image onClick={() => setIsIgrejaModalOpen(false)} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+                  <X onClick={() => setIsIgrejaModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
                 </div>
 
               <h2 className='text-white text1 text-4xl flex justify-center'>Sua Igreja</h2>
-              
+
               {igrejaData ? (
                 <div className="space-y-4 flex flex-col px-10">
                   <div className='flex flex-col'>
@@ -315,7 +304,7 @@ export default function configuracoes() {
                       onChange={(e) => setIgrejaData({ ...igrejaData, nome: e.target.value })}
                     />
                   </div>
-                  
+
                   <div className='flex flex-col'>
                     <label className="text-white text1 text-xl mt-1 mb-1">CNPJ</label>
                     <input
@@ -366,7 +355,7 @@ export default function configuracoes() {
                       onChange={(e) => setIgrejaData({ ...igrejaData, endereco: e.target.value })}
                     />
                   </div>
-                  
+
                   <div className="flex gap-4">
                     <div className='text-white flex flex-col'>
                       <label className="text-white text1 text-xl mt-1 mb-1">Bairro</label>
@@ -423,9 +412,9 @@ export default function configuracoes() {
                 </button>
               </div>
             </div>
-          </Modal>
+          </AppModal>
 
-          <Modal
+          <AppModal
             isOpen={isEmailModalOpen}
             onRequestClose={() => setIsEmailModalOpen(false)}
             contentLabel="Alterar Email"
@@ -433,9 +422,9 @@ export default function configuracoes() {
           >
             <div className="flex flex-col justify-center self-center bg-azul mt-[1vh] rounded-lg shadow-xl">
               <div className='cursor-pointer flex place-content-end rounded-lg'>
-                <Image onClick={() => setIsEmailModalOpen(false)} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+                <X onClick={() => setIsEmailModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
               </div>
-              
+
               <div className="px-10">
               <h2 className="text-xl text1 font-bold text-white mb-4">Novo Email</h2>
 
@@ -464,9 +453,9 @@ export default function configuracoes() {
                 </button>
               </div>
             </div>
-          </Modal>
+          </AppModal>
 
-          <Modal
+          <AppModal
             isOpen={isConfirmEmailModalOpen}
             onRequestClose={() => setIsConfirmEmailModalOpen(false)}
             contentLabel="Confirmar Alteração de Email"
@@ -474,7 +463,7 @@ export default function configuracoes() {
           >
             <div className="bg-white rounded-xl p-6 w-full max-w-md">
               <h2 className="text-xl font-bold text-gray-800 mb-4">Confirmar Alteração</h2>
-              
+
               <p className="text-gray-600 mb-6">Tem certeza que deseja alterar o email para <b>{novoEmail}</b>?</p>
 
               <div className="flex justify-end space-x-3">
@@ -502,9 +491,9 @@ export default function configuracoes() {
                 </button>
               </div>
             </div>
-          </Modal>
-          
-          <Modal
+          </AppModal>
+
+          <AppModal
             isOpen={isPasswordModalOpen}
             onRequestClose={() => setIsPasswordModalOpen(false)}
             contentLabel="Alterar Senha"
@@ -512,11 +501,11 @@ export default function configuracoes() {
           >
             <div className="flex flex-col justify-center self-center bg-azul mt-[1vh] rounded-lg shadow-xl">
               <div className='cursor-pointer flex place-content-end rounded-lg'>
-                <Image onClick={() => setIsPasswordModalOpen(false)} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+                <X onClick={() => setIsPasswordModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
               </div>
-              
+
               <h2 className="text-xl text1 font-bold text-white mb-4 px-10">Nova Senha</h2>
-              
+
               <div className="flex flex-col px-10 gap-4">
 
                 <input
@@ -556,9 +545,9 @@ export default function configuracoes() {
                 </button>
               </div>
             </div>
-          </Modal>
+          </AppModal>
 
-          <Modal
+          <AppModal
             isOpen={isConfirmPasswordModalOpen}
             onRequestClose={() => setIsConfirmPasswordModalOpen(false)}
             contentLabel="Confirmar Alteração de Senha"
@@ -566,7 +555,7 @@ export default function configuracoes() {
           >
             <div className="bg-white rounded-xl p-6 w-full max-w-md">
               <h2 className="text-xl font-bold text-gray-800 mb-4">Confirmar Alteração</h2>
-              
+
               <p className="text-gray-600 mb-6">Tem certeza que deseja alterar sua senha?</p>
 
               <div className="flex justify-end space-x-3">
@@ -594,16 +583,16 @@ export default function configuracoes() {
                 </button>
               </div>
             </div>
-          </Modal>
-          
-          <Modal
+          </AppModal>
+
+          <AppModal
             isOpen={isBugModalOpen}
             onRequestClose={() => setIsBugModalOpen(false)}
             className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40"
           >
             <div className="flex flex-col justify-center self-center bg-azul mt-[1vh] rounded-lg shadow-xl">
               <div className='cursor-pointer flex place-content-end rounded-lg'>
-                <Image onClick={() => setIsBugModalOpen(false)} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+                <X onClick={() => setIsBugModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
               </div>
 
               <div className="px-10">
@@ -640,9 +629,9 @@ export default function configuracoes() {
                 </div>
               </div>
             </div>
-          </Modal>
+          </AppModal>
 
-          <Modal
+          <AppModal
             isOpen={isPriavcyModalOpen} 
             onRequestClose={() => setIsPrivacyModalOpen(false)}
             contentLabel="Termo de Uso"
@@ -651,12 +640,12 @@ export default function configuracoes() {
           >
             <div className='flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl'>
               <div className='cursor-pointer flex place-content-end rounded-lg'>
-                  <Image onClick={() => setIsPrivacyModalOpen(false)} src={close} width={40} height={40} alt='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+                  <X onClick={() => setIsPrivacyModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
                 </div>
               <h2 className='text-white text1 text-4xl flex justify-center'>Termos de uso</h2>
 
-              <div className='flex flex-col justify-center self-center bg-white m-10 p-10 py-5 mt-[2vh] rounded-lg max-h-[45vh] overflow-y-auto'>
-                <div className='mt-[127vh]'>
+              <div className='flex flex-col bg-white w-full max-w-2xl p-4 sm:p-8 rounded-lg max-h-[calc(100dvh-2rem)] overflow-y-auto'>
+                <div>
                   <h3 className='text1 text-black text-lg'>1. Consentimento</h3>
                   <p className='text2 text-black leading-4 mt-1'>Ao utilizar o Sistema, você expressa seu<br/>consentimento para a coleta, armazenamento,<br/>processamento e uso dos seus dados pessoais de <br/>acordo com os termos estabelecidos neste Termo. <br/>Caso não concorde com estes termos, por favor, não <br/>prossiga utilizando o Sistema.</p>
                 </div>
@@ -743,9 +732,9 @@ export default function configuracoes() {
                 </div>
               </div>                
             </div>
-          </Modal>
-          
-          <Modal
+          </AppModal>
+
+          <AppModal
             isOpen={isDeleteAccountModalOpen}
             onRequestClose={() => setIsDeleteAccountModalOpen(false)}
             contentLabel="Apagar Conta"
@@ -773,9 +762,9 @@ export default function configuracoes() {
                 </button>
               </div>
             </div>
-          </Modal>
+          </AppModal>
 
-          <Modal
+          <AppModal
             isOpen={isConfirmDeleteModalOpen}
             onRequestClose={() => setIsConfirmDeleteModalOpen(false)}
             contentLabel="Confirmar Apagar Conta"
@@ -808,7 +797,7 @@ export default function configuracoes() {
                 </button>
               </div>
             </div>
-          </Modal>
+          </AppModal>
          </div>
          <ToastContainer />
       </div>

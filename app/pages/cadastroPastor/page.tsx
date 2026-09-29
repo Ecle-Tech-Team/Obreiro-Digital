@@ -1,5 +1,6 @@
 'use client'
 import React from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import Image from 'next/image'
 import api from '../../api/api';
 import { useState, useEffect } from 'react';
@@ -7,8 +8,6 @@ import { useRouter } from 'next/navigation';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import logo from '@/public/images/icon-white.png';
-import on from '@/public/icons/on.svg';
-import off from '@/public/icons/off.svg';
 
 interface Igreja {
   id_igreja: number;
@@ -116,10 +115,10 @@ export default function cadastroPastor() {
     }
   }  
   return (
-    <main className='overflow-hidden'>
-        <div className='bg-azul min-h-screen flex justify-center'>
-            <div className='flex justify-center items-center'>
-              <div>
+    <main className='registration-page'>
+        <div className='bg-azul min-h-screen flex justify-center px-4 py-8'>
+            <div className='flex justify-center items-center w-full'>
+              <div className='w-full max-w-xl'>
                 <div className='flex justify-center'>
                   <Image src={logo} width={75} height={10} alt=''/>
                   <h2 className='ml-3 font-extrabold text-4xl text-white text1'>OBREIRO<br/>DIGITAL</h2>
@@ -130,7 +129,7 @@ export default function cadastroPastor() {
                             <h1 className='text-white text-4xl mt-10 text1 flex justify-center'>Cadastro de Pastor</h1>
                             <p className='text-white text-xl text2 mt-2 flex justify-center mb-6'>Agora, cadastre o Pastor da sua igreja para acessar o sistema</p>
                         </div>
-                        <div className=''>
+                        <div className='registration-fields'>
                             <div className='flex flex-col'>
                                 <label className='text-white text1 text-xl mt-2 mb-1'>Código de Membro</label>
 
@@ -193,7 +192,7 @@ export default function cadastroPastor() {
                                         className='ml-[1vh]'
                                         onClick={() => setShowPassword(!showPassword)}
                                       >
-                                        <Image src={showPassword ? on : off} width={40} height={40} alt={showPassword ? 'Open' : 'Closed'}/>
+                                        {showPassword ? <Eye size={28} aria-hidden="true" /> : <EyeOff size={28} aria-hidden="true" />}
                                       </button>
                                     </div>                                
                                 </div>                            
@@ -233,7 +232,7 @@ export default function cadastroPastor() {
                               </div>
                             </div>                           
                             
-                            <button type='submit' className='border-2 rounded-lg h-12 w-[64dvh] mt-3 border-white text2 text-white active:bg-white active:text-azul' onClick={handleRegister}>Cadastrar</button>
+                            <button type='submit' className='border-2 rounded-lg h-12 w-full mt-3 border-white text2 text-white active:bg-white active:text-azul' onClick={handleRegister}>Cadastrar</button>
                             <ToastContainer />
                         </div>
                     </div>

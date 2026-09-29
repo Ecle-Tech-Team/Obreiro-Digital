@@ -1,20 +1,16 @@
 "use client";
+import { AppModal, FilterButton, PageTitle, SearchField } from '@/app/components/shared/MemberStyle';
 import React, { useState, useEffect, useRef } from "react";
+import { ChevronDown, Search, X } from "lucide-react";
 import api from "@/app/api/api";
 import MenuInferior from "@/app/components/menuInferior/menuInferior";
 import MenuSuperior from "@/app/components/menuSuperior/menuSuperior";
 import EventosCardMobile from "@/app/components/eventosCardMobile/eventosCardMobile";
 import EventoModalMobile from "@/app/components/eventosMobileModal/eventosMobileModal";
 import { format } from "date-fns";
-import Image from "next/image";
 import Link from "next/link";
-import Modal from "react-modal";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import seta from "@/public/icons/seta-down.svg";
-import filter from "@/public/icons/filter.png";
-import close from "@/public/icons/close.svg";
-import lupa from "@/public/icons/lupa.svg";
 
 interface User {
   id_user: number;
@@ -155,24 +151,20 @@ export default function eventosMobile() {
   const [searchModalIsOpen, setSearchModalIsOpen] = useState(false);
 
   return (
-    <main>
+    <main className="mobile-page">
       <div>
         <div>
           <MenuSuperior />
           <MenuInferior />
         </div>
 
-        <div className="flex">
-          <div className="mt-5 relative sm:left-[2vh]" ref={dropdownRef}>
-            <button onClick={toggleDropdown} className="ml-2 flex">
-              <h1 className="text-black text1 sm:mr-[1vh] sm:text-3xl md:text-4xl lg:text-5xl">
-                Eventos
-              </h1>
-              <Image
-                src={seta}
+        <div className="mobile-list-header">
+          <div className="relative" ref={dropdownRef}>
+            <button onClick={toggleDropdown} className="flex items-center gap-2">
+              <PageTitle>Eventos</PageTitle>
+              <ChevronDown
                 width={24}
-                height={24}
-                alt="Arrow Icon"
+                height={24} aria-label="Arrow Icon"
                 className={`${
                   isDropdownOpen ? "rotate-180" : ""
                 } transition-transform`}
@@ -190,31 +182,32 @@ export default function eventosMobile() {
               </div>
             )}
           </div>
-          <div className="flex">
-            <div className="mt-5 relative sm:left-[11vh] md:left-[20vh] lg:left-[54vh]">
-              <div className="flex mb-4 items-center gap-5">
+          <div className="flex min-w-0">
+            <div className="relative">
+              <div className="mobile-list-controls">
                 {/* Botão de filtro */}
                 <div className="flex gap-2">
-                  <button
+                  <FilterButton
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    className="flex items-center justify-center px-2 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
-                  >
-                    <Image src={filter} width={30} height={30} alt="Filtrar" />
-                  </button>
+
+                   />
                 </div>
 
                 {/* Campo de pesquisa */}
                 <div className="flex-1">
-                  <button
+                  <SearchField
+                    readOnly
+                    className="cursor-pointer"
+                    value={searchTerm}
+                    placeholder="Pesquisar eventos..."
+                    aria-label="Abrir pesquisa de eventos"
                     onClick={() => setSearchModalIsOpen(true)}
-                    className="bg-azul  py-[1.2vh] px-4 rounded-lg"
-                  >
-                    <Image src={lupa} width={23} height={30} alt="Pesquisar" />
-                  </button>
+                    onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSearchModalIsOpen(true); } }}
+                  />
                 </div>
                 {/* Dropdown de filtros */}
                 {isFilterOpen && (
-                  <div className="absolute right-5 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
+                  <div className="od-filter-menu absolute right-5 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
                     <button
                       className={`block w-full text-left px-4 py-2 ${
                         sortCriteria === "recent"
@@ -277,8 +270,8 @@ export default function eventosMobile() {
           </div>
         </div>
 
-        <div className="flex justify-center">
-          <div className="bg-white shadow-xl rounded-xl self-center mt-7 w-[40vh] h-[70vh] max-h-[70vh] p-10 overflow-y-scroll">
+        <div className="px-4">
+          <div className="bg-white shadow-xl rounded-xl mt-5 w-full min-w-0 max-h-[65vh] p-4 sm:p-6 overflow-y-auto">
             <div className="grid grid-cols-1 gap-[3vh]">
               {sortedEventos.length === 0 ? (
                 <p className="text-center text-black text1 text-4xl mt-5 text-gray-4]">
@@ -345,7 +338,7 @@ export default function eventosMobile() {
           }
         />
 
-        <Modal
+        <AppModal
           className="text-white flex flex-col bg-black bg-opacity-0"
           isOpen={searchModalIsOpen}
           onRequestClose={() => setSearchModalIsOpen(false)}
@@ -353,21 +346,18 @@ export default function eventosMobile() {
         >
           <div className="flex flex-col justify-center self-center bg-white mt-[15vh] rounded-lg shadow-xl">
             <div className="cursor-pointer flex place-content-start rounded-lg">
-              <Image
+              <X
                 onClick={() => setSearchModalIsOpen(false)}
-                src={close}
                 width={40}
-                height={40}
-                alt="close Icon"
+                height={40} aria-label="close Icon"
                 className="bg-red-500 hover:bg-red-600 rounded-tl-lg"
               />
             </div>
 
             <div className="flex flex-row gap-3 px-5 py-2 mt-3">
-              <input
+              <SearchField
                 type="text"
                 placeholder="Digite o nome, categoria ou data..."
-                className="px-4 py-3 rounded-lg text2 text-slate-500 border focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -379,7 +369,7 @@ export default function eventosMobile() {
                   setSearchModalIsOpen(false);
                 }}
               >
-                <Image src={lupa} width={23} height={20} alt="Pesquisar" />
+                <Search width={23} height={20} aria-label="Pesquisar" />
               </button>
             </div>
 
@@ -394,7 +384,7 @@ export default function eventosMobile() {
               Limpar
             </button>
           </div>
-        </Modal>
+        </AppModal>
       </div>
     </main>
   );

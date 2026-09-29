@@ -1,16 +1,13 @@
 "use client";
+import { AddButton, AppModal, DataTable, FilterButton, PageTitle, SearchField } from '@/app/components/shared/MemberStyle';
 import React, { useState, useEffect, useRef } from "react";
+import { Trash2, X } from "lucide-react";
 import { format } from "date-fns";
 import MenuLateral from "@/app/components/menuLateral/menuLateral";
 import Link from "next/link";
-import Image from "next/image";
-import Modal from "react-modal";
 import api from "../../api/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import close from "@/public/icons/close.svg";
-import lixo from "@/public/icons/delete.svg";
-import filter from "@/public/icons/filter.png";
 
 interface Igreja {
   id_igreja: number;
@@ -461,55 +458,41 @@ export default function estoque() {
     <main>
       <div className="flex">
         <MenuLateral />
-        <div className="sm:ml-[10vh] md:ml-[20vh] lg:ml-[5vh] mr-[10vh] mb-[5vh]">
-          <div className="flex mt-12">
-            <Link
-              href={"/../../pages/inicio"}
-              className="text-cinza text-lg text3"
-            >
-              Início &#62;
-            </Link>
-            <Link
-              href={"/../../pages/estoque"}
-              className="text-cinza text-lg text3 ml-2"
-            >
-              Estoque &#62;
-            </Link>
-          </div>
+        <div className="app-content">
+          <nav className="mb-6 md:mb-0" aria-label="Navegação">
+            <ol className="flex flex-wrap items-center text-sm text-gray-600">
+              <li><Link href={"/../../pages/inicio"} className="text3 transition-colors hover:text-azul">Início</Link></li>
+              <li className="mx-2" aria-hidden="true">&#62;</li>
+              <li className="text3 font-semibold text-azul" aria-current="page">Estoque</li>
+            </ol>
+          </nav>
 
-          <div className="flex">
-            <div className="mt-10">
-              <h1 className="text-black text1 text-5xl">Estoque</h1>
+          <div className="page-toolbar od-reference-toolbar mt-6">
+            <div>
+              <PageTitle>Estoque</PageTitle>
             </div>
 
-            <div className="flex">
-              <div className="mt-10 relative sm:right-[5vh] md:left-[20vh] lg:left-[59vh]">
-                <div className="flex mb-4">
+            <div className="page-toolbar-actions">
+              <div className="relative flex min-w-0 flex-1">
+                <div className="flex w-full min-w-0">
                   {/* Botão de filtro */}
-                  <div className="flex gap-5 relative">
-                    <button
+                  <div className="od-list-controls relative flex w-full min-w-0 items-center gap-2">
+                    <FilterButton
                       onClick={() => setIsFilterOpen(!isFilterOpen)}
-                      className="flex items-center justify-center px-5 py-2 hover:bg-slate-200 cursor-pointer rounded-lg focus:outline-none"
-                    >
-                      <Image
-                        src={filter}
-                        width={30}
-                        height={30}
-                        alt="Filtrar"
-                      />
-                    </button>
+
+                     />
                     <div className="flex-1">
-                      <input
+                      <SearchField
                         type="text"
                         placeholder="Pesquisar produtos..."
-                        className="sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-xl md:text-lg lg:text-xl text-gray-600 pl-5 text2 text-left content-center justify-center rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500"
+
                         value={searchTerm}
                         onChange={(e) => handleSearch(e.target.value)}
                       />
                     </div>
                     {/* Dropdown de filtros */}
                     {isFilterOpen && (
-                      <div className="absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
+                      <div className="od-filter-menu absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
                         <button
                           className={`block w-full text-left px-4 py-2 ${
                             sortCriteria === "recent"
@@ -584,26 +567,21 @@ export default function estoque() {
                   </div>
                 </div>
               </div>
-              <div className="flex relative sm:right-[10vh] md:left-[35vh] lg:left-[61.2vh]">
-                <div className="mt-10 ml-1 flex justify-center">
-                  <p
-                    className="bg-azul sm:h-[5.2vh] md:h-[5.5vh] lg:h-[7vh] sm:w-[21vh] md:w-[28vh] lg:w-[32vh] sm:text-2xl md:text-2xl lg:text-3xl text-white text2 text-center content-center justify-center rounded-xl cursor-pointer hover:bg-blue-600 active:bg-blue-400"
-                    onClick={() => openModal("new")}
-                  >
-                    Novo Produto +
-                  </p>
+              <div className="flex min-w-0">
+                <div className="flex justify-center">
+                  <AddButton onClick={() => openModal("new")}>Novo Produto</AddButton>
                 </div>
               </div>
             </div>
 
-            <div className="ml-[20vh]">
-              <div className="space-x-16 shadow-xl absolute rounded-xl top-[24%] sm:left-[2vh] md:left-[20vh] lg:left-[35vh] h-[72vh] max-h-[72vh] overflow-y-auto overflow-x-auto">
+            <div className="page-list-region">
+              <div className="page-table-scroll mt-4 max-h-[70vh]">
                 {sortedEstoque.length === 0 ? (
                   <p className="text-center text-black text1 text-4xl mt-5 text-gray-4">
                     Nenhum produto encontrado.
                   </p>
                 ) : (
-                  <table>
+                  <DataTable>
                     <thead className="sticky top-0">
                       <tr className="bg-azul text-white rounded-xl">
                         <th className="text1 text-white text-2xl px-[4.9vh] py-2 ">
@@ -634,25 +612,25 @@ export default function estoque() {
                           onClick={() => openModal("edit", prod)}
                           className="cursor-pointer hover:bg-slate-200"
                         >
-                          <td className="text-center text2 text-xl py-3">
+                          <td data-label="Cód. Produto" className="text-center text2 text-xl py-3">
                             {prod.cod_produto}
                           </td>
-                          <td className="text-center text2 text-xl py-3">
+                          <td data-label="Nome" className="text-center text2 text-xl py-3">
                             {prod.nome_produto}
                           </td>
-                          <td className="text-center text2 text-xl py-3">
+                          <td data-label="Categoria" className="text-center text2 text-xl py-3">
                             {prod.categoria}
                           </td>
-                          <td className="text-center text2 text-xl py-3">
+                          <td data-label="Quantidade" className="text-center text2 text-xl py-3">
                             {prod.quantidade}
                           </td>
-                          <td className="text-center text2 text-xl py-3">
+                          <td data-label="Validade" className="text-center text2 text-xl py-3">
                             {format(new Date(prod.validade), "dd/MM/yyyy")}
                           </td>
-                          <td className="text-center text2 text-xl py-3">
+                          <td data-label="Preço Unitário" className="text-center text2 text-xl py-3">
                             {prod.preco_unitario}
                           </td>
-                          <td className="text-center">
+                          <td data-label="Ações" className="text-center">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -660,23 +638,21 @@ export default function estoque() {
                               }}
                               className="px-2 py-1 mr-5 bg-red-500 text-white rounded hover:bg-red-600"
                             >
-                              <Image
-                                src={lixo}
+                              <Trash2
                                 width={30}
-                                height={40}
-                                alt="lixo Icon"
+                                height={40} aria-label="lixo Icon"
                               />
                             </button>
                           </td>
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </DataTable>
                 )}
               </div>
             </div>
 
-            <Modal
+            <AppModal
               isOpen={isDeleteModalOpen}
               onRequestClose={() => setIsDeleteModalOpen(false)}
               contentLabel="Confirmar exclusão"
@@ -705,9 +681,9 @@ export default function estoque() {
                   </button>
                 </div>
               </div>
-            </Modal>
+            </AppModal>
 
-            <Modal
+            <AppModal
               className="text-white flex flex-col"
               isOpen={modalIsOpen && modalType === "new"}
               onRequestClose={closeModal}
@@ -715,12 +691,10 @@ export default function estoque() {
             >
               <div className="flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl">
                 <div className="cursor-pointer flex place-content-end rounded-lg">
-                  <Image
+                  <X
                     onClick={closeModal}
-                    src={close}
                     width={40}
-                    height={40}
-                    alt="close Icon"
+                    height={40} aria-label="close Icon"
                     className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
                   />
                 </div>
@@ -842,9 +816,9 @@ export default function estoque() {
                   </button>
                 </div>
               </div>
-            </Modal>
+            </AppModal>
 
-            <Modal
+            <AppModal
               className="text-white flex flex-col"
               isOpen={modalIsOpen && modalType === "edit"}
               onRequestClose={closeModal}
@@ -852,16 +826,14 @@ export default function estoque() {
             >
               <div className="flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl">
                 <div className="cursor-pointer flex place-content-end rounded-lg">
-                  <Image
+                  <X
                     onClick={closeModal}
-                    src={close}
                     width={40}
-                    height={40}
-                    alt="close Icon"
+                    height={40} aria-label="close Icon"
                     className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
                   />
                 </div>
-                
+
                 <h2 className="text-white text1 text-4xl flex justify-center">
                   Editar Produto
                 </h2>
@@ -984,7 +956,7 @@ export default function estoque() {
                   </button>
                 </div>
               </div>
-            </Modal>
+            </AppModal>
           </div>
         </div>
         <ToastContainer />

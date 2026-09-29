@@ -1,6 +1,5 @@
 import React, { FormEvent } from "react";
-import Image from "next/image";
-import lixo from "@/public/icons/delete.svg";
+import { Trash2 } from "lucide-react";
 
 interface Igreja {
   id_igreja: number;
@@ -45,7 +44,7 @@ export default function AvisosCard({
               }}
               className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
             >
-              <Image src={lixo} width={30} height={40} alt="lixo Icon" />
+              <Trash2 width={30} height={40} aria-label="lixo Icon" />
             </button>
           )}
         </div>
