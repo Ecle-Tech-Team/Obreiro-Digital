@@ -24,7 +24,7 @@ interface Igreja {
   id_matriz: number;
 }
 
-export default function Igrejas({ igrejas } : { igrejas: Igreja[] }) {
+export default function Igrejas() {
   const [nome, setNome] = useState<string>("");
   const [cnpj, setCnpj] = useState<string>("");
   const [data_fundacao, setDataFundacao] = useState<string>("");

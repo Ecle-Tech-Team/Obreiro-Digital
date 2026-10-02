@@ -1,7 +1,7 @@
 'use client'
 import { AddButton, AppModal, PageTitle } from '@/app/components/shared/MemberStyle';
 import React, { useState, useEffect } from 'react'
-import { UserRound } from 'lucide-react'
+import { UserRound, X } from 'lucide-react'
 import { format } from 'date-fns';
 import MenuInferior from '@/app/components/menuInferior/menuInferior'
 import MenuSuperior from '@/app/components/menuSuperior/menuSuperior'
@@ -263,21 +263,28 @@ export default function visitantesMobile() {
                 </div>
             </div>
 
+            <ToastContainer />
             <AppModal
-                className="text-white flex flex-col" 
+                className="responsive-modal"
                 isOpen={modalIsOpen} 
                 onRequestClose={closeModal}
                 contentLabel="Novo Visitante +"
             >
-                <div className='flex flex-col justify-center self-center bg-azul px-5 py-6 mt-[10vh] rounded-lg shadow-xl'>
-                    <h2 className='text-white text1 text-3xl flex justify-center'>Novo Visitante</h2>
+                <div className='od-modal-surface flex flex-col !p-0'>
+                    <div className='sticky top-0 z-10 flex items-center justify-between gap-3 bg-azul px-5 py-4'>
+                        <h2 className='text1 text-xl text-white sm:text-2xl'>Novo Visitante</h2>
+                        <button type='button' onClick={closeModal} aria-label='Fechar modal' className='flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white hover:bg-white/20'>
+                            <X size={22} aria-hidden='true' />
+                        </button>
+                    </div>
+                    <div className='grid min-w-0 gap-4 p-5 sm:p-6'>
 
-                    <div className='flex flex-col'>
-                        <label className='text-white text1 text-lg mt-5 mb-1'>Nome</label>
+                    <div className='flex min-w-0 flex-col gap-1'>
+                        <label className='text1 text-sm text-gray-700'>Nome</label>
 
                         <input 
                             type="text" 
-                            className='px-4 py-3 rounded-lg text2 text-black'
+                            className='text2 w-full min-w-0 rounded-lg border border-gray-300 bg-slate-50 px-4 py-3 text-gray-800'
                             placeholder='Digite o Nome...'
                             value={nome}
                             onChange={(e) => setNome(e.target.value)}   
@@ -286,11 +293,11 @@ export default function visitantesMobile() {
                         />
                     </div>
 
-                    <div className='flex flex-col'>
-                        <label className='text-white text1 text-lg mt-5 mb-1'>Convidado Por</label>
+                    <div className='flex min-w-0 flex-col gap-1'>
+                        <label className='text1 text-sm text-gray-700'>Convidado Por</label>
 
                         <select                              
-                            className='bg-white px-4 py-3 rounded-lg text2 text-black'
+                            className='text2 w-full min-w-0 rounded-lg border border-gray-300 bg-slate-50 px-4 py-3 text-gray-800'
                             value={convidadoPor}
                             onChange={(e) => setConvidadoPor(Number(e.target.value))}                
                             required 
@@ -305,12 +312,12 @@ export default function visitantesMobile() {
                         </select>
                     </div>
 
-                    <div className='flex'>
-                        <div className='flex flex-col'>
-                            <label className='text-white text1 text-lg mt-5 mb-1'>Cristão?</label>
+                    <div className='grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2'>
+                        <div className='flex min-w-0 flex-col gap-1'>
+                            <label className='text1 text-sm text-gray-700'>Cristão?</label>
 
                             <select                              
-                                className='bg-white px-4 py-3 rounded-lg text2 text-black'
+                                className='text2 w-full min-w-0 rounded-lg border border-gray-300 bg-slate-50 px-4 py-3 text-gray-800'
                                 value={cristao}
                                 onChange={(e) => setCristao(e.target.value)}                 
                                 required 
@@ -321,12 +328,12 @@ export default function visitantesMobile() {
                             </select>
                         </div>
 
-                        <div className='flex flex-col ml-4'>
-                            <label className='text-white text1 text-lg mt-5 mb-1'>Data da Visita</label>
+                        <div className='flex min-w-0 flex-col gap-1'>
+                            <label className='text1 text-sm text-gray-700'>Data da Visita</label>
 
                             <input 
                                 type="date" 
-                                className='px-4 py-3 rounded-lg text2 text-black'
+                                className='text2 w-full min-w-0 rounded-lg border border-gray-300 bg-slate-50 px-4 py-3 text-gray-800'
                                 value={dataVisita}
                                 onChange={(e) => setDataVisita (e.target.value)}
                                 required 
@@ -334,12 +341,12 @@ export default function visitantesMobile() {
                         </div>                        
                     </div>
 
-                    <div className='flex flex-col'>
-                        <label className='text-white text1 text-lg mt-5 mb-1'>Congregação</label>
+                    <div className='flex min-w-0 flex-col gap-1'>
+                        <label className='text1 text-sm text-gray-700'>Congregação</label>
 
                         <input 
                             type="text" 
-                            className='px-4 py-3 rounded-lg text2 text-black'
+                            className='text2 w-full min-w-0 rounded-lg border border-gray-300 bg-slate-50 px-4 py-3 text-gray-800'
                             placeholder='Digite a Congregação...'
                             value={congregacao}
                             onChange={(e) => setCongregacao (e.target.value)}
@@ -347,12 +354,12 @@ export default function visitantesMobile() {
                         />
                     </div>
 
-                    <div className='flex flex-col'>
-                        <label className='text-white text1 text-lg mt-5 mb-1'>Ministério</label>
+                    <div className='flex min-w-0 flex-col gap-1'>
+                        <label className='text1 text-sm text-gray-700'>Ministério</label>
 
                         <input 
                             type="text" 
-                            className='px-4 py-3 rounded-lg text2 text-black'
+                            className='text2 w-full min-w-0 rounded-lg border border-gray-300 bg-slate-50 px-4 py-3 text-gray-800'
                             placeholder='Digite o Ministério...'
                             value={ministerio}
                             onChange={(e) => setMinisterio (e.target.value)}
@@ -360,11 +367,11 @@ export default function visitantesMobile() {
                         />
                     </div>
 
-                    <div className='flex flex-col'>
-                        <label className='text-white text1 text-lg mt-5 mb-1'>Igreja Realizadora</label>
+                    <div className='flex min-w-0 flex-col gap-1'>
+                        <label className='text1 text-sm text-gray-700'>Igreja Realizadora</label>
 
                         <select                              
-                            className='px-4 py-3 rounded-lg text2 text-black'                            
+                            className='text2 w-full min-w-0 rounded-lg border border-gray-300 bg-slate-50 px-4 py-3 text-gray-800'
                             value={nomeIgreja}
                             onChange={(e) => setNomeIgreja(Number(e.target.value))}
                             required
@@ -381,10 +388,10 @@ export default function visitantesMobile() {
                         </select>
                     </div>
 
-                    <button className='border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
+                    <button className='text2 min-h-12 rounded-lg bg-azul px-4 py-3 font-semibold text-white hover:bg-blue-600' onClick={handleRegister}>Enviar</button>
 
+                    </div>
                 </div>
-                <ToastContainer />
             </AppModal>
 
         </div>

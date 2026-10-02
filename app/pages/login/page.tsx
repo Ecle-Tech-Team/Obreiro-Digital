@@ -4,6 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import api from "../../api/api";
+import axios from "axios";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast, ToastContainer } from "react-toastify";
@@ -115,8 +116,12 @@ export default function Login() {
           }, 1500);
         }
       }
-    } catch {
-      notifyError();
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        toast.error("Email ou senha incorretos.", { position: "top-center" });
+      } else {
+        notifyError();
+      }
     }
   }
   return (

@@ -332,18 +332,22 @@ const sortedPedidos = sortPedidos(filteredPedidos);
           </div>
         </div>
 
+        <ToastContainer />
         <AppModal
-          className="text-white flex flex-col bg-black bg-opacity-0"
+          className="responsive-modal"
           isOpen={searchModalIsOpen}
           onRequestClose={() => setSearchModalIsOpen(false)}
           contentLabel="Pesquisar Pedidos"
         >
-          <div className="flex flex-col justify-center self-center bg-white mt-[15vh] rounded-lg shadow-xl">            
-            <div className='cursor-pointer flex place-content-start rounded-lg'>
-              <X onClick={() => setSearchModalIsOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tl-lg'/>
+          <div className="od-modal-surface flex flex-col !p-0">
+            <div className="flex items-center justify-between gap-3 bg-azul px-5 py-4">
+              <h2 className="text1 !text-xl text-white sm:!text-2xl">Pesquisar pedidos</h2>
+              <button type="button" onClick={() => setSearchModalIsOpen(false)} aria-label="Fechar modal" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white hover:bg-white/20">
+                <X size={22} aria-hidden="true" />
+              </button>
             </div>
 
-            <div className="flex flex-row gap-3 px-5 py-2 mt-3">
+            <div className="flex min-w-0 gap-3 px-5 pt-5">
               <SearchField
                 type="text"
                 placeholder="Digite o nome, categoria ou data..."
@@ -352,7 +356,8 @@ const sortedPedidos = sortPedidos(filteredPedidos);
               /> 
 
               <button
-                className="bg-azul px-4 py-1 rounded-lg"
+                type="button"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-azul text-white hover:bg-blue-600"
                 onClick={() => {
                   handleSearch(searchTerm);
                   setSearchModalIsOpen(false);
@@ -364,7 +369,8 @@ const sortedPedidos = sortPedidos(filteredPedidos);
 
 
               <button
-                className="border-2 mx-5 mb-6 px-4 py-2 mt-2 rounded-lg text2 text-gray-600 text-lg"
+                type="button"
+                className="text2 mx-5 mb-5 mt-4 min-h-11 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
                 onClick={() => {
                   setSearchTerm('');
                   setSearchModalIsOpen(false);                
@@ -379,24 +385,26 @@ const sortedPedidos = sortPedidos(filteredPedidos);
         </AppModal>
 
         <AppModal
-          className="text-white flex flex-col" 
+          className="responsive-modal"
           isOpen={modalIsOpen} 
           onRequestClose={closeModal}
           contentLabel="Novo Pedido"
         >
-          <div className='flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl'>
-            <div className='cursor-pointer flex place-content-end rounded-lg'>
-              <X onClick={closeModal} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
+          <div className='od-modal-surface flex flex-col !p-0'>
+            <div className='sticky top-0 z-10 flex items-center justify-between gap-3 bg-azul px-5 py-4'>
+              <h2 className='text1 text-xl text-white sm:text-2xl'>Novo Pedido</h2>
+              <button type='button' onClick={closeModal} aria-label='Fechar modal' className='flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white hover:bg-white/20'>
+                <X size={22} aria-hidden='true' />
+              </button>
             </div>
-            <div className='flex flex-col px-7 pb-10'>
-              <h2 className='text-white text1 text-3xl flex justify-center'>Novo Pedido</h2>                  
+            <div className='flex min-w-0 flex-col gap-4 p-5 sm:p-6'>
 
-                <div className='flex flex-col'>
-                  <label className='text-white text1 text-lg mt-5 mb-1'>Nome</label>
+                <div className='flex min-w-0 flex-col gap-1'>
+                  <label className='text1 text-sm text-gray-700'>Nome</label>
 
                   <input                    
                     type="text" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
+                    className='text2 w-full min-w-0 rounded-lg border border-gray-300 bg-slate-50 px-4 py-3 text-gray-800'
                     placeholder='Digite o Nome...'
                     value={nome_produto}
                     onChange={(e) => setNomeProduto(e.target.value)}
@@ -405,11 +413,11 @@ const sortedPedidos = sortPedidos(filteredPedidos);
                     />
                 </div>
 
-                <div className='flex flex-col'>
-                  <label className='text-white text1 text-lg mt-5 mb-1'>Categoria</label>
+                <div className='flex min-w-0 flex-col gap-1'>
+                  <label className='text1 text-sm text-gray-700'>Categoria</label>
 
                   <select                    
-                    className='px-4 py-3 rounded-lg text2 bg-white text-slate-500'
+                    className='text2 w-full min-w-0 rounded-lg border border-gray-300 bg-slate-50 px-4 py-3 text-gray-800'
                     value={categoria_produto}
                     onChange={(e) => setCategoriaProduto(e.target.value)}
                     required 
@@ -426,34 +434,33 @@ const sortedPedidos = sortPedidos(filteredPedidos);
                 </div>                        
 
 
-              <div className='flex flex-col'>
-                <label className='text-white text1 text-lg mt-5 mb-1'>Quantidade</label>
+              <div className='flex min-w-0 flex-col gap-1'>
+                <label className='text1 text-sm text-gray-700'>Quantidade</label>
 
                 <input                    
                   type="text" 
-                  className='px-4 py-3 rounded-lg text2 text-slate-500'                      
+                  className='text2 w-full min-w-0 rounded-lg border border-gray-300 bg-slate-50 px-4 py-3 text-gray-800'
                   value={quantidade}
                   onChange={(e) => setQuantidade(Number(e.target.value))}
                   required 
                   />
               </div>
 
-              <div className='flex flex-col'>
-                <label className='text-white text1 text-lg mt-5 mb-1'>Data do Pedido</label>
+              <div className='flex min-w-0 flex-col gap-1'>
+                <label className='text1 text-sm text-gray-700'>Data do Pedido</label>
 
                 <input                    
                   type="date" 
-                  className='px-4 py-3 rounded-lg text2 text-slate-500'
+                  className='text2 w-full min-w-0 rounded-lg border border-gray-300 bg-slate-50 px-4 py-3 text-gray-800'
                   placeholder='Digite o Nome...'
                   value={data_pedido}
                   onChange={(e) => setDataPedido(e.target.value)}
                   required 
                   />
               </div>                         
-              <button className='border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
+              <button className='text2 min-h-12 rounded-lg bg-azul px-4 py-3 font-semibold text-white hover:bg-blue-600' onClick={handleRegister}>Enviar</button>
             </div>
           </div>
-          <ToastContainer />
         </AppModal>
 
       </div>
