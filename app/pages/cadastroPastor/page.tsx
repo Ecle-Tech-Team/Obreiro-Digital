@@ -20,7 +20,7 @@ export default function cadastroPastor() {
   const [email, setEmail] = useState<string>('');
   const [senha, setSenha] = useState<string>('');
   const [birth, setBirth] = useState<string>('');
-  const [cargo, setCargo] = useState<string>('Pastor');
+  const [cargo, setCargo] = useState<string>('Pastor Matriz');
   const [nomeIgreja, setNomeIgreja] = useState<number>(0)
 
   const [showPassword, setShowPassword] = useState(false);
@@ -32,8 +32,12 @@ export default function cadastroPastor() {
   useEffect(() => {
     const fetchIgrejas = async () => {
       try {
-        const response = await api.get('/departamento/igreja');
+        const response = await api.get('/igreja');
         setIgreja(response.data);
+        const igrejaCadastroId = Number(sessionStorage.getItem('igrejaCadastroId'));
+        if (igrejaCadastroId && response.data.some((item: Igreja) => item.id_igreja === igrejaCadastroId)) {
+          setNomeIgreja(igrejaCadastroId);
+        }
       } catch (error) {
         console.error('Error fetching igrejas:', error);
       }
@@ -102,7 +106,8 @@ export default function cadastroPastor() {
           id_igreja: nomeIgreja
         }           
        
-        const response = await api.post('/cadastro', data)           
+        await api.post('/cadastro', data)
+        sessionStorage.removeItem('igrejaCadastroId');
         
         notifySuccess();
 

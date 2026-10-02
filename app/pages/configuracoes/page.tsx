@@ -425,13 +425,13 @@ export default function configuracoes() {
                 <X onClick={() => setIsEmailModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
               </div>
 
-              <div className="px-10">
-              <h2 className="text-xl text1 font-bold text-white mb-4">Novo Email</h2>
+              <h2 className="text-xl text1 font-bold text-white mb-4 px-10">Novo Email</h2>
 
+              <div className="flex flex-col px-10 gap-4">
                 <input
                   type="email"
                   placeholder="Digite o novo email"
-                  className="px-4 py-3 rounded-lg text2 text-black"
+                  className="w-full px-4 py-3 rounded-lg text2 text-black"
                   value={novoEmail}
                   onChange={(e) => setNovoEmail(e.target.value)}
                 />
@@ -595,11 +595,11 @@ export default function configuracoes() {
                 <X onClick={() => setIsBugModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
               </div>
 
-              <div className="px-10">
-                <h2 className="text-white text-3xl text1 font-bold mb-4">Relatar Bug</h2>
+              <h2 className="text-xl text1 font-bold text-white mb-4 px-10">Relatar Bug</h2>
 
+              <div className="flex flex-col px-10 gap-4">
                 <select
-                  className="bg-white text-black w-full mb-6 px-4 py-[1.2vh] border rounded-lg"
+                  className="bg-white text-black w-full px-4 py-3 border rounded-lg"
                   value={motivo}
                   onChange={(e) => setMotivo(e.target.value)}
                 >
@@ -613,7 +613,7 @@ export default function configuracoes() {
 
                 <textarea
                   placeholder="Descrição do Bug"
-                  className="w-full mb-3 px-4 py-3 rounded-lg text2 text-black"
+                  className="w-full px-4 py-3 rounded-lg text2 text-black"
                   rows={4}
                   value={descricao}
                   onChange={(e) => setDescricao(e.target.value)}

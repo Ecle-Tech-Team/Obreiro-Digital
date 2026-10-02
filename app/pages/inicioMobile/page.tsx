@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { CalendarDays, Package, Users } from "lucide-react";
+import { CalendarDays, ChevronRight, Package, Users } from "lucide-react";
 import api from "@/app/api/api";
 import MenuInferior from "@/app/components/menuInferior/menuInferior";
 import MenuSuperior from "@/app/components/menuSuperior/menuSuperior";
@@ -112,130 +112,102 @@ export default function inicioMobile() {
   }, []);
 
   return (
-    <main className="mobile-page">
-      <div>
-        <div>
-          <MenuSuperior />
-          <MenuInferior />
+    <main className="mobile-page min-h-screen bg-gray-100">
+      <MenuSuperior />
+      <MenuInferior />
+
+      <div className="mx-auto w-full max-w-5xl space-y-5 px-4 py-5 sm:space-y-6 sm:px-6 sm:py-7">
+        <div className="min-w-0 rounded-xl bg-azul p-5 sm:p-7">
+          <h1 className="text1 break-words text-2xl text-white sm:text-3xl lg:text-4xl">
+            A Paz {nome} {cargo}!
+          </h1>
+          <h2 className="text2 mt-2 text-base leading-snug text-white sm:text-lg lg:text-xl">
+            Veja as principais informações sobre a sua igreja:
+          </h2>
         </div>
 
-        <div className="px-3">
-          <div className="bg-azul rounded-xl p-4">
-            <h1 className="text1 text-white text-2xl ">
-              A Paz {nome} {cargo}!
-            </h1>
-            <h2 className="text2 text-white text-base mt-1 leading-5">
-              Veja as principais informações
-              <br />
-              sobre a sua igreja:
-            </h2>
-          </div>
+        <div className="grid grid-cols-1 items-stretch gap-4 min-[390px]:grid-cols-2 sm:gap-5">
+          <Link
+            href={"/../../pages/eventosMobile"}
+            className="group flex h-full min-w-0 flex-col rounded-xl bg-white p-5 shadow-xl transition-shadow hover:shadow-2xl"
+          >
+            <div className="flex min-w-0 items-center gap-2.5">
+              <CalendarDays size={28} className="shrink-0 text-azul" aria-hidden="true" />
+              <h4 className="text3 min-w-0 text-lg text-black sm:text-xl">Eventos</h4>
+            </div>
+            <div className="mt-5 flex-1">
+              <p className="text2 text-sm text-azul sm:text-base">Eventos Totais</p>
+              <p className="text2 mt-1 text-2xl font-semibold text-black">{totalEventos}</p>
+            </div>
+            <span className="text2 mt-5 inline-flex items-center gap-1 text-sm text-azul group-hover:text-blue-700">
+              Ver detalhes <ChevronRight size={18} aria-hidden="true" />
+            </span>
+          </Link>
 
-          <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-4 mt-6">
-            <div className="contents">
-              <div className="bg-white shadow-xl min-w-0 rounded-xl p-4">
-                <Link href={"/../../pages/eventosMobile"}>
-                  <div className="ml-4 mt-3">
-                    <CalendarDays size={28} className="text-azul" aria-hidden="true" />
-                    <h4 className="text3 text-xl text-black mt-1">Eventos</h4>
-                  </div>
+          <Link
+            href={"/../../pages/visitantesMobile"}
+            className="group flex h-full min-w-0 flex-col rounded-xl bg-white p-5 shadow-xl transition-shadow hover:shadow-2xl"
+          >
+            <div className="flex min-w-0 items-center gap-2.5">
+              <Users size={28} className="shrink-0 text-azul" aria-hidden="true" />
+              <h4 className="text3 min-w-0 text-lg text-black sm:text-xl">Visitantes</h4>
+            </div>
+            <div className="mt-5 flex-1">
+              <p className="text2 text-sm text-azul sm:text-base">Visitantes Totais</p>
+              <p className="text2 mt-1 text-2xl font-semibold text-black">{totalVisitantes}</p>
+            </div>
+            <span className="text2 mt-5 inline-flex items-center gap-1 text-sm text-azul group-hover:text-blue-700">
+              Ver detalhes <ChevronRight size={18} aria-hidden="true" />
+            </span>
+          </Link>
+        </div>
 
-                  <div className="ml-4 mt-3">
-                    <p className="text2 text-azul text-base">Eventos Totais</p>
-                    <p className="text2 text-black text-base relative bottom-1">
-                      {totalEventos}
-                    </p>
-                  </div>
-                </Link>
+        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2 lg:gap-5">
+          <Link
+            href={"/../../pages/pedidosMobile"}
+            className="group flex h-full min-w-0 flex-col rounded-xl bg-white p-5 shadow-xl transition-shadow hover:shadow-2xl"
+          >
+            <div className="flex min-w-0 items-center gap-2.5">
+              <Package size={28} className="shrink-0 text-azul" aria-hidden="true" />
+              <h4 className="text3 min-w-0 text-xl text-black">Pedidos</h4>
+            </div>
+            <div className="mt-5 grid min-w-0 flex-1 grid-cols-1 gap-2 min-[430px]:grid-cols-3 min-[430px]:gap-3">
+              <div className="min-w-0 rounded-lg bg-green-50 p-3">
+                <p className="text2 text-sm font-medium text-green-700">Entregues</p>
+                <p className="text2 mt-1 text-xl font-semibold text-black">{pedidosEntregues}</p>
               </div>
-
-              <div className="bg-white shadow-xl min-w-0 rounded-xl p-4">
-                <Link href={"/../../pages/visitantesMobile"}>
-                  <div className="ml-4 mt-3">
-                    <Users size={28} className="text-azul" aria-hidden="true" />
-                    <h4 className="text3 text-xl text-black mt-1">
-                      Visitantes
-                    </h4>
-                  </div>
-
-                  <div className="ml-4 mt-3">
-                    <p className="text2 text-azul text-base">
-                      Visitantes Totais
-                    </p>
-                    <p className="text2 text-black text-base relative bottom-1">
-                      {totalVisitantes}
-                    </p>
-                  </div>
-                </Link>
+              <div className="min-w-0 rounded-lg bg-yellow-50 p-3">
+                <p className="text2 text-sm font-medium text-yellow-700">Em Andamento</p>
+                <p className="text2 mt-1 text-xl font-semibold text-black">{pedidosEmAndamento}</p>
+              </div>
+              <div className="min-w-0 rounded-lg bg-red-50 p-3">
+                <p className="text2 text-sm font-medium text-red-700">Recusados</p>
+                <p className="text2 mt-1 text-xl font-semibold text-black">{pedidosRecusados}</p>
               </div>
             </div>
-
-            <div className="contents">
-              <div className="bg-white shadow-xl min-w-0 rounded-xl p-4">
-                <Link href={"/../../pages/pedidosMobile"}>
-                  <div className="ml-4 mt-3">
-                    <Package size={28} className="text-azul" aria-hidden="true" />
-                    <h4 className="text3 text-xl text-black mt-1">Pedidos</h4>
-                  </div>
-
-                  <div className="ml-4 mt-2 flex flex-col">
-                    <div>
-                      <p className="text2 text-verde text-base">Entregues</p>
-                      <p className="text2 text-black text-base relative bottom-1">
-                        {pedidosEntregues}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text2 text-amarelo text-base">
-                        Em Andamento
-                      </p>
-                      <p className="text2 text-black text-base relative bottom-1">
-                        {pedidosEmAndamento}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text2 text-vermelho text-base">Recusados</p>
-                      <p className="text2 text-black text-base relative bottom-1">
-                        {pedidosRecusados}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="ml-4">
-                    <p className="text2 text-azul text-base">Pedidos Totais</p>
-                    <p className="text2 text-black text-base relative bottom-1">
-                      {totalPedidos}
-                    </p>
-                  </div>
-                </Link>
-              </div>
-
-              <div className="bg-white shadow-xl min-w-0 rounded-xl p-4">
-                <div className="ml-4 mt-3">
-                  <Image src={logo} width={30} height={30} alt="" />
-                  <h4 className="text3 text-xl text-black mt-1">
-                    Acompanhe o <br />
-                    Projeto
-                  </h4>
-                </div>
-
-                <p className="text2 ml-4 mt-3 mb-6 text-black">
-                  Siga-nos nas redes <br />
-                  sociais e saiba mais
-                  <br />
-                  sobre os próximos
-                  <br />
-                  passos do Obreiro Digital!
-                </p>
-
-                <Link
-                  className="inline-block bg-azul text2 text-lg text-white rounded-lg py-1 px-4 ml-4"
-                  href={"https://www.instagram.com/obreirodigital/"}
-                >
-                  Acesse Já
-                </Link>
-              </div>
+            <div className="mt-5 border-t border-gray-100 pt-4">
+              <p className="text2 text-sm text-azul sm:text-base">Pedidos Totais</p>
+              <p className="text2 mt-1 text-xl font-semibold text-black">{totalPedidos}</p>
             </div>
+            <span className="text2 mt-5 inline-flex items-center gap-1 text-sm text-azul group-hover:text-blue-700">
+              Ver detalhes <ChevronRight size={18} aria-hidden="true" />
+            </span>
+          </Link>
+
+          <div className="flex h-full min-w-0 flex-col rounded-xl bg-white p-5 shadow-xl sm:p-6">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <Image src={logo} width={30} height={30} alt="" />
+              <h4 className="text3 min-w-0 text-xl text-black">Acompanhe o Projeto</h4>
+            </div>
+            <p className="text2 mt-5 flex-1 text-base leading-relaxed text-black">
+              Siga-nos nas redes sociais e saiba mais sobre os próximos passos do Obreiro Digital!
+            </p>
+            <Link
+              className="text2 mt-5 inline-flex min-h-11 items-center self-start rounded-lg bg-azul px-4 text-base text-white transition-colors hover:bg-blue-600"
+              href={"https://www.instagram.com/obreirodigital/"}
+            >
+              Acesse Já
+            </Link>
           </div>
         </div>
       </div>

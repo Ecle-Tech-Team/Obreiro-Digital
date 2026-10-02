@@ -143,6 +143,8 @@ export default function cadastroIgreja() {
 
                 const response = await api.post('/igreja', dataRegister);
 
+                sessionStorage.setItem('igrejaCadastroId', String(response.data.id_igreja));
+
                 notifySuccess();
 
                 setTimeout(() => {
