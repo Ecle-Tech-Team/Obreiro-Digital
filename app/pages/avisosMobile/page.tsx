@@ -84,7 +84,6 @@ export default function avisosMobile() {
         const avisoResponse = await api.get(`/avisos/matriz/${id_igreja}`);
         setAllAvisos(avisoResponse.data);
         setFilteredAvisos(avisoResponse.data);
-        console.log("ID Igreja recebido:", id_igreja);
       } catch (error) {
         console.error("Error fetching user data:", error);
       }
@@ -251,11 +250,8 @@ export default function avisosMobile() {
       return;
     }
     try {
-      const token = localStorage.getItem("token");
       const dados = { titulo: editTitulo, conteudo: editConteudo };
-      await api.put(`/avisos/${selectedAviso.id_aviso}`, dados, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.put(`/avisos/${selectedAviso.id_aviso}`, dados);
       toast.success("Aviso cadastrado com sucesso!", {
         position: "top-center",
         autoClose: 1500,

@@ -144,6 +144,8 @@ export default function cadastroIgreja() {
                 const response = await api.post('/igreja', dataRegister);
 
                 sessionStorage.setItem('igrejaCadastroId', String(response.data.id_igreja));
+                sessionStorage.setItem('igrejaCadastroNome', String(response.data.nome));
+                sessionStorage.setItem('igrejaCadastroToken', String(response.data.registration_token));
 
                 notifySuccess();
 

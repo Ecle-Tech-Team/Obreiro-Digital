@@ -9,7 +9,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { cookies } from "next/dist/client/components/headers";
 import logo from "@/public/images/icon-white.png";
 
 export default function Login() {
@@ -98,7 +97,6 @@ export default function Login() {
         sessionStorage.setItem("nome", userData.nome);
         sessionStorage.setItem("cargo", userData.cargo);
         sessionStorage.setItem("id_igreja", userData.id_igreja);
-        sessionStorage.setItem("token", response.data.token);
         sessionStorage.setItem("email", email);
         sessionStorage.setItem("id_matriz", userData.id_matriz);
 

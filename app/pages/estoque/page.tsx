@@ -121,7 +121,6 @@ export default function estoque() {
         const estoqueResponse = await api.get(`/estoque/${id_igreja}`);
         setAllEstoque(estoqueResponse.data);
         setFilteredEstoque(estoqueResponse.data);
-        console.log("ID Igreja recebido:", id_igreja);
       } catch (error) {
         console.error("Error fetching user data:", error);
       }
