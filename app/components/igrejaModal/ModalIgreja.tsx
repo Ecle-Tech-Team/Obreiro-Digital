@@ -64,10 +64,8 @@ const ModalIgrejaDetalhes: React.FC<ModalProps> = ({ igreja, onClose }) => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const token = sessionStorage.getItem("token");
-
-      if (!igreja?.id_igreja || !token) {
-        console.error("ID da igreja ou token não encontrado");
+      if (!igreja?.id_igreja) {
+        console.error("ID da igreja não encontrado");
         return;
       }
 

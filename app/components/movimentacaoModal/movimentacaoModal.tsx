@@ -52,8 +52,6 @@ export default function ModalMovimentacao({
 
   const [novaIgreja, setNovaIgreja] = useState("");
   const [loading, setLoading] = useState(false);
-  const token =
-    typeof window !== "undefined" ? sessionStorage.getItem("token") : "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

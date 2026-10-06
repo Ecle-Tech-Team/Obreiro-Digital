@@ -377,7 +377,7 @@ export default function departamentos() {
       );
 
       const response = await api.put(
-        `/cadastro/${departamento.id_departamento}`,
+        `/departamento/${departamento.id_departamento}/${departamento.id_igreja}`,
         data
       );
 

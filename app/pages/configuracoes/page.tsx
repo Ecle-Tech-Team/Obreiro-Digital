@@ -27,13 +27,14 @@ export default function configuracoes() {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isPriavcyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
-  const handleLogout = () => {
-    // Limpar todos os dados de autenticação
-    sessionStorage.clear();
-    localStorage.clear();
-
-    // Redirecionar para a página de login
-    router.push('/pages/login');
+  const handleLogout = async () => {
+    try { await api.post('/login/logout'); }
+    catch { /* Token já expirado. */ }
+    finally {
+      sessionStorage.clear();
+      localStorage.clear();
+      router.push('/pages/login');
+    }
   };  
 
   const [isIgrejaModalOpen, setIsIgrejaModalOpen] = useState(false);
@@ -155,8 +156,6 @@ export default function configuracoes() {
   const [emailConfirmacao, setEmailConfirmacao] = useState('');
 
   const handleDeleteAccount = async () => {
-    const emailUsuario = sessionStorage.getItem('email');
-    console.log("Email salvo:", emailUsuario);
     const id_user = sessionStorage.getItem('id_user');
 
     if (emailConfirmacao.trim().toLowerCase() !== sessionStorage.getItem("email")?.trim().toLowerCase()) {

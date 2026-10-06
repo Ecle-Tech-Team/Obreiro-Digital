@@ -54,7 +54,6 @@ export default function eventosMobile() {
         const eventoResponse = await api.get(`/evento/matriz/${id_igreja}`);
         setAllEventos(eventoResponse.data);
         setFilteredEventos(eventoResponse.data);
-        console.log("ID Igreja recebido:", id_igreja);
       } catch (error) {
         console.error("Error fetching user data:", error);
       }

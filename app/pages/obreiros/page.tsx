@@ -427,7 +427,7 @@ export default function obreiros() {
       };
 
       const response = await api.put(
-        `/cadastro/${user.id_user}/${user.id_igreja}`,
+        `/cadastro/${user.id_user}`,
         data
       );
 

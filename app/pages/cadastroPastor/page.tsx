@@ -32,10 +32,9 @@ export default function cadastroPastor() {
   useEffect(() => {
     const fetchIgrejas = async () => {
       try {
-        const response = await api.get('/igreja');
-        setIgreja(response.data);
         const igrejaCadastroId = Number(sessionStorage.getItem('igrejaCadastroId'));
-        if (igrejaCadastroId && response.data.some((item: Igreja) => item.id_igreja === igrejaCadastroId)) {
+        if (igrejaCadastroId) {
+          setIgreja([{ id_igreja: igrejaCadastroId, nome: sessionStorage.getItem('igrejaCadastroNome') || 'Igreja cadastrada' }]);
           setNomeIgreja(igrejaCadastroId);
         }
       } catch (error) {
@@ -103,11 +102,14 @@ export default function cadastroPastor() {
           senha,
           birth,
           cargo,
-          id_igreja: nomeIgreja
+          id_igreja: nomeIgreja,
+          registration_token: sessionStorage.getItem('igrejaCadastroToken')
         }           
        
         await api.post('/cadastro', data)
         sessionStorage.removeItem('igrejaCadastroId');
+        sessionStorage.removeItem('igrejaCadastroToken');
+        sessionStorage.removeItem('igrejaCadastroNome');
         
         notifySuccess();
 
