@@ -210,9 +210,9 @@ export default function Login() {
 
           {/* Links adicionais */}
           <div className="mt-8 pt-6 border-t border-white/20">
-            <button className="w-full text-center text-white text2 text-sm hover:text-blue-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 rounded py-2">
+            <Link href="/pages/recuperarSenha" className="block w-full text-center text-white text2 text-sm hover:text-blue-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 rounded py-2">
               Esqueci a senha
-            </button>
+            </Link>
 
             <div className="text-center mt-4">
               <p className="text-white text2 text-sm">
