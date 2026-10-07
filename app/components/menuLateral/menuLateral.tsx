@@ -74,7 +74,7 @@ export default function MenuLateral() {
       icon: DollarSign,
     },
     {
-      href: "/pages/relatorios",
+      href: "/pages/relatorio",
       label: "Relatórios",
       icon: FileText,
     },
