@@ -333,10 +333,13 @@ export default function configuracoesMobile() {
                       const id_user = sessionStorage.getItem('id_user');
                       await api.put(`/cadastro/${id_user}`, { email: novoEmail, senha_atual: senhaAtual });
                       setSenhaAtual('');
+                      sessionStorage.setItem('email', novoEmail);
                       setIsConfirmEmailModalOpen(false);
                       notifySuccessAlterEmail();
                     } catch (error) {
                       console.error('Erro ao alterar email:', error);
+                      setIsConfirmEmailModalOpen(false);
+                      setIsEmailModalOpen(true);
                       alert(axios.isAxiosError(error) && error.response?.data?.message ? error.response.data.message : 'Erro ao alterar email. Tente novamente.');
                     }
                   }}
@@ -365,18 +368,19 @@ export default function configuracoesMobile() {
 
                 <input
                   type="password"
-                  placeholder="Digite o nova senha"
-                  className="px-4 py-3 rounded-lg text2 text-black"
-                  value={novoPassword}
-                  onChange={(e) => setNovoPassword(e.target.value)}
-                />
-                <input
-                  type="password"
                   placeholder="Digite sua senha atual"
                   autoComplete="current-password"
                   className="w-full px-4 py-3 rounded-lg text2 text-black"
                   value={senhaAtual}
                   onChange={(e) => setSenhaAtual(e.target.value)}
+                />
+
+                <input
+                  type="password"
+                  placeholder="Digite o nova senha"
+                  className="px-4 py-3 rounded-lg text2 text-black"
+                  value={novoPassword}
+                  onChange={(e) => setNovoPassword(e.target.value)}
                 />
 
                 <input
@@ -436,8 +440,17 @@ export default function configuracoesMobile() {
                       setSenhaAtual('');
                       setIsConfirmPasswordModalOpen(false);
                       notifySuccessAlterPassword();
+                      setNovoPassword('');
+                      setConfirmarPassword('');
+                      setTimeout(() => {
+                        sessionStorage.clear();
+                        localStorage.clear();
+                        router.push('/pages/login');
+                      }, 1500);
                     } catch (error) {
-                      console.error('Erro ao alterar email:', error);
+                      console.error('Erro ao alterar senha:', error);
+                      setIsConfirmPasswordModalOpen(false);
+                      setIsPasswordModalOpen(true);
                       alert(axios.isAxiosError(error) && error.response?.data?.message ? error.response.data.message : 'Erro ao alterar senha. Tente novamente.');
                     }
                   }}
