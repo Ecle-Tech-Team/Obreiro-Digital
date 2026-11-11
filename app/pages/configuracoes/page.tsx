@@ -8,6 +8,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import api from '@/app/api/api';
+import axios from 'axios';
 
 interface Igreja {
   id_igreja: number;
@@ -112,6 +113,7 @@ export default function configuracoes() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isConfirmEmailModalOpen, setIsConfirmEmailModalOpen] = useState(false);
   const [novoEmail, setNovoEmail] = useState('');
+  const [senhaAtual, setSenhaAtual] = useState('');
 
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isConfirmPasswordModalOpen, setIsConfirmPasswordModalOpen] = useState(false);
@@ -434,6 +436,14 @@ export default function configuracoes() {
                   value={novoEmail}
                   onChange={(e) => setNovoEmail(e.target.value)}
                 />
+                <input
+                  type="password"
+                  placeholder="Digite sua senha atual"
+                  autoComplete="current-password"
+                  className="w-full px-4 py-3 rounded-lg text2 text-black"
+                  value={senhaAtual}
+                  onChange={(e) => setSenhaAtual(e.target.value)}
+                />
               </div>
 
               <div className="flex justify-end space-x-3 py-5 pr-4">                
@@ -476,12 +486,13 @@ export default function configuracoes() {
                   onClick={async () => {
                     try {
                       const id_user = sessionStorage.getItem('id_user');
-                      await api.put(`/cadastro/${id_user}`, { email: novoEmail });
+                      await api.put(`/cadastro/${id_user}`, { email: novoEmail, senha_atual: senhaAtual });
+                      setSenhaAtual('');
                       setIsConfirmEmailModalOpen(false);
                       notifySuccessAlterEmail();
                     } catch (error) {
                       console.error('Erro ao alterar email:', error);
-                      alert('Erro ao alterar email. Tente novamente.');
+                      alert(axios.isAxiosError(error) && error.response?.data?.message ? error.response.data.message : 'Erro ao alterar email. Tente novamente.');
                     }
                   }}
                   className="px-5 py-2 bg-azul text-white rounded-lg hover:bg-azul-escuro"
@@ -513,6 +524,14 @@ export default function configuracoes() {
                   className="px-4 py-3 rounded-lg text2 text-black"
                   value={novoPassword}
                   onChange={(e) => setNovoPassword(e.target.value)}
+                />
+                <input
+                  type="password"
+                  placeholder="Digite sua senha atual"
+                  autoComplete="current-password"
+                  className="w-full px-4 py-3 rounded-lg text2 text-black"
+                  value={senhaAtual}
+                  onChange={(e) => setSenhaAtual(e.target.value)}
                 />
 
                 <input
@@ -568,12 +587,13 @@ export default function configuracoes() {
                   onClick={async () => {
                     try {
                       const id_user = sessionStorage.getItem('id_user');
-                      await api.put(`/cadastro/${id_user}`, { senha: novoPassword});
+                      await api.put(`/cadastro/${id_user}`, { senha: novoPassword, senha_atual: senhaAtual });
+                      setSenhaAtual('');
                       setIsConfirmPasswordModalOpen(false);
                       notifySuccessAlterPassword();
                     } catch (error) {
                       console.error('Erro ao alterar email:', error);
-                      alert('Erro ao alterar email. Tente novamente.');
+                      alert(axios.isAxiosError(error) && error.response?.data?.message ? error.response.data.message : 'Erro ao alterar senha. Tente novamente.');
                     }
                   }}
                   className="px-5 py-2 bg-azul text-white rounded-lg hover:bg-azul-escuro"
