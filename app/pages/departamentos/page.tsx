@@ -9,6 +9,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Link from "next/link";
 import { isMatriz } from "@/app/utils/auth";
+import { parseDateOnly } from "@/app/utils/date";
 
 interface Igreja {
   id_igreja: number;
@@ -185,9 +186,9 @@ export default function departamentos() {
     } else if (type === "edit" && departamento) {
       setSelectedDepartamento(departamento);
       setEditNome(departamento.nome);
-      setEditBirth(format(new Date(departamento.birth), "yyyy-MM-dd"));
+      setEditBirth(format(parseDateOnly(departamento.birth), "yyyy-MM-dd"));
       setEditDataCongresso(
-        format(new Date(departamento.data_congresso), "yyyy-MM-dd")
+        format(parseDateOnly(departamento.data_congresso), "yyyy-MM-dd")
       );
     }
 
@@ -592,7 +593,7 @@ export default function departamentos() {
                             {departs.nome}
                           </td>
                           <td data-label="Fundação" className="text-center text2 text-xl">
-                            {format(new Date(departs.birth), "dd/MM/yyyy")}
+                            {format(parseDateOnly(departs.birth), "dd/MM/yyyy")}
                           </td>
                           <td data-label="Data do Congresso" className="text-center text2 text-xl">
                             {format(

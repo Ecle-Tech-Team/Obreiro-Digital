@@ -4,6 +4,28 @@ const api = axios.create({
   withCredentials: true
 })
 
+// Páginas que funcionam sem sessão: nelas um 401 é resposta normal (ex.: senha errada).
+const PUBLIC_PAGES = ['/pages/login', '/pages/recuperarSenha', '/pages/cadastroIgreja', '/pages/cadastroPastor', '/pages/apresentacao'];
+
+// Sessão expirada ou revogada: limpa os dados locais e volta ao login (uma vez só).
+let redirecting = false;
+api.interceptors.response.use(
+  response => response,
+  error => {
+    const path = typeof window !== 'undefined' ? window.location.pathname : '';
+    const isPublic = path === '/' || PUBLIC_PAGES.some(page => path.startsWith(page));
+    if (error?.response?.status === 401 && !isPublic && !redirecting) {
+      redirecting = true;
+      try {
+        sessionStorage.clear();
+        sessionStorage.setItem('sessaoExpirada', '1');
+      } catch { /* armazenamento indisponível */ }
+      window.location.assign('/pages/login');
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const fetchMembrosPorIgreja = async (id_igreja) => {
   const res = await api.get(`/membro/matriz/${id_igreja}`);
   return res.data;

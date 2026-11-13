@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import api from '@/app/api/api';
 import axios from 'axios';
+import { parseDateOnly } from "@/app/utils/date";
 
 interface Igreja {
   id_igreja: number;
@@ -157,7 +158,7 @@ export default function configuracoesMobile() {
       router.push('/pages/login');
     } catch (error) {
       console.error('Erro ao deletar conta:', error);
-      alert('Erro ao deletar conta. Tente novamente.');
+      alert(axios.isAxiosError(error) && error.response?.data?.message ? error.response.data.message : 'Erro ao deletar conta. Tente novamente.');
     }
   };
 
@@ -568,7 +569,7 @@ export default function configuracoesMobile() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Data de Fundação</label>
-                    <p className="mt-1 text-gray-900">{format(new Date(igrejaData.data_fundacao), 'dd-MM-yyyy') || 'Não informada'}</p>
+                    <p className="mt-1 text-gray-900">{format(parseDateOnly(igrejaData.data_fundacao), 'dd-MM-yyyy') || 'Não informada'}</p>
                   </div>
                 </div>
               ) : (

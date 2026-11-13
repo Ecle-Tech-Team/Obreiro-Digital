@@ -3,6 +3,7 @@
 import { AppModal, ModalSurface } from '@/app/components/shared/MemberStyle';
 import React from "react";
 import { X } from "lucide-react";
+import { formatPhone } from "@/app/utils/phone";
 
 interface Departamento {
   id_departamento: number;
@@ -111,12 +112,14 @@ export default function MemberFormModal({
               <div>
                 <label className={labelClass}>Celular</label>
                 <input
-                  type="text"
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel"
                   className={inputClass}
-                  placeholder="Digite o número"
-                  value={formData.numero}
-                  onChange={(e) => onChange("numero", e.target.value)}
-                  maxLength={25}
+                  placeholder="(11) 98765-4321"
+                  value={formatPhone(formData.numero)}
+                  onChange={(e) => onChange("numero", formatPhone(e.target.value))}
+                  maxLength={20}
                   required
                 />
               </div>

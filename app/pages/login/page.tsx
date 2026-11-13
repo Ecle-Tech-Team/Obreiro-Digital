@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import api from "../../api/api";
 import axios from "axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -17,6 +17,16 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
 
   const router = useRouter();
+
+  // Aviso quando o usuário foi trazido ao login porque a sessão expirou.
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("sessaoExpirada")) {
+        sessionStorage.removeItem("sessaoExpirada");
+        toast.info("Sua sessão expirou. Entre novamente.", { position: "top-center", autoClose: 3000 });
+      }
+    } catch { /* armazenamento indisponível */ }
+  }, []);
 
   async function handleLogin(event: React.FormEvent) {
     event.preventDefault();

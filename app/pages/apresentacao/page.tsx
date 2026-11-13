@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import api from "@/app/api/api";
 import { format } from "date-fns";
 import Link from "next/link";
+import { parseDateOnly } from "@/app/utils/date";
 
 interface Evento {
   id_evento: number;
@@ -64,12 +65,12 @@ export default function Apresentacao() {
               <div className="mt-2">
                 <p className="text-xl text3 mt-4">
                   <strong>Início:</strong>{" "}
-                  {format(new Date(evento.data_inicio), "dd/MM")} às{" "}
+                  {format(parseDateOnly(evento.data_inicio), "dd/MM")} às{" "}
                   {evento.horario_inicio.slice(0, 5)}
                 </p>
                 <p className="text-xl text3 mt-2">
                   <strong>Fim:</strong>{" "}
-                  {format(new Date(evento.data_fim), "dd/MM")} às{" "}
+                  {format(parseDateOnly(evento.data_fim), "dd/MM")} às{" "}
                   {evento.horario_fim.slice(0, 5)}
                 </p>
               </div>
