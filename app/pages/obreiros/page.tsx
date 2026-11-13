@@ -9,6 +9,18 @@ import api from "../../api/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { isMatriz } from "@/app/utils/auth";
+import axios from "axios";
+import { parseDateOnly } from "@/app/utils/date";
+
+// Usuários da matriz cadastram cargos "Matriz"; nas demais igrejas, Pastor e Obreiro.
+// O cargo atual sempre aparece na lista, para o campo nunca mostrar um valor diferente do real.
+function cargoOptions(atual?: string) {
+  const opcoes = isMatriz() ? ["Pastor Matriz", "Obreiro Matriz"] : ["Pastor", "Obreiro"];
+  return atual && !opcoes.includes(atual) ? [atual, ...opcoes] : opcoes;
+}
+
+const apiMessage = (error: unknown, fallback: string) =>
+  axios.isAxiosError(error) && error.response?.data?.message ? String(error.response.data.message) : fallback;
 
 interface Igreja {
   id_igreja: number;
@@ -79,7 +91,7 @@ export default function obreiros() {
         window.location.reload();
       }, 1500);
     } catch (error) {
-      toast.error("Erro ao remover usuário.");
+      toast.error(apiMessage(error, "Erro ao remover usuário."), { position: "top-center", autoClose: 4000 });
     } finally {
       setIsDeleteModalOpen(false);
       setUserToDelete(null);
@@ -225,7 +237,7 @@ export default function obreiros() {
       setEditNome(user.nome);
       setEditEmail(user.email);
       setEditSenha(user.senha);
-      setEditBirth(format(new Date(user.birth), "yyyy-MM-dd"));
+      setEditBirth(format(parseDateOnly(user.birth), "yyyy-MM-dd"));
       setEditCargo(user.cargo);
     }
     setModalIsOpen(true);
@@ -387,10 +399,10 @@ export default function obreiros() {
       });
     };
 
-    const notifyError = () => {
-      toast.error("Erro na atualização, Tente novamente.", {
+    const notifyError = (message = "Erro na atualização, Tente novamente.") => {
+      toast.error(message, {
         position: "top-center",
-        autoClose: 1500,
+        autoClose: 4000,
         hideProgressBar: false,
         closeOnClick: true,
         pauseOnHover: true,
@@ -448,7 +460,7 @@ export default function obreiros() {
       setSelectedUser(null);
     } catch (error) {
       console.error("Error updating user:", error);
-      notifyError();
+      notifyError(apiMessage(error, "Erro na atualização, Tente novamente."));
     }
   };
 
@@ -647,7 +659,7 @@ export default function obreiros() {
                           {obreiro.nome}
                         </td>
                         <td data-label="Nascimento" className="text-center text2 text-xl">
-                          {format(new Date(obreiro.birth), "dd/MM/yyyy")}
+                          {format(parseDateOnly(obreiro.birth), "dd/MM/yyyy")}
                         </td>
                         <td data-label="Email" className="text-center text2 text-xl">
                           {obreiro.email}
@@ -820,8 +832,9 @@ export default function obreiros() {
                     <option value="" disabled>
                       Selecione o Cargo
                     </option>
-                    <option value="Pastor">Pastor</option>
-                    <option value="Obreiro">Obreiro</option>
+                    {cargoOptions(cargo).map((opcao) => (
+                      <option key={opcao} value={opcao}>{opcao}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -944,8 +957,9 @@ export default function obreiros() {
                     <option value="" disabled>
                       Selecione o Cargo
                     </option>
-                    <option value="Pastor">Pastor</option>
-                    <option value="Obreiro">Obreiro</option>
+                    {cargoOptions(editCargo).map((opcao) => (
+                      <option key={opcao} value={opcao}>{opcao}</option>
+                    ))}
                   </select>
                 </div>
               </div>

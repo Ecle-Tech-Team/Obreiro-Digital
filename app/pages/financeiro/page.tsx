@@ -8,6 +8,7 @@ import Link from 'next/link'
 import api from '../../api/api';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { parseDateOnly } from "@/app/utils/date";
 
 interface Saldo {
   id_saldo: number;
@@ -130,7 +131,7 @@ export default function financeiro() {
       setEditCategoria(financas.categoria);
       setEditValor(financas.valor);
       setEditDescricao(financas.descricao);
-      setEditData(format(new Date(financas.data), 'yyyy-MM-dd'));      
+      setEditData(format(parseDateOnly(financas.data), 'yyyy-MM-dd'));      
       setEditNomeIgreja(financas.id_igreja)
     }
     setModalIsOpen(true);
@@ -366,7 +367,7 @@ export default function financeiro() {
                         <td data-label="Tipo" className='text-center text2 text-xl py-3'>{mov.tipo}</td>
                         <td data-label="Categoria" className='text-center text2 text-xl py-3'>{mov.categoria}</td>
                         <td data-label="Valor" className='text-center text2 text-xl py-3'>{mov.valor}</td>
-                        <td data-label="Data" className='text-center text2 text-xl py-3'>{format(new Date(mov.data), 'dd/MM/yyyy')}</td>
+                        <td data-label="Data" className='text-center text2 text-xl py-3'>{format(parseDateOnly(mov.data), 'dd/MM/yyyy')}</td>
                       </tr>
                     ))}
                   </tbody>

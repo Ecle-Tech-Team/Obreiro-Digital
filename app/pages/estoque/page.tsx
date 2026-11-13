@@ -8,6 +8,7 @@ import Link from "next/link";
 import api from "../../api/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { parseDateOnly } from "@/app/utils/date";
 
 interface Igreja {
   id_igreja: number;
@@ -231,7 +232,7 @@ export default function estoque() {
       setEditNomeProduto(produto.nome_produto);
       setEditCategoria(produto.categoria);
       setEditQuantidade(produto.quantidade);
-      setEditValidade(format(new Date(produto.validade), "yyyy-MM-dd"));
+      setEditValidade(format(parseDateOnly(produto.validade), "yyyy-MM-dd"));
       setEditPrecoUnitario(produto.preco_unitario);
     }
 
@@ -624,7 +625,7 @@ export default function estoque() {
                             {prod.quantidade}
                           </td>
                           <td data-label="Validade" className="text-center text2 text-xl py-3">
-                            {format(new Date(prod.validade), "dd/MM/yyyy")}
+                            {format(parseDateOnly(prod.validade), "dd/MM/yyyy")}
                           </td>
                           <td data-label="Preço Unitário" className="text-center text2 text-xl py-3">
                             {prod.preco_unitario}

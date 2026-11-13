@@ -22,6 +22,11 @@ import MemberFormModal, {
 } from "@/app/components/memberFormModal/memberFormModal";
 import MenuLateral from "@/app/components/menuLateral/menuLateral";
 import { isMatriz } from "@/app/utils/auth";
+import { displayPhone, isValidPhone } from "@/app/utils/phone";
+import axios from "axios";
+
+const apiMessage = (error: unknown, fallback: string) =>
+  axios.isAxiosError(error) && error.response?.data?.message ? String(error.response.data.message) : fallback;
 import api from "../../api/api";
 
 import "react-toastify/dist/ReactToastify.css";
@@ -197,7 +202,8 @@ export default function MembrosPage() {
       return (
         nomeStr.includes(lower) ||
         codStr.includes(lower) ||
-        numeroStr.includes(lower)
+        numeroStr.includes(lower) ||
+        (lower.replace(/\D/g, "") !== "" && numeroStr.replace(/\D/g, "").includes(lower.replace(/\D/g, "")))
       );
     });
 
@@ -372,6 +378,10 @@ export default function MembrosPage() {
         notifyWarn("Todos os campos devem ser preenchidos!");
         return;
       }
+      if (!isValidPhone(numero)) {
+        notifyWarn("Celular inválido. Use DDD + número, por exemplo (11) 98765-4321.");
+        return;
+      }
 
       if (specialCharactersRegex.test(nome)) {
         notifyTypingError();
@@ -406,7 +416,7 @@ export default function MembrosPage() {
       }, 1500);
     } catch (error) {
       console.error("Erro no cadastro:", error);
-      notifyError("Erro no cadastro, tente novamente.");
+      notifyError(apiMessage(error, "Erro no cadastro, tente novamente."));
     }
   }
 
@@ -438,6 +448,11 @@ export default function MembrosPage() {
 
       if (!validNameRegex.test(editNome.trim())) {
         notifyTypingErrorSpecial();
+        return;
+      }
+
+      if (editNumero.trim() !== "" && !isValidPhone(editNumero)) {
+        notifyWarn("Celular inválido. Use DDD + número, por exemplo (11) 98765-4321.");
         return;
       }
 
@@ -480,7 +495,7 @@ export default function MembrosPage() {
       }, 1500);
     } catch (error) {
       console.error("Error updating member:", error);
-      notifyError("Erro na atualização, tente novamente.");
+      notifyError(apiMessage(error, "Erro na atualização, tente novamente."));
     }
   };
 
@@ -832,7 +847,7 @@ export default function MembrosPage() {
                           {member.nome}
                         </td>
                         <td className="text2 px-6 py-4 text-gray-700">
-                          {member.numero}
+                          {displayPhone(member.numero)}
                         </td>
                         <td className="text2 px-6 py-4 text-gray-700">
                           {formatBirthDate(member.birth)}
@@ -878,7 +893,7 @@ export default function MembrosPage() {
                         <div className="text2 flex flex-wrap gap-2 text-sm text-gray-600">
                           <span className="flex items-center">
                             <Phone className="mr-1 h-4 w-4" />
-                            {member.numero}
+                            {displayPhone(member.numero)}
                           </span>
 
                           <span className="flex items-center">

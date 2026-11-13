@@ -8,6 +8,7 @@ import MenuSuperior from '@/app/components/menuSuperior/menuSuperior'
 import api from '../../api/api';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { parseDateOnly } from "@/app/utils/date";
 
 
 interface Membro {
@@ -87,11 +88,9 @@ export default function visitantesMobile() {
                     return dateB.getTime() - dateA.getTime();
                 });               
 
-                const visitantesWithAdjustedDate = sortedVisitantes.map((visitante: { data_visita: string | number | Date; }) => {
-                    const date = new Date(visitante.data_visita);
-                    date.setDate(date.getDate() + 1);
-                    return { ...visitante, data_visita: date.toISOString().split('T')[0] };
-                });
+                const visitantesWithAdjustedDate = sortedVisitantes.map((visitante: { data_visita: string | number | Date; }) => (
+                    { ...visitante, data_visita: String(visitante.data_visita).slice(0, 10) }
+                ));
 
                 setVisitantes(visitantesWithAdjustedDate);
             } catch (error) {
@@ -257,7 +256,7 @@ export default function visitantesMobile() {
                                 <h4 className='text1 text-black text-lg leading-5'>{visitante.nome}</h4>
                                 <p className='text2 text-black relative bottom-1.5'>{visitante.congregacao}</p>
                             </div>
-                            <h4 className='ml-auto shrink-0 self-center text2 text-black'>{format(new Date(visitante.data_visita), 'dd/MM')}</h4>
+                            <h4 className='ml-auto shrink-0 self-center text2 text-black'>{format(parseDateOnly(visitante.data_visita), 'dd/MM')}</h4>
                         </div>
                     ))}
                 </div>

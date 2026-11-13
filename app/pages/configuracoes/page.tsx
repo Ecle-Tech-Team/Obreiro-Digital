@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import api from '@/app/api/api';
 import axios from 'axios';
+import { parseDateOnly } from "@/app/utils/date";
 
 interface Igreja {
   id_igreja: number;
@@ -172,7 +173,7 @@ export default function configuracoes() {
       router.push('/pages/login');
     } catch (error) {
       console.error('Erro ao deletar conta:', error);
-      alert('Erro ao deletar conta. Tente novamente.');
+      alert(axios.isAxiosError(error) && error.response?.data?.message ? error.response.data.message : 'Erro ao deletar conta. Tente novamente.');
     }
   };
 
@@ -398,7 +399,7 @@ export default function configuracoes() {
                   try {
                     await api.put(`/igreja/${igrejaData.id_igreja}`, {
                     ...igrejaData,
-                    data_fundacao: format(new Date(igrejaData.data_fundacao), 'yyyy-MM-dd'),
+                    data_fundacao: format(parseDateOnly(igrejaData.data_fundacao), 'yyyy-MM-dd'),
                   });;
                     setIsIgrejaModalOpen(false);
                     notifySuccess();

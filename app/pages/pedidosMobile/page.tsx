@@ -8,6 +8,7 @@ import MenuSuperior from '@/app/components/menuSuperior/menuSuperior'
 import { format } from 'date-fns';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { parseDateOnly } from "@/app/utils/date";
 
 interface Igreja {
   id_igreja: number;
@@ -326,7 +327,7 @@ const sortedPedidos = sortPedidos(filteredPedidos);
                   <h4 className='text1 text-black text-lg leading-5'>{ped.nome_produto}</h4>
                   <p className='text2 text-black relative bottom-1.5'>{ped.categoria_produto}</p>
                 </div>
-                <h4 className='ml-auto shrink-0 self-center text2 text-black'>{format(new Date(ped.data_pedido), 'dd/MM')}</h4>
+                <h4 className='ml-auto shrink-0 self-center text2 text-black'>{format(parseDateOnly(ped.data_pedido), 'dd/MM')}</h4>
               </div>
             ))}
           </div>

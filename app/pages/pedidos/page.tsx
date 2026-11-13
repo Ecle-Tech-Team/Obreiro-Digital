@@ -8,6 +8,8 @@ import Link from 'next/link'
 import api from '../../api/api';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import PedidosResponder, { podeResponderPedidos } from '@/app/components/pedidosResponder/PedidosResponder';
+import { parseDateOnly } from "@/app/utils/date";
 
 interface Igreja {
   id_igreja: number;
@@ -28,10 +30,13 @@ interface Pedidos {
   status_pedido: string;
   data_entrega: string;
   motivo_recusa: string;
+  respondido?: number | boolean;
   id_igreja: number;
 };
 
 export default function pedidos() {
+  const [podeResponder, setPodeResponder] = useState(false);
+  useEffect(() => { setPodeResponder(podeResponderPedidos(sessionStorage.getItem('cargo'), sessionStorage.getItem('id_matriz'))); }, []);
   const [nome_produto, setNomeProduto] = useState<string>('');
   const [categoria_produto, setCategoriaProduto] = useState<string>('');
   const [quantidade, setQuantidade] = useState<number>(0);
@@ -248,7 +253,7 @@ export default function pedidos() {
       setEditNomeProduto(pedidos.nome_produto);
       setEditCategoriaProduto(pedidos.categoria_produto);
       setEditQuantidade(pedidos.quantidade);
-      setEditDataPedido(format(new Date(pedidos.data_pedido), 'yyyy-MM-dd'));
+      setEditDataPedido(format(parseDateOnly(pedidos.data_pedido), 'yyyy-MM-dd'));
       setStatusPedido(pedidos.status_pedido);      
       // setMotivoRecusa(pedidos.motivo_recusa);
       // setDataEntrega(pedidos.data_entrega);
@@ -412,7 +417,7 @@ export default function pedidos() {
         return;
       }
 
-      if (!editNomeProduto || !editCategoriaProduto || !editQuantidade || !editDataPedido || !status_pedido ) {
+      if (!editNomeProduto || !editCategoriaProduto || !editQuantidade || !editDataPedido) {
         notifyWarn();
         return;
       }
@@ -422,7 +427,6 @@ export default function pedidos() {
         categoria_produto: editCategoriaProduto,
         quantidade: editQuantidade,
         data_pedido: editDataPedido,
-        status_pedido        
         // data_entrega,
         // motivo_recusa
       }
@@ -627,7 +631,7 @@ export default function pedidos() {
                           <td data-label="Categoria" className='text-center text2 text-xl py-3'>{ped.categoria_produto}</td>
                           <td data-label="Quantidade" className='text-center text2 text-xl py-3'>{ped.quantidade}</td>
                           <td data-label="Status" className='text-center text2 text-xl py-3'>{ped.status_pedido}</td>
-                          <td data-label="Data do Pedido" className='text-center text2 text-xl py-3'>{format(new Date(ped.data_pedido), 'dd/MM/yyyy')}</td>
+                          <td data-label="Data do Pedido" className='text-center text2 text-xl py-3'>{format(parseDateOnly(ped.data_pedido), 'dd/MM/yyyy')}</td>
                           <td data-label="Ações" className='text-center text2 text-xl py-3 pr-10'>
                             <button 
                               onClick={(e) => {
@@ -646,6 +650,10 @@ export default function pedidos() {
                 )}
               </div>
             </div>
+            {podeResponder && (
+              <PedidosResponder onRespondido={() => setTimeout(() => window.location.reload(), 1500)} />
+            )}
+
             <AppModal
               isOpen={isDeleteModalOpen}
               onRequestClose={() => setIsDeleteModalOpen(false)}
@@ -772,6 +780,7 @@ export default function pedidos() {
                       className='px-4 py-3 rounded-lg text2 text-slate-500'
                       placeholder='Digite o Nome...'
                       value={editNomeProduto}
+                      disabled={!!selectedPedidos?.respondido}
                       onChange={(e) => setEditNomeProduto(e.target.value)}
                       required 
                     />
@@ -783,6 +792,7 @@ export default function pedidos() {
                     <select                    
                       className='px-4 py-3 rounded-lg text2 bg-white text-slate-500'
                       value={editCategoriaProduto}
+                      disabled={!!selectedPedidos?.respondido}
                       onChange={(e) => setEditCategoriaProduto(e.target.value)}
                       required 
                       >
@@ -805,6 +815,7 @@ export default function pedidos() {
                         type="text" 
                         className='px-4 py-3 rounded-lg text2 text-slate-500'                      
                         value={editQuantidade}
+                      disabled={!!selectedPedidos?.respondido}
                         onChange={(e) => setEditQuantidade(Number(e.target.value))}
                         required 
                         />
@@ -817,6 +828,7 @@ export default function pedidos() {
                         type="date" 
                         className='px-4 py-3 rounded-lg text2 text-slate-500'                      
                         value={editDataPedido}
+                      disabled={!!selectedPedidos?.respondido}
                         onChange={(e) => setEditDataPedido(e.target.value)}
                         required 
                         />
@@ -824,22 +836,21 @@ export default function pedidos() {
                   </div>
 
                   <div className='flex flex-col'>
-                    <label className='text-white text1 text-xl mt-5 mb-1'>Status</label>
-
-                    <select                    
-                      className='px-4 py-3 rounded-lg text2 bg-white text-slate-500'
-                      value={status_pedido}
-                      onChange={(e) => setStatusPedido(e.target.value)}
-                      required 
-                      >
-                      <option value="" disabled>Selecione</option>
-                      <option value="Entregue">Entregue</option>
-                      <option value="Recusado">Recusar</option>                    
-                    </select>     
+                    <label className='text-white text1 text-xl mt-5 mb-1'>Situação</label>
+                    <p className='px-4 py-3 rounded-lg text2 bg-white text-slate-700'>
+                      {selectedPedidos?.status_pedido || 'Em Andamento'}
+                      {selectedPedidos?.status_pedido === 'Entregue' && selectedPedidos?.data_entrega ? ` em ${format(parseDateOnly(selectedPedidos.data_entrega), 'dd/MM/yyyy')}` : ''}
+                      {selectedPedidos?.status_pedido === 'Recusado' && selectedPedidos?.motivo_recusa ? ` — ${selectedPedidos.motivo_recusa}` : ''}
+                    </p>
+                    <span className='text2 text-white text-sm mt-1'>
+                      {selectedPedidos?.respondido ? 'Pedido já respondido: não pode mais ser editado.' : 'A resposta (entregue ou recusado) é dada pela igreja responsável.'}
+                    </span>
                   </div>
 
 
-                  <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={() => selectedPedidos && handleUpdate(selectedPedidos)}>Atualizar</button>
+                  {!selectedPedidos?.respondido && (
+                    <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={() => selectedPedidos && handleUpdate(selectedPedidos)}>Atualizar</button>
+                  )}
 
                 </div>
               </div>

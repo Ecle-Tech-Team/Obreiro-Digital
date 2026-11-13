@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { parseDateOnly } from "@/app/utils/date";
 
 interface User {
   id_user: number;
@@ -291,7 +292,7 @@ export default function eventosMobile() {
                         new Date(`1970-01-01T${evento.horario_inicio}`),
                         "HH:mm"
                       )}
-                      data_fim={format(new Date(evento.data_fim), "dd/MM/yyyy")}
+                      data_fim={format(parseDateOnly(evento.data_fim), "dd/MM/yyyy")}
                       hora_fim={format(
                         new Date(`1970-01-01T${evento.horario_fim}`),
                         "HH:mm"
