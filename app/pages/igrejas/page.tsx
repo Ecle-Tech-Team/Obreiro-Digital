@@ -9,6 +9,14 @@ import Link from "next/link";
 import api from "../../api/api";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import NovaFilialModal from "@/app/components/filiais/NovaFilialModal";
+import ConvitePastorModal from "@/app/components/filiais/ConvitePastorModal";
+
+interface FilialInfo {
+  id_igreja: number;
+  total_pastores: number;
+  convite_expira_em: string | null;
+}
 
 interface Igreja {
   id_igreja: number;
@@ -25,6 +33,42 @@ interface Igreja {
 }
 
 export default function Igrejas() {
+  // Só o Pastor Matriz cria filiais e convida pastores; usuários da matriz veem a situação.
+  const [cargoUsuario, setCargoUsuario] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [filiaisInfo, setFiliaisInfo] = useState<Record<number, FilialInfo>>({});
+  const [novaFilialAberta, setNovaFilialAberta] = useState(false);
+  const [conviteFilial, setConviteFilial] = useState<{ id_igreja: number; nome: string } | null>(null);
+  const isPastorMatriz = cargoUsuario === "Pastor Matriz";
+  const recarregar = () => setReloadKey(key => key + 1);
+
+  useEffect(() => { setCargoUsuario(sessionStorage.getItem("cargo")); }, []);
+
+  useEffect(() => {
+    if (cargoUsuario !== "Pastor Matriz" && cargoUsuario !== "Obreiro Matriz") return;
+    api.get("/igreja/filiais")
+      .then(({ data }) => setFiliaisInfo(Object.fromEntries((data as FilialInfo[]).map(item => [item.id_igreja, item]))))
+      .catch(error => console.error("Erro ao buscar filiais:", error));
+  }, [cargoUsuario, reloadKey]);
+
+  const situacaoPastor = (igreja: Igreja) => {
+    const info = filiaisInfo[igreja.id_igreja];
+    if (!info) return <span className="text-gray-500">—</span>;
+    if (info.total_pastores > 0) return <span className="text-green-700">Ativo</span>;
+    const acao = (rotulo: string) => isPastorMatriz && (
+      <button
+        type="button"
+        className="ml-2 rounded-lg bg-azul px-3 py-1 text-base text-white hover:bg-blue-600"
+        onClick={(e) => { e.stopPropagation(); setConviteFilial({ id_igreja: igreja.id_igreja, nome: igreja.nome }); }}
+      >
+        {rotulo}
+      </button>
+    );
+    if (info.convite_expira_em) {
+      return <span className="text-amber-700">Convite até {format(new Date(info.convite_expira_em), "dd/MM")}{acao("Novo link")}</span>;
+    }
+    return <span className="text-red-600">Sem pastor{acao("Convidar")}</span>;
+  };
   const [nome, setNome] = useState<string>("");
   const [cnpj, setCnpj] = useState<string>("");
   const [data_fundacao, setDataFundacao] = useState<string>("");
@@ -112,7 +156,7 @@ export default function Igrejas() {
     };
 
     fetchIgrejasSubordinadas();
-  }, []);
+  }, [reloadKey]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -339,7 +383,7 @@ export default function Igrejas() {
               </div>
               <div className="flex min-w-0">
                 <div className="flex justify-center">
-                  <AddButton>Nova Igreja</AddButton>
+                  {isPastorMatriz && <AddButton onClick={() => setNovaFilialAberta(true)}>Nova Igreja</AddButton>}
                 </div>
               </div>
             </div>
@@ -370,6 +414,9 @@ export default function Igrejas() {
                       <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[10vh] py-2">
                         Setor
                       </th>
+                      <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[6vh] py-2">
+                        Pastor
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -394,6 +441,9 @@ export default function Igrejas() {
                         <td data-label="Setor" className="text-center text2 text-xl">
                           {igreja.setor}
                         </td>
+                        <td data-label="Pastor" className="text-center text2 text-lg">
+                          {situacaoPastor(igreja)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -401,6 +451,13 @@ export default function Igrejas() {
               )}
             </div>
           </div>
+          <NovaFilialModal
+            isOpen={novaFilialAberta}
+            onClose={() => setNovaFilialAberta(false)}
+            onCreated={(filial) => { setNovaFilialAberta(false); recarregar(); setConviteFilial(filial); }}
+          />
+          <ConvitePastorModal filial={conviteFilial} onClose={() => setConviteFilial(null)} onGenerated={recarregar} />
+          <ToastContainer />
           {/* Modal de detalhes da igreja */}
           {modalIgreja && (
             <ModalIgrejaDetalhes

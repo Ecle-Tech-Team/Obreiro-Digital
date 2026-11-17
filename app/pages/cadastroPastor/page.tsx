@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import logo from '@/public/images/icon-white.png';
+import axios from 'axios';
 
 interface Igreja {
   id_igreja: number;
@@ -28,6 +29,32 @@ export default function cadastroPastor() {
   const router = useRouter();
 
   const [igreja, setIgreja] = useState<Igreja[]>([]);
+
+  // Convite de filial: o código chega depois do "#" no link enviado pela matriz.
+  const [conviteToken, setConviteToken] = useState<string>('');
+  const [convite, setConvite] = useState<{ igreja: string; matriz: string | null } | null>(null);
+  const [conviteErro, setConviteErro] = useState<string>('');
+
+  useEffect(() => {
+    let token = '';
+    try {
+      const match = window.location.hash.match(/convite=([A-Za-z0-9_-]+)/);
+      if (match) {
+        token = match[1];
+        sessionStorage.setItem('conviteToken', token);
+        // Tira o código da barra de endereço (histórico e capturas de tela).
+        window.history.replaceState(null, '', window.location.pathname);
+      } else {
+        token = sessionStorage.getItem('conviteToken') || '';
+      }
+    } catch { /* armazenamento indisponível */ }
+    if (!token) return;
+    setConviteToken(token);
+    setCargo('Pastor');
+    api.post('/convite/validar', { token })
+      .then(({ data }) => setConvite(data))
+      .catch(() => setConviteErro('Este convite é inválido, expirou ou já foi utilizado. Peça um novo link à sua igreja matriz.'));
+  }, []);
 
   useEffect(() => {
     const fetchIgrejas = async () => {
@@ -91,9 +118,18 @@ export default function cadastroPastor() {
     }
     
     try{
-      if(cod_membro === "" || nome === "" || email === "" || senha === "" ||  birth === "" || cargo === "" || nomeIgreja === 0) {
+      if(cod_membro === "" || nome === "" || email === "" || senha === "" ||  birth === "" || cargo === "" || (!conviteToken && nomeIgreja === 0)) {
           notifyWarn();
           return;
+      } else if (senha.length < 10) {
+        toast.warn('A senha deve ter pelo menos 10 caracteres.', { position: "top-center", autoClose: 3000 });
+        return;
+      } else if (conviteToken) {
+        if (!convite) { toast.error(conviteErro || 'Convite inválido.', { position: "top-center" }); return; }
+        await api.post('/cadastro', { cod_membro, nome, email, senha, birth, convite_token: conviteToken });
+        try { sessionStorage.removeItem('conviteToken'); } catch { /* armazenamento indisponível */ }
+        notifySuccess();
+        setTimeout(() => { router.push('/pages/login', { scroll: false }); }, 1500);
       } else {
         const data = {              
           cod_membro,
@@ -117,8 +153,12 @@ export default function cadastroPastor() {
           router.push('/pages/login', { scroll: false });
       }, 1500);
       }
-    } catch{
-      notifyError();
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        toast.error(String(error.response.data.message), { position: "top-center", autoClose: 4000 });
+      } else {
+        notifyError();
+      }
     }
   }  
   return (
@@ -134,7 +174,15 @@ export default function cadastroPastor() {
                 <div className='flex flex-col'>
                         <div>
                             <h1 className='text-white text-4xl mt-10 text1 flex justify-center'>Cadastro de Pastor</h1>
-                            <p className='text-white text-xl text2 mt-2 flex justify-center mb-6'>Agora, cadastre o Pastor da sua igreja para acessar o sistema</p>
+                            {conviteToken ? (
+                              <p className='text-white text-xl text2 mt-2 flex justify-center text-center mb-6'>
+                                {conviteErro || (convite
+                                  ? `Você foi convidado para ser pastor da ${convite.igreja}${convite.matriz ? ` (filial de ${convite.matriz})` : ''}. Crie sua conta abaixo.`
+                                  : 'Verificando convite...')}
+                              </p>
+                            ) : (
+                              <p className='text-white text-xl text2 mt-2 flex justify-center mb-6'>Agora, cadastre o Pastor da sua igreja para acessar o sistema</p>
+                            )}
                         </div>
                         <div className='registration-fields'>
                             <div className='flex flex-col'>
@@ -187,10 +235,12 @@ export default function cadastroPastor() {
                                       <input 
                                         className='px-4 py-3 mb-1 w-[30vh] text2 rounded-lg text-black' 
                                         type={showPassword ? 'text' : 'password'}
-                                        placeholder='Digite a Senha...'
+                                        placeholder='Mínimo de 10 caracteres'
                                         value={senha}
                                         onChange={e => setSenha(e.target.value)}
-                                        maxLength={16}
+                                        minLength={10}
+                                        maxLength={64}
+                                        autoComplete='new-password'
                                         required
                                       />
 
@@ -217,6 +267,12 @@ export default function cadastroPastor() {
                                 />
                               </div>
 
+                              {conviteToken ? (
+                              <div className='flex flex-col ml-5'>
+                                <label className='text-white text1 text-xl mt-2 mb-1'>Igreja</label>
+                                <p className='bg-white px-4 py-3 mb-1 w-[32vh] text2 rounded-lg text-black'>{convite?.igreja || '—'}</p>
+                              </div>
+                              ) : (
                               <div className='flex flex-col ml-5'>
                                 <label className='text-white text1 text-xl mt-2 mb-1'>Endereço</label>
 
@@ -237,6 +293,7 @@ export default function cadastroPastor() {
                                   ))}       
                                 </select>
                               </div>
+                              )}
                             </div>                           
                             
                             <button type='submit' className='border-2 rounded-lg h-12 w-full mt-3 border-white text2 text-white active:bg-white active:text-azul' onClick={handleRegister}>Cadastrar</button>
