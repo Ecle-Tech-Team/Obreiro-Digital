@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Nunito, Poppins } from 'next/font/google'
 import './globals.css'
+import './styles/od.css'
 
 // Otimização de fontes com display: swap para melhor performance
 const poppinsBold = Poppins({
@@ -18,11 +19,19 @@ const poppinsSemiBold = Poppins({
   preload: true,
 })
 const nunito = Nunito({
-  weight: "700",
+  weight: ["600", "700", "800"],
   subsets: ["latin"],
   variable: "--font-nunito",
   display: 'swap',
   preload: true,
+})
+
+// Família completa usada pelo sistema visual novo (styles/od.css).
+const poppins = Poppins({
+  weight: ["600", "700", "800"],
+  subsets: ["latin"],
+  variable: "--font-poppins",
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
@@ -53,7 +62,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-br">
-      <body className={`${poppinsBold.variable} ${poppinsSemiBold.variable} ${nunito.variable}`}>{children}</body>
+      <body className={`${poppinsBold.variable} ${poppinsSemiBold.variable} ${nunito.variable} ${poppins.variable}`}>{children}</body>
     </html>
   )
 }

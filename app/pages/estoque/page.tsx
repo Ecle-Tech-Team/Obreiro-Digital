@@ -1,966 +1,241 @@
 "use client";
-import { AddButton, AppModal, DataTable, FilterButton, PageTitle, SearchField } from '@/app/components/shared/MemberStyle';
-import React, { useState, useEffect, useRef } from "react";
-import { Trash2, X } from "lucide-react";
-import { format } from "date-fns";
-import MenuLateral from "@/app/components/menuLateral/menuLateral";
-import Link from "next/link";
-import api from "../../api/api";
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
+import { AlertTriangle, Boxes, CalendarClock, CircleDollarSign, Hash, Package, Pencil, Plus, Tag, Trash2 } from "lucide-react";
+
+import { ConfirmDialog, EditRow, Modal, ViewRow } from "@/app/components/ui/Modal";
+import { apiMessage, PageShell, SearchBox, SortMenu } from "@/app/components/ui/PageParts";
+import { brDate, parseDateOnly } from "@/app/utils/date";
+import { brl, cents, toApiValue, toInputValue } from "@/app/utils/money";
+import api from "../../api/api";
+
 import "react-toastify/dist/ReactToastify.css";
-import { parseDateOnly } from "@/app/utils/date";
 
-interface Igreja {
-  id_igreja: number;
-  nome: string;
+interface Produto { id_produto: number; cod_produto: string | null; categoria: string; nome_produto: string; quantidade: number; validade: string; preco_unitario: string; id_igreja: number }
+type Sort = "recent" | "oldest" | "name-asc" | "name-desc" | "validade";
+type Form = { nome: string; cod: string; cat: string; qtd: string; preco: string; validade: string };
+
+const CATEGORIAS = ["Cozinha", "Limpeza", "Materiais de Construção"];
+const CURTA: Record<string, string> = { "Materiais de Construção": "Construção" };
+const SORTS: [Sort, string][] = [["recent", "Adicionados recentemente"], ["oldest", "Adicionados antigamente"], ["name-asc", "Nome A-Z"], ["name-desc", "Nome Z-A"], ["validade", "Vencem primeiro"]];
+const COLS = "minmax(0, 1fr) 110px 130px 140px 190px";
+const ALERTA_DIAS = 60;
+const toastConfig = { position: "top-center" as const, autoClose: 1800, theme: "colored" as const };
+
+// Dias até a validade (negativo = vencido).
+function diasAte(valor: string) {
+  const d = parseDateOnly(valor);
+  if (Number.isNaN(d.getTime())) return Infinity;
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  return Math.round((d.getTime() - hoje.getTime()) / 864e5);
+}
+function validade(valor: string) {
+  const n = diasAte(valor);
+  if (n < 0) return { cls: "tag tag-rec", txt: `Vencido · ${brDate(valor)}` };
+  if (n <= ALERTA_DIAS) return { cls: "tag tag-and", txt: `${brDate(valor)} · ${n === 0 ? "vence hoje" : n === 1 ? "1 dia" : `${n} dias`}` };
+  return { cls: "list-n", txt: brDate(valor) };
 }
 
-interface User {
-  id_user: number;
-  id_igreja: number;
-}
+export default function Estoque() {
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [busca, setBusca] = useState("");
+  const [ordem, setOrdem] = useState<Sort>("name-asc");
+  const [cat, setCat] = useState("todos");
 
-interface Estoque {
-  id_produto: number;
-  cod_produto: string;
-  categoria: string;
-  nome_produto: string;
-  quantidade: number;
-  validade: string;
-  preco_unitario: number;
-  id_igreja: number;
-}
+  const [modal, setModal] = useState<"det" | "form" | null>(null);
+  const [sel, setSel] = useState<Produto | null>(null);
+  const [form, setForm] = useState<Form>({ nome: "", cod: "", cat: "", qtd: "", preco: "", validade: "" });
+  const [salvando, setSalvando] = useState(false);
+  const [paraExcluir, setParaExcluir] = useState<Produto | null>(null);
 
-export default function estoque() {
-  const [cod_produto, setCodProduto] = useState<string>("");
-  const [nome_produto, setNomeProduto] = useState<string>("");
-  const [categoria, setCategoria] = useState<string>("");
-  const [quantidade, setQuantidade] = useState<number>(0);
-  const [validade, setValidade] = useState<string>("");
-  const [preco_unitario, setPrecoUnitario] = useState<number>(0);
-
-  const [editCodProduto, setEditCodProduto] = useState<string>("");
-  const [editNomeProduto, setEditNomeProduto] = useState<string>("");
-  const [editCategoria, setEditCategoria] = useState<string>("");
-  const [editQuantidade, setEditQuantidade] = useState<number>(0);
-  const [editValidade, setEditValidade] = useState<string>("");
-  const [editPrecoUnitario, setEditPrecoUnitario] = useState<number>(0);
-
-  const [modalType, setModalType] = useState<"new" | "edit" | null>(null);
-
-  const [produtos, setProdutos] = useState<Estoque[]>([]);
-
-  const [user, setUser] = useState<User | null>(null);
-
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [produtoToDelete, setProdutoToDelete] = useState<number | null>(null);
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [allEstoque, setAllEstoque] = useState<Estoque[]>([]); // Lista completa
-  const [filteredEstoque, setFilteredEstoque] = useState<Estoque[]>([]); // Lista filtrada
-  const handleDeleteClick = (id_produto: number) => {
-    setProdutoToDelete(id_produto);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!produtoToDelete) return;
-
+  const carregar = useCallback(async () => {
+    const igreja = sessionStorage.getItem("id_igreja");
+    if (!igreja) return;
     try {
-      await api.delete(`/estoque/${produtoToDelete}`);
-      const notifyDelete = () => {
-        toast.success("Produto deletado com sucesso!", {
-          position: "top-center",
-          autoClose: 1500,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "colored",
-        });
-      };
-
-      setProdutos(produtos.filter((m) => m.id_produto !== produtoToDelete));
-      notifyDelete();
-    } catch (error) {
-      toast.error("Erro ao remover membro.");
-    } finally {
-      setIsDeleteModalOpen(false);
-      setProdutoToDelete(null);
-    }
-  };
-
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-
-  const handleClickOutside = (event: MouseEvent) => {
-    if (
-      dropdownRef.current &&
-      !dropdownRef.current.contains(event.target as Node)
-    ) {
-      setIsDropdownOpen(false);
-    }
-  };
-
-  useEffect(() => {
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const id_igreja = sessionStorage.getItem("id_igreja");
-
-        const estoqueResponse = await api.get(`/estoque/${id_igreja}`);
-        setAllEstoque(estoqueResponse.data);
-        setFilteredEstoque(estoqueResponse.data);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
-    };
-
-    fetchUserData();
-  }, []);
-
-  const [igreja, setIgreja] = useState<Igreja[]>([]);
-
-  useEffect(() => {
-    const fetchIgrejas = async () => {
-      try {
-        const response = await api.get("/departamento/igreja");
-        setIgreja(response.data);
-      } catch (error) {
-        console.error("Error fetching igrejas:", error);
-      }
-    };
-
-    fetchIgrejas();
-  }, []);
-
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
-
-    if (term.trim() === "") {
-      setFilteredEstoque(allEstoque);
-      return;
-    }
-
-    const lowercasedTerm = term.toLowerCase();
-
-    const filtered = allEstoque.filter((produto) => {
-      // Converte todos os campos para string antes de verificar
-      const nomeStr = produto.nome_produto
-        ? produto.nome_produto.toString().toLowerCase()
-        : "";
-      const codStr = produto.cod_produto
-        ? produto.cod_produto.toString().toLowerCase()
-        : "";
-
-      return (
-        nomeStr.includes(lowercasedTerm) || codStr.includes(lowercasedTerm)
-      );
-    });
-
-    setFilteredEstoque(filtered);
-  };
-
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [sortCriteria, setSortCriteria] = useState<
-    "recent" | "oldest" | "name-asc" | "name-desc" | "birth"
-  >("recent");
-
-  const sortEstoque = (produtos: Estoque[]) => {
-    const sorted = [...produtos];
-
-    switch (sortCriteria) {
-      case "recent":
-        // Adicionados recentemente (maior ID primeiro)
-        return sorted.sort((a, b) => b.id_produto - a.id_produto);
-
-      case "oldest":
-        // Adicionados há mais tempo (menor ID primeiro)
-        return sorted.sort((a, b) => a.id_produto - b.id_produto);
-
-      case "name-asc":
-        // Ordem alfabética A-Z
-        return sorted.sort((a, b) =>
-          a.nome_produto.localeCompare(b.nome_produto)
-        );
-
-      case "name-desc":
-        // Ordem alfabética Z-A
-        return sorted.sort((a, b) =>
-          b.nome_produto.localeCompare(a.nome_produto)
-        );
-
-      case "birth":
-        // Por data de nascimento (mais jovens primeiro)
-        return sorted.sort(
-          (a, b) =>
-            new Date(b.validade).getTime() - new Date(a.validade).getTime()
-        );
-
-      default:
-        return sorted;
-    }
-  };
-
-  const sortedEstoque = sortEstoque(filteredEstoque);
-
-  const [modalIsOpen, setModalIsOpen] = useState(false);
-
-  const openModal = (type: "new" | "edit", produto?: Estoque) => {
-    setModalType(type);
-    if (type === "new") {
-      setCodProduto("");
-      setNomeProduto("");
-      setCategoria("");
-      setQuantidade(0);
-      setValidade("");
-      setPrecoUnitario(0);
-    } else if (type === "edit" && produto) {
-      setSelectedProduto(produto);
-      setEditCodProduto(produto.cod_produto);
-      setEditNomeProduto(produto.nome_produto);
-      setEditCategoria(produto.categoria);
-      setEditQuantidade(produto.quantidade);
-      setEditValidade(format(parseDateOnly(produto.validade), "yyyy-MM-dd"));
-      setEditPrecoUnitario(produto.preco_unitario);
-    }
-
-    setModalIsOpen(true);
-  };
-
-  const closeModal = () => {
-    setModalIsOpen(false);
-    setModalType(null);
-  };
-
-  const notifyTypingError = () => {
-    toast.error("O nome não pode conter caracteres especiais.", {
-      position: "top-center",
-      autoClose: 1500,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "colored",
-    });
-  };
-
-  const notifyTypingErrorSpecial = () => {
-    toast.error("O nome contém caracteres inválidos.", {
-      position: "top-center",
-      autoClose: 1500,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "colored",
-    });
-  };
-
-  const [selectedProduto, setSelectedProduto] = useState<Estoque | null>(null);
-
-  useEffect(() => {
-    if (selectedProduto) {
-      setCodProduto(selectedProduto.cod_produto || "");
-      setNomeProduto(selectedProduto.nome_produto || "");
-      setCategoria(selectedProduto.categoria || "");
-      setQuantidade(selectedProduto.quantidade || 0);
-      setValidade(selectedProduto.validade || "");
-      setPrecoUnitario(selectedProduto.preco_unitario || 0);
-    }
-  }, [selectedProduto]);
-
-  async function handleRegister(event: React.FormEvent) {
-    event.preventDefault();
-
-    const specialCharactersRegex = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/;
-    const invalidCharactersRegex = /[^a-zA-Z\s]/;
-
-    const notifySuccess = () => {
-      toast.success("Produto cadastrado com sucesso!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyWarn = () => {
-      toast.warn("Todos os campos devem ser preenchidos!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyError = () => {
-      toast.error("Erro no cadastro, Tente novamente.", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    try {
-      if (
-        cod_produto === "" ||
-        nome_produto === "" ||
-        categoria === "" ||
-        validade === "" ||
-        preco_unitario === 0
-      ) {
-        notifyWarn();
-        return;
-      } else if (specialCharactersRegex.test(nome_produto)) {
-        notifyTypingError();
-        return;
-      } else if (invalidCharactersRegex.test(nome_produto)) {
-        notifyTypingErrorSpecial();
-        return;
-      } else {
-        const data = {
-          cod_produto,
-          nome_produto,
-          categoria,
-          quantidade,
-          validade,
-          preco_unitario,
-        };
-
-        const response = await api.post("/estoque", data);
-
-        notifySuccess();
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
-      }
+      const { data } = await api.get(`/estoque/${igreja}`);
+      setProdutos(Array.isArray(data) ? data : []);
     } catch {
-      notifyError();
+      setProdutos([]);
+    }
+  }, []);
+
+  useEffect(() => { void carregar(); }, [carregar]);
+
+  const total = (p: Produto) => cents(p.preco_unitario) * BigInt(p.quantidade || 0);
+  const kpis = useMemo(() => ({
+    valor: produtos.reduce((t, p) => t + total(p), 0n),
+    vencendo: produtos.filter((p) => diasAte(p.validade) <= ALERTA_DIAS).length,
+  }), [produtos]);
+
+  const lista = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    const cmp: Record<Sort, (a: Produto, b: Produto) => number> = {
+      recent: (a, b) => b.id_produto - a.id_produto,
+      oldest: (a, b) => a.id_produto - b.id_produto,
+      "name-asc": (a, b) => a.nome_produto.localeCompare(b.nome_produto),
+      "name-desc": (a, b) => b.nome_produto.localeCompare(a.nome_produto),
+      validade: (a, b) => diasAte(a.validade) - diasAte(b.validade),
+    };
+    return produtos
+      .filter((p) => cat === "todos" || p.categoria === cat)
+      .filter((p) => !termo || `${p.nome_produto} ${p.cod_produto ?? ""} ${p.categoria}`.toLowerCase().includes(termo))
+      .sort(cmp[ordem]);
+  }, [produtos, busca, ordem, cat]);
+
+  const novo = () => { setSel(null); setForm({ nome: "", cod: "", cat: "", qtd: "", preco: "", validade: "" }); setModal("form"); };
+  const editar = () => { if (sel) { setForm({ nome: sel.nome_produto, cod: sel.cod_produto ?? "", cat: sel.categoria, qtd: String(sel.quantidade), preco: toInputValue(sel.preco_unitario), validade: String(sel.validade).slice(0, 10) }); setModal("form"); } };
+  const fechar = () => { setModal(null); setSel(null); };
+  const voltar = () => setModal(sel ? "det" : null);
+  const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm({ ...form, [k]: e.target.value });
+
+  async function salvar(event?: React.FormEvent) {
+    event?.preventDefault();
+    const qtd = Number(form.qtd);
+    const preco = toApiValue(form.preco);
+    if (!form.nome.trim() || !form.cat || !form.validade) return void toast.warn("Preencha nome, categoria e validade.", toastConfig);
+    if (!Number.isInteger(qtd) || qtd < 0) return void toast.warn("A quantidade deve ser um número inteiro.", toastConfig);
+    if (!preco) return void toast.warn("Informe o preço unitário, por exemplo 12,50.", toastConfig);
+    const dados = { nome_produto: form.nome.trim(), cod_produto: form.cod.trim(), categoria: form.cat, quantidade: qtd, preco_unitario: preco, validade: form.validade };
+    setSalvando(true);
+    try {
+      if (sel) {
+        await api.put(`/estoque/${sel.id_produto}/${sel.id_igreja}`, dados);
+        await carregar();
+        setSel({ ...sel, ...dados });
+        setModal("det");
+        toast.success("Produto atualizado!", toastConfig);
+      } else {
+        await api.post("/estoque", dados);
+        await carregar();
+        fechar();
+        toast.success("Produto adicionado ao estoque!", toastConfig);
+      }
+    } catch (error) {
+      toast.error(apiMessage(error, "Não foi possível salvar o produto."), toastConfig);
+    } finally {
+      setSalvando(false);
     }
   }
 
-  const handleUpdate = async (produto: Estoque | null) => {
-    const notifySuccess = () => {
-      toast.success("Produto atualizado com sucesso!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyWarn = () => {
-      toast.warn("Todos os campos devem ser preenchidos!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyError = () => {
-      toast.error("Erro na atualização, Tente novamente.", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
+  async function excluir() {
+    if (!paraExcluir) return;
     try {
-      if (!produto) {
-        console.error("No selected produto for update");
-        return;
-      }
-
-      if (
-        !editCodProduto ||
-        !editNomeProduto ||
-        !editCategoria ||
-        !editQuantidade ||
-        !editValidade ||
-        !editPrecoUnitario
-      ) {
-        notifyWarn();
-        return;
-      }
-
-      const data = {
-        cod_produto: editCodProduto,
-        nome_produto: editNomeProduto,
-        categoria: editCategoria,
-        quantidade: editQuantidade,
-        validade: editValidade,
-        preco_unitario: editPrecoUnitario,
-      };
-
-      setProdutos((prevProdutos) =>
-        prevProdutos.map((p) =>
-          p.id_produto === produto.id_produto ? { ...p, ...data } : p
-        )
-      );
-
-      const response = await api.put(
-        `/estoque/${produto.id_produto}/${produto.id_igreja}`,
-        data
-      );
-      notifySuccess();
-
-      closeModal();
-      setSelectedProduto(null);
+      await api.delete(`/estoque/${paraExcluir.id_produto}`);
+      await carregar();
+      fechar();
+      toast.success("Produto removido.", toastConfig);
     } catch (error) {
-      console.error("Error updating produto:", error);
-      notifyError();
+      toast.error(apiMessage(error, "Erro ao remover produto."), toastConfig);
+    } finally {
+      setParaExcluir(null);
     }
-  };
+  }
+
+  const tabs: [string, string, number][] = [["todos", "Todos", produtos.length], ...CATEGORIAS.map((c) => [c, CURTA[c] || c, produtos.filter((p) => p.categoria === c).length] as [string, string, number])];
 
   return (
-    <main>
-      <div className="flex">
-        <MenuLateral />
-        <div className="app-content">
-          <nav className="mb-6 md:mb-0" aria-label="Navegação">
-            <ol className="flex flex-wrap items-center text-sm text-gray-600">
-              <li><Link href={"/../../pages/inicio"} className="text3 transition-colors hover:text-azul">Início</Link></li>
-              <li className="mx-2" aria-hidden="true">&#62;</li>
-              <li className="text3 font-semibold text-azul" aria-current="page">Estoque</li>
-            </ol>
-          </nav>
-
-          <div className="page-toolbar od-reference-toolbar mt-6">
-            <div>
-              <PageTitle>Estoque</PageTitle>
-            </div>
-
-            <div className="page-toolbar-actions">
-              <div className="relative flex min-w-0 flex-1">
-                <div className="flex w-full min-w-0">
-                  {/* Botão de filtro */}
-                  <div className="od-list-controls relative flex w-full min-w-0 items-center gap-2">
-                    <FilterButton
-                      onClick={() => setIsFilterOpen(!isFilterOpen)}
-
-                     />
-                    <div className="flex-1">
-                      <SearchField
-                        type="text"
-                        placeholder="Pesquisar produtos..."
-
-                        value={searchTerm}
-                        onChange={(e) => handleSearch(e.target.value)}
-                      />
-                    </div>
-                    {/* Dropdown de filtros */}
-                    {isFilterOpen && (
-                      <div className="od-filter-menu absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "recent"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("recent");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Adicionados recentemente
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "oldest"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("oldest");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Adicionados antigamente
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "name-asc"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("name-asc");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Nome A-Z
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "name-desc"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("name-desc");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Nome Z-A
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "birth"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("birth");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Data de validade
-                        </button>
-                      </div>
-                    )}
+    <PageShell
+      crumbs={[{ label: "Início", href: "/pages/inicio" }, { label: "Estoque" }]}
+      title="Estoque"
+      after={(
+        <>
+          <Modal open={modal === "det" && !!sel} onClose={fechar} title="Detalhes do produto" subtitle={sel ? `${sel.cod_produto || "Sem código"} · ${sel.categoria}` : ""}>
+            {sel && (
+              <>
+                <div className="mx-b">
+                  <div className="pf"><span className="av" aria-hidden="true"><Package className="i" /></span><div><h3 className="xc-tit">{sel.nome_produto}</h3><span className="tag tag-loc">{sel.categoria}</span></div></div>
+                  <div className="vw">
+                    <ViewRow icon={Boxes} label="Quantidade">{sel.quantidade} {sel.quantidade === 1 ? "unidade" : "unidades"}</ViewRow>
+                    <ViewRow icon={CircleDollarSign} label="Preço unitário">{brl(cents(sel.preco_unitario))} · total {brl(total(sel))}</ViewRow>
+                    <ViewRow icon={CalendarClock} label="Validade"><span className={validade(sel.validade).cls}>{validade(sel.validade).txt}</span></ViewRow>
                   </div>
                 </div>
-              </div>
-              <div className="flex min-w-0">
-                <div className="flex justify-center">
-                  <AddButton onClick={() => openModal("new")}>Novo Produto</AddButton>
+                <div className="mx-f split">
+                  <button type="button" className="btn dng-g" onClick={() => setParaExcluir(sel)}><Trash2 className="i s18" aria-hidden="true" />Excluir</button>
+                  <button type="button" className="btn pri" onClick={editar}><Pencil className="i s18" aria-hidden="true" />Editar</button>
                 </div>
-              </div>
-            </div>
+              </>
+            )}
+          </Modal>
 
-            <div className="page-list-region">
-              <div className="page-table-scroll mt-4 max-h-[70vh]">
-                {sortedEstoque.length === 0 ? (
-                  <p className="text-center text-black text1 text-4xl mt-5 text-gray-4">
-                    Nenhum produto encontrado.
-                  </p>
-                ) : (
-                  <DataTable>
-                    <thead className="sticky top-0">
-                      <tr className="bg-azul text-white rounded-xl">
-                        <th className="text1 text-white text-2xl px-[4.9vh] py-2 ">
-                          Cód. Produto
-                        </th>
-                        <th className="text1 text-white text-2xl px-[7.9vh] py-2">
-                          Nome
-                        </th>
-                        <th className="text1 text-white text-2xl px-[4.9vh] py-2">
-                          Categoria
-                        </th>
-                        <th className="text1 text-white text-2xl px-[4.9vh] py-2">
-                          Quantidade
-                        </th>
-                        <th className="text1 text-white text-2xl px-[4.9vh] py-2">
-                          Validade
-                        </th>
-                        <th className="text1 text-white text-2xl px-[4.9vh] py-2">
-                          Preço Unitário
-                        </th>
-                        <th className="sm:px-1 md:px-1 lg:px-1 py-2"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedEstoque.map((prod) => (
-                        <tr
-                          key={prod.id_produto}
-                          onClick={() => openModal("edit", prod)}
-                          className="cursor-pointer hover:bg-slate-200"
-                        >
-                          <td data-label="Cód. Produto" className="text-center text2 text-xl py-3">
-                            {prod.cod_produto}
-                          </td>
-                          <td data-label="Nome" className="text-center text2 text-xl py-3">
-                            {prod.nome_produto}
-                          </td>
-                          <td data-label="Categoria" className="text-center text2 text-xl py-3">
-                            {prod.categoria}
-                          </td>
-                          <td data-label="Quantidade" className="text-center text2 text-xl py-3">
-                            {prod.quantidade}
-                          </td>
-                          <td data-label="Validade" className="text-center text2 text-xl py-3">
-                            {format(parseDateOnly(prod.validade), "dd/MM/yyyy")}
-                          </td>
-                          <td data-label="Preço Unitário" className="text-center text2 text-xl py-3">
-                            {prod.preco_unitario}
-                          </td>
-                          <td data-label="Ações" className="text-center">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteClick(prod.id_produto);
-                              }}
-                              className="px-2 py-1 mr-5 bg-red-500 text-white rounded hover:bg-red-600"
-                            >
-                              <Trash2
-                                width={30}
-                                height={40} aria-label="lixo Icon"
-                              />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </DataTable>
-                )}
-              </div>
-            </div>
-
-            <AppModal
-              isOpen={isDeleteModalOpen}
-              onRequestClose={() => setIsDeleteModalOpen(false)}
-              contentLabel="Confirmar exclusão"
-              className="fixed inset-0 flex items-center justify-center p-4"
-              overlayClassName="fixed inset-0 bg-black bg-opacity-70"
-            >
-              <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-                <h2 className="text1 text-xl text-black font-bold mb-4">
-                  Confirmar Exclusão
-                </h2>
-                <p className="text2 text-gray-600 mb-6">
-                  Você tem certeza que deseja remover este produto?
-                </p>
-                <div className="flex justify-end space-x-4">
-                  <button
-                    onClick={() => setIsDeleteModalOpen(false)}
-                    className="text2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={handleDeleteConfirm}
-                    className="text2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                  >
-                    Confirmar
-                  </button>
-                </div>
-              </div>
-            </AppModal>
-
-            <AppModal
-              className="text-white flex flex-col"
-              isOpen={modalIsOpen && modalType === "new"}
-              onRequestClose={closeModal}
-              contentLabel="Novo Produto"
-            >
-              <div className="flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl">
-                <div className="cursor-pointer flex place-content-end rounded-lg">
-                  <X
-                    onClick={closeModal}
-                    width={40}
-                    height={40} aria-label="close Icon"
-                    className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
-                  />
-                </div>
-
-                <h2 className="text-white text1 text-4xl flex justify-center">
-                  Novo Produto
-                </h2>
-
-                <div className="flex flex-col px-10">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Cód. Produto
-                  </label>
-
-                  <input
-                    type="text"
-                    className="px-4 py-3 rounded-lg text2 text-black"
-                    placeholder="Digite o Código..."
-                    value={cod_produto}
-                    onChange={(e) => {
-                      setCodProduto(e.target.value);
-                    }}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col px-10">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Nome
-                  </label>
-
-                  <input
-                    type="text"
-                    className="px-4 py-3 rounded-lg text2 text-black"
-                    placeholder="Digite o Código..."
-                    value={nome_produto}
-                    onChange={(e) => {
-                      setNomeProduto(e.target.value);
-                    }}
-                    maxLength={150}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col px-10">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Categoria
-                  </label>
-
-                  <select
-                    className="bg-white px-4 py-3 rounded-lg text2 text-black"
-                    value={categoria}
-                    onChange={(e) => setCategoria(e.target.value)}
-                    required
-                  >
-                    <option value="" disabled>
-                      Selecione a Categoria
-                    </option>
-                    <option value="Cozinha">Cozinha</option>
-                    <option value="Limpeza">Limpeza</option>
-                    <option value="Materiais de Construção">
-                      Materiais de Construção
-                    </option>
+          <Modal open={modal === "form"} onClose={fechar} as="form" onSubmit={salvar} title={sel ? "Editar produto" : "Novo produto"} subtitle={sel ? "Atualize quantidade, preço ou validade." : "Cadastre um item do estoque da igreja."}>
+            <div className="mx-b">
+              <label className="sr" htmlFor="s-nome">Nome do produto</label>
+              <input id="s-nome" className="ed-tit" placeholder="Nome do produto" maxLength={150} value={form.nome} onChange={set("nome")} />
+              <div className="vw">
+                <EditRow icon={Hash} label="Código" htmlFor="s-cod"><input id="s-cod" className="ed-in" placeholder="Ex.: P-004" maxLength={30} value={form.cod} onChange={set("cod")} /></EditRow>
+                <EditRow icon={Tag} label="Categoria" htmlFor="s-cat">
+                  <select id="s-cat" className="ed-in" value={form.cat} onChange={set("cat")}>
+                    <option value="">Selecione</option>
+                    {CATEGORIAS.map((c) => <option key={c}>{c}</option>)}
                   </select>
-                </div>
-
-                <div className="flex px-10">
-                  <div className="flex flex-col">
-                    <label className="text-white text1 text-xl mt-5 mb-1">
-                      Quantidade
-                    </label>
-
-                    <input
-                      type="number"
-                      className="px-4 py-3 rounded-lg text2 text-black"
-                      placeholder="Digite a Quantidade..."
-                      value={quantidade}
-                      onChange={(e) => setQuantidade(Number(e.target.value))}
-                      required
-                    />
-                  </div>
-
-                  <div className="flex flex-col ml-10">
-                    <label className="text-white text1 text-xl mt-5 mb-1">
-                      Preço Unitário
-                    </label>
-
-                    <input
-                      type="number"
-                      className="px-4 py-3 rounded-lg text2 text-black"
-                      placeholder="Digite o Preço Unitário..."
-                      value={preco_unitario}
-                      onChange={(e) => setPrecoUnitario(Number(e.target.value))}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col px-10">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Validade
-                  </label>
-
-                  <input
-                    type="date"
-                    className="px-4 py-3 rounded-lg text2 text-black"
-                    placeholder="Digite o Preço Unitário..."
-                    value={validade}
-                    onChange={(e) => setValidade(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col px-10 pb-10">
-                  <button
-                    className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"
-                    onClick={handleRegister}
-                  >
-                    Enviar
-                  </button>
-                </div>
+                </EditRow>
+                <EditRow icon={Boxes} label="Quantidade" htmlFor="s-qtd"><input id="s-qtd" className="ed-in" type="number" min={0} step={1} value={form.qtd} onChange={set("qtd")} /></EditRow>
+                <EditRow icon={CircleDollarSign} label="Preço unit." htmlFor="s-preco"><input id="s-preco" className="ed-in" inputMode="decimal" placeholder="0,00" maxLength={14} value={form.preco} onChange={(e) => setForm({ ...form, preco: e.target.value.replace(/[^\d.,]/g, "") })} /></EditRow>
+                <EditRow icon={CalendarClock} label="Validade" htmlFor="s-val"><input id="s-val" className="ed-in" type="date" value={form.validade} onChange={set("validade")} /></EditRow>
               </div>
-            </AppModal>
+            </div>
+            <div className="mx-f">
+              <button type="button" className="btn ghost" onClick={voltar}>Cancelar</button>
+              <button type="submit" className="btn pri" disabled={!form.nome.trim() || salvando}>{sel ? "Salvar alterações" : "Adicionar produto"}</button>
+            </div>
+          </Modal>
 
-            <AppModal
-              className="text-white flex flex-col"
-              isOpen={modalIsOpen && modalType === "edit"}
-              onRequestClose={closeModal}
-              contentLabel="Editar Produto"
-            >
-              <div className="flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl">
-                <div className="cursor-pointer flex place-content-end rounded-lg">
-                  <X
-                    onClick={closeModal}
-                    width={40}
-                    height={40} aria-label="close Icon"
-                    className="bg-red-500 hover:bg-red-600 rounded-tr-lg"
-                  />
-                </div>
-
-                <h2 className="text-white text1 text-4xl flex justify-center">
-                  Editar Produto
-                </h2>
-
-                <div className="flex flex-col px-10">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Cód. Produto
-                  </label>
-
-                  <input
-                    type="text"
-                    className="px-4 py-3 rounded-lg text2 text-black"
-                    placeholder="Digite o Código..."
-                    value={editCodProduto}
-                    onChange={(e) => {
-                      setEditCodProduto(e.target.value);
-                    }}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col px-10">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Nome
-                  </label>
-
-                  <input
-                    type="text"
-                    className="px-4 py-3 rounded-lg text2 text-black"
-                    placeholder="Digite o Código..."
-                    value={editNomeProduto}
-                    onChange={(e) => {
-                      setEditNomeProduto(e.target.value);
-                    }}
-                    maxLength={150}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col px-10">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Categoria
-                  </label>
-
-                  <select
-                    className="bg-white px-4 py-3 rounded-lg text2 text-black"
-                    value={editCategoria}
-                    onChange={(e) => setEditCategoria(e.target.value)}
-                    required
-                  >
-                    <option value="" disabled>
-                      Selecione a Categoria
-                    </option>
-                    <option value="Cozinha">Cozinha</option>
-                    <option value="Limpeza">Limpeza</option>
-                    <option value="Materiais de Construção">
-                      Materiais de Construção
-                    </option>
-                  </select>
-                </div>
-
-                <div className="flex px-10">
-                  <div className="flex flex-col">
-                    <label className="text-white text1 text-xl mt-5 mb-1">
-                      Quantidade
-                    </label>
-
-                    <input
-                      type="number"
-                      className="px-4 py-3 rounded-lg text2 text-black"
-                      placeholder="Digite a Quantidade..."
-                      value={editQuantidade}
-                      onChange={(e) =>
-                        setEditQuantidade(Number(e.target.value))
-                      }
-                      required
-                    />
-                  </div>
-
-                  <div className="flex flex-col ml-10">
-                    <label className="text-white text1 text-xl mt-5 mb-1">
-                      Preço Unitário
-                    </label>
-
-                    <input
-                      type="number"
-                      className="px-4 py-3 rounded-lg text2 text-black"
-                      placeholder="Digite o Preço Unitário..."
-                      value={editPrecoUnitario}
-                      onChange={(e) =>
-                        setEditPrecoUnitario(Number(e.target.value))
-                      }
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col px-10">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Validade
-                  </label>
-
-                  <input
-                    type="date"
-                    className="px-4 py-3 rounded-lg text2 text-black"
-                    placeholder="Digite o Preço Unitário..."
-                    value={editValidade}
-                    onChange={(e) => setEditValidade(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="flex flex-col px-10 pb-10">                  
-                  <button
-                    className="border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg"
-                    onClick={() =>
-                      selectedProduto && handleUpdate(selectedProduto)
-                    }
-                  >
-                    Atualizar
-                  </button>
-                </div>
-              </div>
-            </AppModal>
-          </div>
-        </div>
-        <ToastContainer />
+          <ConfirmDialog
+            open={!!paraExcluir}
+            onCancel={() => setParaExcluir(null)}
+            onConfirm={excluir}
+            title="Excluir produto?"
+            message={<>“{paraExcluir?.nome_produto}” será removido do estoque. Essa ação não pode ser desfeita.</>}
+          />
+          <ToastContainer />
+        </>
+      )}
+    >
+      <div className="toolbar">
+        <SearchBox value={busca} onChange={setBusca} placeholder="Pesquisar produtos..." />
+        <SortMenu options={SORTS} value={ordem} onChange={setOrdem} />
+        <button type="button" className="btn-add" onClick={novo}><Plus className="i s20" aria-hidden="true" />Novo Produto</button>
       </div>
-    </main>
+
+      <div className="kpis">
+        <div className="card kpi"><p className="kpi-l"><Package className="i" aria-hidden="true" />Produtos</p><p className="kpi-v">{produtos.length}</p></div>
+        <div className="card kpi"><p className="kpi-l"><CircleDollarSign className="i" aria-hidden="true" />Valor em estoque</p><p className="kpi-v">{brl(kpis.valor)}</p></div>
+        <div className="card kpi"><p className="kpi-l"><AlertTriangle className="i" aria-hidden="true" />Vencem em até {ALERTA_DIAS} dias</p><p className="kpi-v">{kpis.vencendo}</p></div>
+      </div>
+
+      <div className="list-bar">
+        <div className="tabs" role="tablist" aria-label="Filtrar por categoria" style={{ background: "#e9edf5" }}>
+          {tabs.map(([k, label, n]) => <button key={k} type="button" role="tab" className={cat === k ? "on" : ""} aria-selected={cat === k} onClick={() => setCat(k)}>{label} · {n}</button>)}
+        </div>
+        <span className="list-n">{lista.length} {lista.length === 1 ? "produto" : "produtos"}</span>
+      </div>
+
+      <div className="tbl-wrap fin">
+        <div className="dt">
+          <div className="dt-h" style={{ gridTemplateColumns: COLS }}><span>Produto</span><span>Quantidade</span><span>Preço unit.</span><span>Total</span><span className="r">Validade</span></div>
+          {lista.map((p) => {
+            const v = validade(p.validade);
+            return (
+              <div key={p.id_produto} className="dt-r" style={{ gridTemplateColumns: COLS, minHeight: 68 }}>
+                <button type="button" className="hit" aria-label={`Ver ${p.nome_produto}`} onClick={() => { setSel(p); setModal("det"); }} />
+                <div className="c-desc" data-label="Produto">
+                  <div className="mb">
+                    <span className="fx-ico box" aria-hidden="true"><Package className="i" /></span>
+                    <div><p className="mb-n"><span className="mb-t">{p.nome_produto}</span></p><p className="mb-c">{p.cod_produto ? `${p.cod_produto} · ` : ""}{CURTA[p.categoria] || p.categoria}<span className="only-m"> · {p.quantidade} un.</span></p></div>
+                  </div>
+                </div>
+                <span className="c-hm" data-label="Quantidade">{p.quantidade} un.</span>
+                <span className="c-hm" data-label="Preço unit.">{brl(cents(p.preco_unitario))}</span>
+                <span className="c-hm" data-label="Total" style={{ color: "#0f172a", fontWeight: 800 }}>{brl(total(p))}</span>
+                <span className="c-val" data-label="Validade"><span className={v.cls}>{v.txt}</span></span>
+              </div>
+            );
+          })}
+          {lista.length === 0 && <p className="empty">{produtos.length ? "Nenhum produto neste filtro." : "Nenhum produto cadastrado ainda."}</p>}
+        </div>
+      </div>
+    </PageShell>
   );
 }

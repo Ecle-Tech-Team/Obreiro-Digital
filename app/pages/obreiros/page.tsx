@@ -1,982 +1,245 @@
 "use client";
-import { AddButton, AppModal, DataTable, FilterButton, ModalCloseButton, PageTitle, SearchField } from '@/app/components/shared/MemberStyle';
-import React, { useState, useEffect, useRef } from "react";
-import { ChevronDown, Eye, EyeOff, Trash2 } from "lucide-react";
-import { format } from "date-fns";
-import MenuLateral from "@/app/components/menuLateral/menuLateral";
-import Link from "next/link";
-import api from "../../api/api";
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { Cake, Calendar, Hash, KeyRound, Lock, Mail, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
+
+import { ConfirmDialog, EditRow, Modal, ViewRow } from "@/app/components/ui/Modal";
+import { apiMessage, initials, PageShell, SearchBox, SortMenu } from "@/app/components/ui/PageParts";
+import { birthday, brDate } from "@/app/utils/date";
 import { isMatriz } from "@/app/utils/auth";
-import axios from "axios";
-import { parseDateOnly } from "@/app/utils/date";
+import api from "../../api/api";
 
-// Usuários da matriz cadastram cargos "Matriz"; nas demais igrejas, Pastor e Obreiro.
-// O cargo atual sempre aparece na lista, para o campo nunca mostrar um valor diferente do real.
-function cargoOptions(atual?: string) {
-  const opcoes = isMatriz() ? ["Pastor Matriz", "Obreiro Matriz"] : ["Pastor", "Obreiro"];
-  return atual && !opcoes.includes(atual) ? [atual, ...opcoes] : opcoes;
-}
+import "react-toastify/dist/ReactToastify.css";
 
-const apiMessage = (error: unknown, fallback: string) =>
-  axios.isAxiosError(error) && error.response?.data?.message ? String(error.response.data.message) : fallback;
+interface Obreiro { id_user: number; cod_membro: string; nome: string; email: string; birth: string; cargo: string; id_igreja: number }
+type Sort = "recent" | "oldest" | "name-asc" | "name-desc" | "niver";
+type Form = { cod: string; nome: string; email: string; senha: string; nasc: string; cargo: string };
 
-interface Igreja {
-  id_igreja: number;
-  nome: string;
-}
+const SORTS: [Sort, string][] = [["recent", "Adicionados recentemente"], ["oldest", "Adicionados antigamente"], ["name-asc", "Nome A-Z"], ["name-desc", "Nome Z-A"], ["niver", "Aniversário (jan → dez)"]];
+const toastConfig = { position: "top-center" as const, autoClose: 1800, theme: "colored" as const };
+const ehPastor = (cargo?: string | null) => cargo === "Pastor" || cargo === "Pastor Matriz";
 
-interface User {
-  id_user: number;
-  cod_membro: string;
-  nome: string;
-  email: string;
-  senha: string;
-  birth: string;
-  cargo: string;
-  id_igreja: number;
-}
+export default function Obreiros() {
+  const [obreiros, setObreiros] = useState<Obreiro[]>([]);
+  const [busca, setBusca] = useState("");
+  const [ordem, setOrdem] = useState<Sort>("name-asc");
+  const [eu, setEu] = useState<{ id: number; cargo: string | null; igreja: string | null; matriz: boolean }>({ id: 0, cargo: null, igreja: null, matriz: false });
 
-export default function obreiros() {
-  const [cod_membro, setCodMembro] = useState<string>("");
-  const [nome, setNome] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
-  const [senha, setSenha] = useState<string>("");
-  const [birth, setBirth] = useState<string>("");
-  const [cargo, setCargo] = useState<string>("");
+  const [modal, setModal] = useState<"det" | "form" | null>(null);
+  const [sel, setSel] = useState<Obreiro | null>(null);
+  const [form, setForm] = useState<Form | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [paraExcluir, setParaExcluir] = useState<Obreiro | null>(null);
 
-  const [editCodMembro, setEditCodMembro] = useState<string>("");
-  const [editNome, setEditNome] = useState<string>("");
-  const [editEmail, setEditEmail] = useState<string>("");
-  const [editSenha, setEditSenha] = useState<string>("");
-  const [editBirth, setEditBirth] = useState<string>("");
-  const [editCargo, setEditCargo] = useState<string>("");
+  // Usuários da matriz cadastram cargos "Matriz"; nas demais igrejas, Pastor e Obreiro.
+  const cargos = eu.matriz ? ["Obreiro Matriz", "Pastor Matriz"] : ["Obreiro", "Pastor"];
+  const souPastor = ehPastor(eu.cargo);
+  const podeMexer = (o: Obreiro) => souPastor || o.id_user === eu.id;
 
-  const [modalType, setModalType] = useState<"new" | "edit" | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<number | null>(null);
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const handleDeleteClick = (id_user: number) => {
-    setUserToDelete(id_user);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!userToDelete) return;
-
+  const carregar = useCallback(async () => {
+    const igreja = sessionStorage.getItem("id_igreja");
+    if (!igreja) return;
     try {
-      await api.delete(`/cadastro/${userToDelete}`);
-      const notifyDelete = () => {
-        toast.success("Usuário deletado com sucesso!", {
-          position: "top-center",
-          autoClose: 1500,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "colored",
-        });
-      };
-
-      setUsers(user.filter((m) => m.id_user !== userToDelete));
-      notifyDelete();
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      const { data } = await api.get(`/cadastro/obreiros/${igreja}`);
+      setObreiros(Array.isArray(data) ? data : []);
     } catch (error) {
-      toast.error(apiMessage(error, "Erro ao remover usuário."), { position: "top-center", autoClose: 4000 });
-    } finally {
-      setIsDeleteModalOpen(false);
-      setUserToDelete(null);
+      setObreiros([]);
+      toast.error(apiMessage(error, "Erro ao carregar obreiros."), toastConfig);
     }
-  };
-
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-
-  const handleClickOutside = (event: MouseEvent) => {
-    if (
-      dropdownRef.current &&
-      !dropdownRef.current.contains(event.target as Node)
-    ) {
-      setIsDropdownOpen(false);
-    }
-  };
-
-  useEffect(() => {
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
   }, []);
 
-  const [user, setUsers] = useState<User[]>([]);
-
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const id_igreja = sessionStorage.getItem("id_igreja");
+    setEu({ id: Number(sessionStorage.getItem("id_user")), cargo: sessionStorage.getItem("cargo"), igreja: sessionStorage.getItem("id_igreja"), matriz: isMatriz() });
+    void carregar();
+  }, [carregar]);
 
-        const response = await api.get(`/cadastro/obreiros/${id_igreja}`);
-        setAllUsers(response.data);
-        setFilteredUsers(response.data);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
+  const lista = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    const filtrados = obreiros.filter((o) => !termo || `${o.nome} ${o.email} ${o.cod_membro} ${o.cargo}`.toLowerCase().includes(termo));
+    const cmp: Record<Sort, (a: Obreiro, b: Obreiro) => number> = {
+      recent: (a, b) => b.id_user - a.id_user,
+      oldest: (a, b) => a.id_user - b.id_user,
+      "name-asc": (a, b) => a.nome.localeCompare(b.nome),
+      "name-desc": (a, b) => b.nome.localeCompare(a.nome),
+      niver: (a, b) => birthday(a.birth).chave - birthday(b.birth).chave,
     };
+    return [...filtrados].sort(cmp[ordem]);
+  }, [obreiros, busca, ordem]);
 
-    fetchUserData();
-  }, []);
-
-  const [igreja, setIgreja] = useState<Igreja[]>([]);
-
-  useEffect(() => {
-    const fetchIgrejas = async () => {
-      try {
-        const response = await api.get("/cadastro/cadastro/igreja");
-        setIgreja(response.data);
-      } catch (error) {
-        console.error("Error fetching igrejas:", error);
-      }
-    };
-
-    fetchIgrejas();
-  }, []);
-
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
-
-    if (term.trim() === "") {
-      setFilteredUsers(allUsers);
-      return;
-    }
-
-    const lowercasedTerm = term.toLowerCase();
-
-    const filtered = allUsers.filter((user) => {
-      // Converte todos os campos para string antes de verificar
-      const nomeStr = user.nome ? user.nome.toString().toLowerCase() : "";
-      const codStr = user.cod_membro
-        ? user.cod_membro.toString().toLowerCase()
-        : "";
-      const emailStr = user.email ? user.email.toString().toLowerCase() : "";
-
-      return (
-        nomeStr.includes(lowercasedTerm) ||
-        codStr.includes(lowercasedTerm) ||
-        emailStr.includes(lowercasedTerm)
-      );
-    });
-
-    setFilteredUsers(filtered);
+  const novo = () => { setSel(null); setForm({ cod: "", nome: "", email: "", senha: "", nasc: "", cargo: cargos[0] }); setModal("form"); };
+  const editar = () => {
+    if (!sel) return;
+    setForm({ cod: sel.cod_membro || "", nome: sel.nome || "", email: sel.email || "", senha: "", nasc: (sel.birth || "").slice(0, 10), cargo: sel.cargo });
+    setModal("form");
   };
+  const fechar = () => { setModal(null); setSel(null); setForm(null); };
+  const voltar = () => setModal(sel ? "det" : null);
+  const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => (f ? { ...f, [k]: e.target.value } : f));
 
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [sortCriteria, setSortCriteria] = useState<
-    "recent" | "oldest" | "name-asc" | "name-desc" | "birth"
-  >("recent");
+  const editandoProprio = !!sel && sel.id_user === eu.id;
 
-  const sortUsers = (users: User[]) => {
-    const sorted = [...users];
-
-    switch (sortCriteria) {
-      case "recent":
-        // Adicionados recentemente (maior ID primeiro)
-        return sorted.sort((a, b) => b.id_user - a.id_user);
-
-      case "oldest":
-        // Adicionados há mais tempo (menor ID primeiro)
-        return sorted.sort((a, b) => a.id_user - b.id_user);
-
-      case "name-asc":
-        // Ordem alfabética A-Z
-        return sorted.sort((a, b) => a.nome.localeCompare(b.nome));
-
-      case "name-desc":
-        // Ordem alfabética Z-A
-        return sorted.sort((a, b) => b.nome.localeCompare(a.nome));
-
-      case "birth":
-        // Por data de nascimento (mais jovens primeiro)
-        return sorted.sort(
-          (a, b) => new Date(b.birth).getTime() - new Date(a.birth).getTime()
-        );
-
-      default:
-        return sorted;
-    }
-  };
-
-  const sortedUsers = sortUsers(filteredUsers);
-
-  const [modalIsOpen, setModalIsOpen] = useState(false);
-
-  const openModal = (type: "new" | "edit", user?: User) => {
-    setModalType(type);
-    if (type === "new") {
-      setCodMembro("");
-      setNome("");
-      setEmail("");
-      setSenha("");
-      setBirth("");
-      setCargo("");
-    } else if (type === "edit" && user) {
-      setSelectedUser(user);
-      setEditCodMembro(user.cod_membro);
-      setEditNome(user.nome);
-      setEditEmail(user.email);
-      setEditSenha(user.senha);
-      setEditBirth(format(parseDateOnly(user.birth), "yyyy-MM-dd"));
-      setEditCargo(user.cargo);
-    }
-    setModalIsOpen(true);
-  };
-
-  const closeModal = () => {
-    setModalIsOpen(false);
-    setModalType(null);
-  };
-
-  const notifyTypingError = () => {
-    toast.error("O nome não pode conter caracteres especiais.", {
-      position: "top-center",
-      autoClose: 1500,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "colored",
-    });
-  };
-
-  const notifyTypingErrorSpecial = () => {
-    toast.error("O nome contém caracteres inválidos.", {
-      position: "top-center",
-      autoClose: 1500,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "colored",
-    });
-  };
-
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    if (selectedUser) {
-      setCodMembro(selectedUser.cod_membro || "");
-      setNome(selectedUser.nome || "");
-      setEmail(selectedUser.email || "");
-      setSenha(selectedUser.senha || "");
-      setBirth(selectedUser.birth || "");
-      setCargo(selectedUser.cargo || "");
-    }
-  }, [selectedUser]);
-
-  async function handleRegister(event: React.FormEvent) {
-    event.preventDefault();
-
-    const specialCharactersRegex = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/;
-    const invalidCharactersRegex = /[^a-zA-Z\s]/;
-
-    const notifySuccess = () => {
-      toast.success("Obreiro cadastrado com sucesso!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyWarn = () => {
-      toast.warn("Todos os campos devem ser preenchidos!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyError = () => {
-      toast.error("Erro no cadastro, Tente novamente.", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
+  async function salvar(event?: React.FormEvent) {
+    event?.preventDefault();
+    if (!form) return;
+    if (!form.nome.trim() || !form.cod.trim() || !form.email.trim() || !form.nasc) return void toast.warn("Preencha nome, código, email e nascimento.", toastConfig);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return void toast.warn("Email inválido.", toastConfig);
+    if ((!sel || form.senha) && form.senha.length < 10) return void toast.warn("A senha deve ter pelo menos 10 caracteres.", toastConfig);
+    setSalvando(true);
     try {
-      if (
-        cod_membro === "" ||
-        nome === "" ||
-        email === "" ||
-        senha === "" ||
-        birth === "" ||
-        cargo === ""
-      ) {
-        notifyWarn();
-        return;
-      } else if (specialCharactersRegex.test(nome)) {
-        notifyTypingError();
-        return;
-      } else if (invalidCharactersRegex.test(nome)) {
-        notifyTypingErrorSpecial();
-        return;
+      if (sel) {
+        const dados: Record<string, string> = { cod_membro: form.cod.trim(), nome: form.nome.trim(), birth: form.nasc };
+        // A própria conta troca email e senha em Configurações (exige a senha atual).
+        if (!editandoProprio) {
+          dados.email = form.email.trim();
+          if (form.senha) dados.senha = form.senha;
+        }
+        if (souPastor && form.cargo !== sel.cargo) dados.cargo = form.cargo;
+        await api.put(`/cadastro/${sel.id_user}`, dados);
+        await carregar();
+        setSel({ ...sel, ...dados, email: dados.email ?? sel.email, cargo: dados.cargo ?? sel.cargo });
+        setModal("det");
+        toast.success("Obreiro atualizado com sucesso!", toastConfig);
       } else {
-        const data = {
-          cod_membro,
-          nome,
-          email,
-          senha,
-          birth,
-          cargo,
-        };
-
-        const response = await api.post("/cadastro", data);
-
-        notifySuccess();
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        await api.post("/cadastro", { cod_membro: form.cod.trim(), nome: form.nome.trim(), email: form.email.trim(), senha: form.senha, birth: form.nasc, cargo: form.cargo, id_igreja: eu.igreja });
+        await carregar();
+        fechar();
+        toast.success("Obreiro cadastrado com sucesso!", toastConfig);
       }
-    } catch {
-      notifyError();
+    } catch (error) {
+      toast.error(apiMessage(error, sel ? "Erro na atualização. Tente novamente." : "Erro no cadastro. Verifique se o email já está em uso."), { ...toastConfig, autoClose: 4000 });
+    } finally {
+      setSalvando(false);
     }
   }
 
-  const handleUpdate = async (user: User | null) => {
-    const notifySuccess = () => {
-      toast.success("Obreiro Atualizado com sucesso!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyWarn = () => {
-      toast.warn("Todos os campos devem ser preenchidos!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyError = (message = "Erro na atualização, Tente novamente.") => {
-      toast.error(message, {
-        position: "top-center",
-        autoClose: 4000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
+  async function excluir() {
+    if (!paraExcluir) return;
     try {
-      if (!user) {
-        console.error("No selected user for update");
-        return;
-      }
-
-      if (
-        !editCodMembro ||
-        !editNome ||
-        !editEmail ||
-        !editBirth ||
-        !editCargo
-      ) {
-        notifyWarn();
-        return;
-      }
-
-      const data = {
-        cod_membro: editCodMembro,
-        nome: editNome,
-        email: editEmail,
-        senha: editSenha,
-        birth: editBirth,
-        cargo: editCargo,
-      };
-
-      const response = await api.put(
-        `/cadastro/${user.id_user}`,
-        data
-      );
-
-      setUsers((prevUsers) =>
-        prevUsers.map((u) =>
-          u.id_user === user.id_user ? { ...u, ...data } : u
-        )
-      );
-      setFilteredUsers((prevUsers) =>
-        prevUsers.map((u) =>
-          u.id_user === user.id_user ? { ...u, ...data } : u
-        )
-      );
-
-      notifySuccess();
-
-      closeModal();
-      setSelectedUser(null);
+      await api.delete(`/cadastro/${paraExcluir.id_user}`);
+      await carregar();
+      fechar();
+      toast.success("Obreiro removido com sucesso!", toastConfig);
     } catch (error) {
-      console.error("Error updating user:", error);
-      notifyError(apiMessage(error, "Erro na atualização, Tente novamente."));
+      toast.error(apiMessage(error, "Erro ao remover obreiro."), { ...toastConfig, autoClose: 4000 });
+    } finally {
+      setParaExcluir(null);
     }
-  };
+  }
+
+  const titleLinks = [{ label: "Membros", href: "/pages/membros" }, { label: "Departamentos", href: "/pages/departamentos" }, ...(eu.matriz ? [{ label: "Igrejas", href: "/pages/igrejas" }] : [])];
+  // O cargo atual sempre aparece entre as opções, para o campo nunca mostrar um valor diferente do real.
+  const opcoesCargo = form && !cargos.includes(form.cargo) ? [form.cargo, ...cargos] : cargos;
 
   return (
-    <main>
-      <div className="flex">
-        <MenuLateral />
-        <div className="app-content">
-          <nav className="mb-6 md:mb-0" aria-label="Navegação">
-            <ol className="flex flex-wrap items-center text-sm text-gray-600">
-              <li><Link href={"/../../pages/inicio"} className="text3 transition-colors hover:text-azul">Início</Link></li>
-              <li className="mx-2" aria-hidden="true">&#62;</li>
-              <li><Link href={"/../../pages/membros"} className="text3 transition-colors hover:text-azul">Membros</Link></li>
-              <li className="mx-2" aria-hidden="true">&#62;</li>
-              <li className="text3 font-semibold text-azul" aria-current="page">Obreiros</li>
-            </ol>
-          </nav>
-
-          <div className="page-toolbar od-reference-toolbar mt-6">
-            <div
-              className="relative min-w-0"
-              ref={dropdownRef}
-            >
-              <button onClick={toggleDropdown} className="flex items-center gap-2">
-                <PageTitle>Obreiros</PageTitle>
-                <ChevronDown
-                  width={24}
-                  height={24} aria-label="Arrow Icon"
-                  className={`${
-                    isDropdownOpen ? "rotate-180" : ""
-                  } transition-transform`}
-                />
-              </button>
-
-              {isDropdownOpen && (
-                <div className="mt-4 absolute bg-white shadow-lg rounded-lg z-50">
-                  {isMatriz() && (
-                    <Link
-                      href={"/../../pages/igrejas"}
-                      className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
-                    >
-                      Igreja
-                    </Link>
-                  )}
-                  <Link
-                    href={"/../../pages/membros"}
-                    className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
-                  >
-                    Membros
-                  </Link>
-                  <Link
-                    href={"/../../pages/departamentos"}
-                    className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
-                  >
-                    Departamentos
-                  </Link>
-                </div>
-              )}
-            </div>
-            <div className="page-toolbar-actions">
-              <div className="relative flex min-w-0 flex-1">
-                <div className="flex w-full min-w-0">
-                  {/* Botão de filtro */}
-                  <div className="od-list-controls relative flex w-full min-w-0 items-center gap-2">
-                    <FilterButton
-                      onClick={() => setIsFilterOpen(!isFilterOpen)}
-
-                     />
-                    <div className="flex-1">
-                      <SearchField
-                        type="text"
-                        placeholder="Pesquisar obreiros..."
-
-                        value={searchTerm}
-                        onChange={(e) => handleSearch(e.target.value)}
-                      />
-                    </div>
-                    {/* Dropdown de filtros */}
-                    {isFilterOpen && (
-                      <div className="od-filter-menu absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "recent"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("recent");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Adicionados recentemente
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "oldest"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("oldest");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Adicionados antigamente
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "name-asc"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("name-asc");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Nome A-Z
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "name-desc"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("name-desc");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Nome Z-A
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "birth"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("birth");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Data de nascimento
-                        </button>
-                      </div>
-                    )}
+    <PageShell
+      crumbs={[{ label: "Início", href: "/pages/inicio" }, { label: "Membros", href: "/pages/membros" }, { label: "Obreiros" }]}
+      title="Obreiros"
+      titleLinks={titleLinks}
+      after={(
+        <>
+          <Modal open={modal === "det" && !!sel} onClose={fechar} title="Detalhes do obreiro" subtitle={sel ? `Cód. ${sel.cod_membro}` : ""}>
+            {sel && (
+              <>
+                <div className="mx-b">
+                  <div className="pf">
+                    <span className="av" aria-hidden="true">{initials(sel.nome)}</span>
+                    <div><h3 className="xc-tit">{sel.nome}</h3><span className={ehPastor(sel.cargo) ? "tag tag-mat" : "tag tag-loc"}>{sel.cargo}</span></div>
+                  </div>
+                  <div className="vw">
+                    <ViewRow icon={Mail} label="Email">{sel.email}</ViewRow>
+                    <ViewRow icon={Calendar} label="Nascimento">{brDate(sel.birth)}</ViewRow>
                   </div>
                 </div>
-              </div>
-              <div className="flex min-w-0">
-                <div className="flex justify-center">
-                  <AddButton onClick={() => openModal("new")}>Novo Obreiro</AddButton>
+                {podeMexer(sel) ? (
+                  <div className="mx-f split">
+                    <button type="button" className="btn dng-g" onClick={() => setParaExcluir(sel)}><Trash2 className="i s18" aria-hidden="true" />Excluir</button>
+                    <button type="button" className="btn pri" onClick={editar}><Pencil className="i s18" aria-hidden="true" />Editar</button>
+                  </div>
+                ) : (
+                  <div className="mx-f"><button type="button" className="btn pri" onClick={fechar}>Fechar</button></div>
+                )}
+              </>
+            )}
+          </Modal>
+
+          <Modal open={modal === "form" && !!form} onClose={fechar} as="form" onSubmit={salvar} title={sel ? "Editar obreiro" : "Novo obreiro"} subtitle={sel ? "Atualize os dados de acesso." : "A pessoa entra no app com este email e senha."}>
+            {form && (
+              <>
+                <div className="mx-b">
+                  {souPastor && (
+                    <div className="chips" role="radiogroup" aria-label="Cargo">
+                      {opcoesCargo.map((c) => (
+                        <label key={c}><input type="radio" name="o-cargo" value={c} checked={form.cargo === c} onChange={() => setForm({ ...form, cargo: c })} />{c}</label>
+                      ))}
+                    </div>
+                  )}
+                  <label className="sr" htmlFor="o-nome">Nome completo</label>
+                  <input id="o-nome" className="ed-tit" placeholder="Nome completo" maxLength={150} value={form.nome} onChange={set("nome")} />
+                  <div className="vw">
+                    <EditRow icon={Hash} label="Código" htmlFor="o-cod"><input id="o-cod" className="ed-in" placeholder="Ex.: O-206" maxLength={16} value={form.cod} onChange={set("cod")} /></EditRow>
+                    <EditRow icon={Mail} label="Email" htmlFor="o-email">
+                      <input id="o-email" className="ed-in" type="email" autoComplete="off" placeholder="nome@exemplo.com" maxLength={150} value={form.email} onChange={set("email")} disabled={editandoProprio} />
+                    </EditRow>
+                    {!editandoProprio && (
+                      <EditRow icon={KeyRound} label="Senha" htmlFor="o-senha">
+                        <input id="o-senha" className="ed-in" type="password" autoComplete="new-password" placeholder={sel ? "Deixe em branco para manter" : "Mínimo de 10 caracteres"} maxLength={128} value={form.senha} onChange={set("senha")} />
+                      </EditRow>
+                    )}
+                    <EditRow icon={Calendar} label="Nascimento" htmlFor="o-nasc"><input id="o-nasc" className="ed-in" type="date" value={form.nasc} onChange={set("nasc")} /></EditRow>
+                  </div>
+                  {editandoProprio && <p className="mx-note"><Lock className="i s18" aria-hidden="true" />Seu email e sua senha são alterados em Configurações.</p>}
                 </div>
-              </div>
-            </div>
-
-            <div className="page-table-scroll mt-4 max-h-[70vh]">
-              {sortedUsers.length > 0 ? (
-                <DataTable className="text-black">
-                  <thead className="sticky top-0">
-                    <tr className="bg-azul text-white rounded-xl">
-                      <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[7.1vh] py-2">
-                        Cód. Membro
-                      </th>
-                      <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[7.3vh] py-2">
-                        Nome
-                      </th>
-                      <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[7.1vh] py-2">
-                        Data de Nascimento
-                      </th>
-                      <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[7.1vh] py-2">
-                        Email
-                      </th>
-                      <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[7.1vh] py-2">
-                        Cargo
-                      </th>
-                      <th className="sm:px-1 md:px-1 lg:px-1 py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedUsers.map((obreiro) => (
-                      <tr
-                        key={obreiro.id_user}
-                        onClick={() => openModal("edit", obreiro)}
-                        className="cursor-pointer hover:bg-slate-200"
-                      >
-                        <td data-label="Cód. Membro" className="text-center text2 text-xl py-3">
-                          {obreiro.cod_membro}
-                        </td>
-                        <td data-label="Nome" className="text-center text2 text-xl">
-                          {obreiro.nome}
-                        </td>
-                        <td data-label="Nascimento" className="text-center text2 text-xl">
-                          {format(parseDateOnly(obreiro.birth), "dd/MM/yyyy")}
-                        </td>
-                        <td data-label="Email" className="text-center text2 text-xl">
-                          {obreiro.email}
-                        </td>
-                        <td data-label="Cargo" className="text-center text2 text-xl">
-                          {obreiro.cargo}
-                        </td>
-                        <td data-label="Ações" className="text-center">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteClick(obreiro.id_user);
-                            }}
-                            className="px-2 py-1 mr-5 bg-red-500 text-white rounded hover:bg-red-600"
-                          >
-                            <Trash2
-                              width={30}
-                              height={40} aria-label="lixo Icon"
-                            />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </DataTable>
-              ) : (
-                <p className="text-center text-black text1 text-4xl mt-5 text-gray-4">
-                  Nenhum obreiro encontrado.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <AppModal
-            isOpen={isDeleteModalOpen}
-            onRequestClose={() => setIsDeleteModalOpen(false)}
-            contentLabel="Confirmar exclusão"
-            className="fixed inset-0 flex items-center justify-center p-4"
-            overlayClassName="fixed inset-0 bg-white bg-opacity-70"
-          >
-            <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-              <h2 className="text1 text-xl text-black font-bold mb-4">
-                Confirmar Exclusão
-              </h2>
-              <p className="text2 text-gray-600 mb-6">
-                Você tem certeza que deseja remover este obreiro?
-              </p>
-              <div className="flex justify-end space-x-4">
-                <button
-                  onClick={() => setIsDeleteModalOpen(false)}
-                  className="text2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleDeleteConfirm}
-                  className="text2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                >
-                  Confirmar
-                </button>
-              </div>
-            </div>
-          </AppModal>
-
-          <AppModal
-            className="text-white flex flex-col"
-            isOpen={modalIsOpen && modalType === "new"}
-            onRequestClose={closeModal}
-            contentLabel="Novo Obreiro"
-          >
-            <div className="flex flex-col justify-center self-center bg-azul mt-[10vh] rounded-lg shadow-xl">
-              <ModalCloseButton onClick={closeModal} />
-
-              <h2 className="text-white text1 text-4xl flex justify-center">
-                Novo Obreiro
-              </h2>
-
-              <div className="flex flex-col px-10">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Cód. Membro
-                </label>
-                <input
-                  type="text"
-                  className="px-4 py-3 rounded-lg text2 text-slate-500"
-                  placeholder="Digite o Código..."
-                  value={cod_membro}
-                  onChange={(e) => setCodMembro(e.target.value)}
-                  maxLength={16}
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col px-10">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Nome
-                </label>
-                <input
-                  type="text"
-                  className="px-4 py-3 rounded-lg text2 text-slate-500"
-                  placeholder="Digite o Nome..."
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  maxLength={150}
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col px-10">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Email
-                </label>
-                <input
-                  type="text"
-                  className="px-4 py-3 rounded-lg text2 text-slate-500"
-                  placeholder="Digite o Email..."
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  maxLength={150}
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col px-10">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Senha
-                </label>
-                <div className="od-password-row flex">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    className="pl-4 py-3 rounded-lg text2 text-slate-500"
-                    placeholder="Digite a Senha..."
-                    value={senha}
-                    onChange={(e) => setSenha(e.target.value)}
-                    maxLength={16}
-                  />
-                  <button
-                    type="button"
-                    className="ml-[1vh]"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <Eye size={28} aria-hidden="true" /> : <EyeOff size={28} aria-hidden="true" />}
-                  </button>
+                <div className="mx-f">
+                  <button type="button" className="btn ghost" onClick={voltar}>Cancelar</button>
+                  <button type="submit" className="btn pri" disabled={!form.nome.trim() || salvando}>{sel ? "Salvar alterações" : "Cadastrar obreiro"}</button>
                 </div>
-              </div>
+              </>
+            )}
+          </Modal>
 
-              <div className="flex px-10">
-                <div className="flex flex-col">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Data de Nascimento
-                  </label>
-                  <input
-                    type="date"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    value={birth}
-                    onChange={(e) => setBirth(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col ml-5">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Cargo
-                  </label>
-                  <select
-                    className="bg-white px-4 py-3 rounded-lg text2 text-slate-500"
-                    value={cargo}
-                    onChange={(e) => setCargo(e.target.value)}
-                    required
-                  >
-                    <option value="" disabled>
-                      Selecione o Cargo
-                    </option>
-                    {cargoOptions(cargo).map((opcao) => (
-                      <option key={opcao} value={opcao}>{opcao}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex flex-col px-10 pb-10">
-                <button
-                  className="border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg"
-                  onClick={handleRegister}
-                >
-                  Enviar
-                </button>
-              </div>
-            </div>
-          </AppModal>
-
-          <AppModal
-            className="text-white flex flex-col"
-            isOpen={modalIsOpen && modalType === "edit"}
-            onRequestClose={closeModal}
-            contentLabel="Editar Obreiro"
-          >
-            <div className="flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl">
-              <ModalCloseButton onClick={closeModal} />
-
-              <h2 className="text-white text1 text-4xl flex justify-center">
-                Editar Obreiro
-              </h2>
-
-              <div className="flex flex-col px-10">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Cód. Membro
-                </label>
-                <input
-                  type="text"
-                  className="px-4 py-3 rounded-lg text2 text-slate-500"
-                  placeholder="Digite o Código..."
-                  value={editCodMembro}
-                  onChange={(e) => setEditCodMembro(e.target.value)}
-                  maxLength={16}
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col px-10">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Nome
-                </label>
-                <input
-                  type="text"
-                  className="px-4 py-3 rounded-lg text2 text-slate-500"
-                  placeholder="Digite o Nome..."
-                  value={editNome}
-                  onChange={(e) => setEditNome(e.target.value)}
-                  maxLength={150}
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col px-10">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Email
-                </label>
-                <input
-                  type="text"
-                  className="px-4 py-3 rounded-lg text2 text-slate-500"
-                  placeholder="Digite o Email..."
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  maxLength={150}
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col px-10">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Senha
-                </label>
-                <div className="od-password-row flex">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    placeholder="Digite a Senha..."
-                    value={editSenha}
-                    onChange={(e) => setEditSenha(e.target.value)}
-                    maxLength={16}
-                  />
-                  <button
-                    type="button"
-                    className="ml-[1vh]"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <Eye size={28} aria-hidden="true" /> : <EyeOff size={28} aria-hidden="true" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex px-10">
-                <div className="flex flex-col">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Data de Nascimento
-                  </label>
-                  <input
-                    type="date"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    value={editBirth}
-                    onChange={(e) => setEditBirth(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="flex flex-col ml-5">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Cargo
-                  </label>
-                  <select
-                    className="bg-white px-4 py-3 rounded-lg text2 text-slate-500"
-                    value={editCargo}
-                    onChange={(e) => setEditCargo(e.target.value)}
-                    required
-                  >
-                    <option value="" disabled>
-                      Selecione o Cargo
-                    </option>
-                    {cargoOptions(editCargo).map((opcao) => (
-                      <option key={opcao} value={opcao}>{opcao}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex flex-col px-10 pb-10">
-                <button
-                  className="border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg"
-                  onClick={() => selectedUser && handleUpdate(selectedUser)}
-                >
-                  Atualizar
-                </button>
-              </div>
-            </div>
-          </AppModal>
-        </div>
-        <ToastContainer />
+          <ConfirmDialog
+            open={!!paraExcluir}
+            onCancel={() => setParaExcluir(null)}
+            onConfirm={excluir}
+            title="Excluir obreiro?"
+            message={<>“{paraExcluir?.nome}” perderá o acesso ao app. Essa ação não pode ser desfeita.</>}
+          />
+          <ToastContainer />
+        </>
+      )}
+    >
+      <div className="toolbar">
+        <SearchBox value={busca} onChange={setBusca} placeholder="Pesquisar obreiros..." />
+        <SortMenu options={SORTS} value={ordem} onChange={setOrdem} />
+        {souPastor && <button type="button" className="btn-add" onClick={novo}><Plus className="i s20" aria-hidden="true" />Novo Obreiro</button>}
       </div>
-    </main>
+
+      {lista.length === 0 ? (
+        <div className="card empty">
+          <div style={{ display: "grid", placeItems: "center", width: 64, height: 64, margin: "0 auto 12px", borderRadius: 999, background: "#eff6ff", color: "#5271FF" }}><UserPlus className="i s32" aria-hidden="true" /></div>
+          <h3 className="t1" style={{ fontSize: 20, color: "#1f2937" }}>Nenhum obreiro encontrado</h3>
+          <p style={{ marginTop: 6 }}>Tente ajustar sua busca</p>
+        </div>
+      ) : (
+        <div className="cards">
+          {lista.map((o) => {
+            const niver = birthday(o.birth);
+            return (
+              <article key={o.id_user} className="card lc">
+                <button type="button" className="hit" aria-label={`Ver ${o.nome}`} onClick={() => { setSel(o); setModal("det"); }} />
+                <div className="lc-top"><span className="av" aria-hidden="true">{initials(o.nome)}</span><span className={ehPastor(o.cargo) ? "tag tag-mat" : "tag tag-loc"}>{o.cargo}</span></div>
+                <h3 className="lc-tit">{o.nome}</h3>
+                <p className="xc-meta"><Mail className="i" aria-hidden="true" /><span>{o.email}</span></p>
+                <div className="lc-foot row">
+                  <span className="lc-cod">{o.cod_membro}</span>
+                  <span className="xc-meta"><span className={`niver${niver.mes ? " mes" : ""}`}>{niver.mes ? <Cake className="i" aria-hidden="true" /> : <Calendar className="i" aria-hidden="true" />}Aniversário {niver.ddmm ?? "—"}</span></span>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </PageShell>
   );
 }

@@ -1,756 +1,173 @@
 "use client";
-import { AddButton, AppModal, DataTable, FilterButton, ModalCloseButton, PageTitle, SearchField } from '@/app/components/shared/MemberStyle';
-import React, { useState, useEffect, useRef } from "react";
-import { ChevronDown } from "lucide-react";
-import { format } from "date-fns";
-import api from "@/app/api/api";
-import MenuLateral from "@/app/components/menuLateral/menuLateral";
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import Link from "next/link";
+import { CalendarHeart, Flag, Pencil, Plus, Users } from "lucide-react";
+
+import { EditRow, Modal, ViewRow } from "@/app/components/ui/Modal";
+import { apiMessage, PageShell, SearchBox, SortMenu } from "@/app/components/ui/PageParts";
+import { brDate, parseDateOnly } from "@/app/utils/date";
 import { isMatriz } from "@/app/utils/auth";
-import { parseDateOnly } from "@/app/utils/date";
+import api from "../../api/api";
 
-interface Igreja {
-  id_igreja: number;
-  nome: string;
+import "react-toastify/dist/ReactToastify.css";
+
+interface Departamento { id_departamento: number; nome: string; birth: string; data_congresso: string | null; id_igreja: number; qtd_membros?: number }
+type Sort = "recent" | "oldest" | "name-asc" | "name-desc" | "membros";
+type Form = { nome: string; fund: string; cong: string };
+
+const SORTS: [Sort, string][] = [["recent", "Adicionados recentemente"], ["oldest", "Adicionados antigamente"], ["name-asc", "Nome A-Z"], ["name-desc", "Nome Z-A"], ["membros", "Mais membros"]];
+const toastConfig = { position: "top-center" as const, autoClose: 1800, theme: "colored" as const };
+
+// "Congresso 18/07/2026 · em 12 dias" ou "· já realizado".
+function congresso(valor?: string | null) {
+  if (!valor) return "Sem congresso marcado";
+  const d = parseDateOnly(valor);
+  if (Number.isNaN(d.getTime())) return "Sem congresso marcado";
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const n = Math.round((d.getTime() - hoje.getTime()) / 864e5);
+  const quando = n < 0 ? "já realizado" : n === 0 ? "hoje" : n === 1 ? "amanhã" : `em ${n} dias`;
+  return `Congresso ${brDate(valor)} · ${quando}`;
 }
+const fundacao = (valor?: string | null) => { const d = parseDateOnly(valor); return Number.isNaN(d.getTime()) ? "Fundação não informada" : `Fundado em ${d.getFullYear()}`; };
+const qtd = (n?: number) => `${Number(n || 0)} ${Number(n || 0) === 1 ? "membro" : "membros"}`;
 
-interface Departamento {
-  id_departamento: number;
-  nome: string;
-  birth: string;
-  data_congresso: string;
-  qtd_membros: number;
-  id_igreja: number;
-}
+export default function Departamentos() {
+  const [lista0, setLista0] = useState<Departamento[]>([]);
+  const [busca, setBusca] = useState("");
+  const [ordem, setOrdem] = useState<Sort>("name-asc");
+  const [matriz, setMatriz] = useState(false);
 
-interface User {
-  id_user: number;
-  id_igreja: number;
-}
-export default function departamentos() {
-  const [nome, setNome] = useState<string>("");
-  const [birth, setBirth] = useState<string>("");
-  const [data_congresso, setDataCongresso] = useState<string>("");
+  const [modal, setModal] = useState<"det" | "form" | null>(null);
+  const [sel, setSel] = useState<Departamento | null>(null);
+  const [form, setForm] = useState<Form>({ nome: "", fund: "", cong: "" });
+  const [salvando, setSalvando] = useState(false);
 
-  const [editNome, setEditNome] = useState<string>("");
-  const [editBirth, setEditBirth] = useState<string>("");
-  const [editDataCongresso, setEditDataCongresso] = useState<string>("");
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [allDepartamentos, setAllDepartamentos] = useState<Departamento[]>([]); // Lista completa
-  const [filteredDepartamentos, setFilteredDepartamentos] = useState<
-    Departamento[]
-  >([]); // Lista filtrada
-
-  const [modalType, setModalType] = useState<"new" | "edit" | null>(null);
-
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-
-  const handleClickOutside = (event: MouseEvent) => {
-    if (
-      dropdownRef.current &&
-      !dropdownRef.current.contains(event.target as Node)
-    ) {
-      setIsDropdownOpen(false);
-    }
-  };
-
-  useEffect(() => {
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
-
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const id_igreja = sessionStorage.getItem("id_igreja");
-
-        const departamentoResponse = await api.get(`/departamento/${id_igreja}`);
-        setAllDepartamentos(departamentoResponse.data);
-        setFilteredDepartamentos(departamentoResponse.data);
-
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
-    };
-
-    fetchUserData();
-  }, []);
-
-  const [igreja, setIgreja] = useState<Igreja[]>([]);
-
-  useEffect(() => {
-    const fetchIgrejas = async () => {
-      try {
-        const response = await api.get("/departamento/igreja");
-        setIgreja(response.data);
-      } catch (error) {
-        console.error("Error fetching igrejas:", error);
-      }
-    };
-
-    fetchIgrejas();
-  }, []);
-
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
-
-    if (term.trim() === "") {
-      setFilteredDepartamentos(allDepartamentos);
-      return;
-    }
-
-    const lowercasedTerm = term.toLowerCase();
-
-    const filtered = allDepartamentos.filter((departamento) => {
-      // Converte todos os campos para string antes de verificar
-      const nomeStr = departamento.nome
-        ? departamento.nome.toString().toLowerCase()
-        : "";
-      const birthStr = departamento.birth
-        ? departamento.birth.toString().toLowerCase()
-        : "";
-      const congressoStr = departamento.data_congresso
-        ? departamento.data_congresso.toString()
-        : "";
-
-      return (
-        nomeStr.includes(lowercasedTerm) ||
-        birthStr.includes(lowercasedTerm) ||
-        congressoStr.includes(lowercasedTerm)
-      );
-    });
-
-    setFilteredDepartamentos(filtered);
-  };
-
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [sortCriteria, setSortCriteria] = useState<
-    "recent" | "oldest" | "name-asc" | "name-desc" | "birth"
-  >("recent");
-
-  const sortDepartamentos = (departamentos: Departamento[]) => {
-    const sorted = [...departamentos];
-
-    switch (sortCriteria) {
-      case "recent":
-        // Adicionados recentemente (maior ID primeiro)
-        return sorted.sort((a, b) => b.id_departamento - a.id_departamento);
-
-      case "oldest":
-        // Adicionados há mais tempo (menor ID primeiro)
-        return sorted.sort((a, b) => a.id_departamento - b.id_departamento);
-
-      case "name-asc":
-        // Ordem alfabética A-Z
-        return sorted.sort((a, b) => a.nome.localeCompare(b.nome));
-
-      case "name-desc":
-        // Ordem alfabética Z-A
-        return sorted.sort((a, b) => b.nome.localeCompare(a.nome));
-
-      case "birth":
-        // Por data de nascimento (mais jovens primeiro)
-        return sorted.sort(
-          (a, b) => new Date(b.birth).getTime() - new Date(a.birth).getTime()
-        );
-
-      default:
-        return sorted;
-    }
-  };
-
-  const sortedDepartamentos = sortDepartamentos(filteredDepartamentos);
-
-  const [modalIsOpen, setModalIsOpen] = useState(false);
-
-  const openModal = (type: "new" | "edit", departamento?: Departamento) => {
-    setModalType(type);
-    if (type === "new") {
-      setNome("");
-      setBirth("");
-      setDataCongresso("");
-    } else if (type === "edit" && departamento) {
-      setSelectedDepartamento(departamento);
-      setEditNome(departamento.nome);
-      setEditBirth(format(parseDateOnly(departamento.birth), "yyyy-MM-dd"));
-      setEditDataCongresso(
-        format(parseDateOnly(departamento.data_congresso), "yyyy-MM-dd")
-      );
-    }
-
-    setModalIsOpen(true);
-  };
-
-  const closeModal = () => {
-    setModalIsOpen(false);
-    setModalType(null);
-  };
-
-  const notifyTypingError = () => {
-    toast.error("O nome não pode conter caracteres especiais.", {
-      position: "top-center",
-      autoClose: 1500,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "colored",
-    });
-  };
-
-  const notifyTypingErrorSpecial = () => {
-    toast.error("O nome contém caracteres inválidos.", {
-      position: "top-center",
-      autoClose: 1500,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "colored",
-    });
-  };
-
-  const [selectedDepartamento, setSelectedDepartamento] =
-    useState<Departamento | null>(null);
-
-  useEffect(() => {
-    if (selectedDepartamento) {
-      setNome(selectedDepartamento.nome || "");
-      setBirth(selectedDepartamento.birth || "");
-      setDataCongresso(selectedDepartamento.data_congresso || "");
-    }
-  }, [selectedDepartamento]);
-
-  async function handleRegister(event: React.FormEvent) {
-    event.preventDefault();
-
-    const specialCharactersRegex = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/;
-    const invalidCharactersRegex = /[^a-zA-Z\s]/;
-
-    const notifySuccess = () => {
-      toast.success("Departamento cadastrado com sucesso!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyWarn = () => {
-      toast.warn("Todos os campos devem ser preenchidos!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyError = () => {
-      toast.error("Erro no cadastro, Tente novamente.", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
+  const carregar = useCallback(async () => {
+    const igreja = sessionStorage.getItem("id_igreja");
+    if (!igreja) return;
     try {
-      if (nome === "" || birth === "" || data_congresso === "") {
-        notifyWarn();
-        return;
-      } else if (specialCharactersRegex.test(nome)) {
-        notifyTypingError();
-        return;
-      } else if (invalidCharactersRegex.test(nome)) {
-        notifyTypingErrorSpecial();
-        return;
+      const { data } = await api.get(`/departamento/${igreja}`);
+      setLista0(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setLista0([]);
+      if ((error as { response?: { status?: number } })?.response?.status !== 404) toast.error("Erro ao carregar departamentos.", toastConfig);
+    }
+  }, []);
+
+  useEffect(() => { setMatriz(isMatriz()); void carregar(); }, [carregar]);
+
+  const lista = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    const cmp: Record<Sort, (a: Departamento, b: Departamento) => number> = {
+      recent: (a, b) => b.id_departamento - a.id_departamento,
+      oldest: (a, b) => a.id_departamento - b.id_departamento,
+      "name-asc": (a, b) => a.nome.localeCompare(b.nome),
+      "name-desc": (a, b) => b.nome.localeCompare(a.nome),
+      membros: (a, b) => Number(b.qtd_membros || 0) - Number(a.qtd_membros || 0),
+    };
+    return lista0.filter((d) => !termo || d.nome.toLowerCase().includes(termo)).sort(cmp[ordem]);
+  }, [lista0, busca, ordem]);
+
+  const novo = () => { setSel(null); setForm({ nome: "", fund: "", cong: "" }); setModal("form"); };
+  const editar = () => { if (sel) { setForm({ nome: sel.nome, fund: (sel.birth || "").slice(0, 10), cong: (sel.data_congresso || "").slice(0, 10) }); setModal("form"); } };
+  const fechar = () => { setModal(null); setSel(null); };
+  const voltar = () => setModal(sel ? "det" : null);
+
+  async function salvar(event?: React.FormEvent) {
+    event?.preventDefault();
+    if (!form.nome.trim() || !form.fund) return void toast.warn("Preencha o nome e a data de fundação.", toastConfig);
+    const dados = { nome: form.nome.trim(), birth: form.fund, data_congresso: form.cong || null };
+    setSalvando(true);
+    try {
+      if (sel) {
+        await api.put(`/departamento/${sel.id_departamento}/${sel.id_igreja}`, dados);
+        await carregar();
+        setSel({ ...sel, ...dados });
+        setModal("det");
+        toast.success("Departamento atualizado com sucesso!", toastConfig);
       } else {
-        const data = {
-          nome,
-          birth,
-          data_congresso,
-        };
-
-        const response = await api.post("/departamento", data);
-
-        notifySuccess();
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        await api.post("/departamento", dados);
+        await carregar();
+        fechar();
+        toast.success("Departamento cadastrado com sucesso!", toastConfig);
       }
-    } catch {
-      notifyError();
+    } catch (error) {
+      toast.error(apiMessage(error, sel ? "Erro na atualização. Tente novamente." : "Erro no cadastro. Tente novamente."), toastConfig);
+    } finally {
+      setSalvando(false);
     }
   }
 
-  const handleUpdate = async (departamento: Departamento | null) => {
-    const notifySuccess = () => {
-      toast.success("Departamento Atualizado com sucesso!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyWarn = () => {
-      toast.warn("Todos os campos devem ser preenchidos!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyError = () => {
-      toast.error("Erro na atualização, Tente novamente.", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    try {
-      if (!departamento) {
-        console.error("No selected departamentp for update");
-        return;
-      }
-
-      if (!editNome || !editBirth || !editDataCongresso) {
-        notifyWarn();
-        return;
-      }
-
-      const data = {
-        nome: editNome,
-        birth: editBirth,
-        data_congresso: editDataCongresso,
-      };
-
-      setDepartamentos((prevDepartamentos) =>
-        prevDepartamentos.map((u) =>
-          u.id_departamento === departamento.id_departamento
-            ? { ...u, ...data }
-            : u
-        )
-      );
-
-      const response = await api.put(
-        `/departamento/${departamento.id_departamento}/${departamento.id_igreja}`,
-        data
-      );
-
-      notifySuccess();
-
-      closeModal();
-      setSelectedDepartamento(null);
-    } catch (error) {
-      console.error("Error updating departamento:", error);
-      notifyError();
-    }
-  };
+  const titleLinks = [{ label: "Membros", href: "/pages/membros" }, { label: "Obreiros", href: "/pages/obreiros" }, ...(matriz ? [{ label: "Igrejas", href: "/pages/igrejas" }] : [])];
 
   return (
-    <main>
-      <div className="flex">
-        <MenuLateral />
-
-        <div className="app-content">
-          <nav className="mb-6 md:mb-0" aria-label="Navegação">
-            <ol className="flex flex-wrap items-center text-sm text-gray-600">
-              <li><Link href={"/../../pages/inicio"} className="text3 transition-colors hover:text-azul">Início</Link></li>
-              <li className="mx-2" aria-hidden="true">&#62;</li>
-              <li><Link href={"/../../pages/membros"} className="text3 transition-colors hover:text-azul">Membros</Link></li>
-              <li className="mx-2" aria-hidden="true">&#62;</li>
-              <li className="text3 font-semibold text-azul" aria-current="page">Departamentos</li>
-            </ol>
-          </nav>
-
-          <div className="page-toolbar od-reference-toolbar mt-6">
-            <div
-              className="relative min-w-0"
-              ref={dropdownRef}
-            >
-              <button onClick={toggleDropdown} className="flex items-center gap-2">
-                <PageTitle>Departamentos</PageTitle>
-                <ChevronDown
-                  width={24}
-                  height={24} aria-label="Arrow Icon"
-                  className={`${
-                    isDropdownOpen ? "rotate-180" : ""
-                  } transition-transform`}
-                />
-              </button>
-
-              {isDropdownOpen && (
-                <div className="mt-4 absolute bg-white w-[16vh] shadow-lg rounded-lg z-50">
-                  {isMatriz() && (
-                    <Link
-                      href={"/../../pages/igrejas"}
-                      className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
-                    >
-                      Igreja
-                    </Link>
-                  )}
-                  <Link
-                    href={"/../../pages/membros"}
-                    className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
-                  >
-                    Membros
-                  </Link>
-                  <Link
-                    href={"/../../pages/obreiros"}
-                    className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
-                  >
-                    Obreiros
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            <div className="page-toolbar-actions">
-              <div className="relative flex min-w-0 flex-1">
-                <div className="flex w-full min-w-0">
-                  {/* Botão de filtro */}
-                  <div className="od-list-controls relative flex w-full min-w-0 items-center gap-2">
-                    <FilterButton
-                      onClick={() => setIsFilterOpen(!isFilterOpen)}
-
-                     />
-                    <div className="flex-1">
-                      <SearchField
-                        type="text"
-                        placeholder="Pesquisar departamentos..."
-
-                        value={searchTerm}
-                        onChange={(e) => handleSearch(e.target.value)}
-                      />
-                    </div>
-                    {/* Dropdown de filtros */}
-                    {isFilterOpen && (
-                      <div className="od-filter-menu absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "recent"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("recent");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Adicionados recentemente
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "oldest"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("oldest");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Adicionados antigamente
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "name-asc"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("name-asc");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Nome A-Z
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "name-desc"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("name-desc");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Nome Z-A
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "birth"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("birth");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Data de nascimento
-                        </button>
-                      </div>
-                    )}
+    <PageShell
+      crumbs={[{ label: "Início", href: "/pages/inicio" }, { label: "Membros", href: "/pages/membros" }, { label: "Departamentos" }]}
+      title="Departamentos"
+      titleLinks={titleLinks}
+      after={(
+        <>
+          <Modal open={modal === "det" && !!sel} onClose={fechar} title="Detalhes do departamento" subtitle={sel ? qtd(sel.qtd_membros) : ""}>
+            {sel && (
+              <>
+                <div className="mx-b">
+                  <div className="pf"><span className="av" aria-hidden="true"><Users className="i" /></span><div><h3 className="xc-tit">{sel.nome}</h3><p className="pf-sub">{qtd(sel.qtd_membros)}</p></div></div>
+                  <div className="vw">
+                    <ViewRow icon={Flag} label="Fundação">{brDate(sel.birth) || "—"}</ViewRow>
+                    <ViewRow icon={CalendarHeart} label="Congresso">{sel.data_congresso ? congresso(sel.data_congresso).replace("Congresso ", "") : "Sem congresso marcado"}</ViewRow>
                   </div>
                 </div>
-              </div>
-              <div className="flex min-w-0">
-                <div className="flex justify-center">
-                  <AddButton onClick={() => openModal("new")}>Novo Departamento</AddButton>
-                </div>
-              </div>
-            </div>
+                <div className="mx-f"><button type="button" className="btn pri" onClick={editar}><Pencil className="i s18" aria-hidden="true" />Editar</button></div>
+              </>
+            )}
+          </Modal>
 
-            <div className="page-list-region">
-              <div className="page-table-scroll mt-4 max-h-[70vh]">
-                {sortedDepartamentos.length === 0 ? (
-                  <p className="text-center text-black text1 text-4xl mt-5 text-gray-4">
-                    Nenhum departamento encontrado.
-                  </p>
-                ) : (
-                  <DataTable className="text-black">
-                    <thead className="sticky top-0">
-                      <tr className="bg-azul text-white rounded-xl">
-                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-24 py-2 ">
-                          Cód. Depart.
-                        </th>
-                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[11.5vh] py-2">
-                          Nome
-                        </th>
-                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-10 py-2">
-                          Fundação
-                        </th>
-                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-10 py-2">
-                          Data do Congresso
-                        </th>
-                        <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:pr-24 py-2">
-                          Qtd. Membros
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedDepartamentos.map((departs) => (
-                        <tr
-                          key={departs.id_departamento}
-                          onClick={() => openModal("edit", departs)}
-                          className="cursor-pointer hover:bg-slate-200"
-                        >
-                          <td data-label="Cód. Depart." className="text-center text2 text-xl py-3">
-                            {departs.id_departamento}
-                          </td>
-                          <td data-label="Nome" className="text-center text2 text-xl">
-                            {departs.nome}
-                          </td>
-                          <td data-label="Fundação" className="text-center text2 text-xl">
-                            {format(parseDateOnly(departs.birth), "dd/MM/yyyy")}
-                          </td>
-                          <td data-label="Data do Congresso" className="text-center text2 text-xl">
-                            {format(
-                              new Date(departs.data_congresso),
-                              "dd/MM/yyyy"
-                            )}
-                          </td>
-                          <td data-label="Qtd. Membros" className="text-center text2 text-xl">
-                            {departs.qtd_membros}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </DataTable>
-                )}
+          <Modal open={modal === "form"} onClose={fechar} as="form" onSubmit={salvar} title={sel ? "Editar departamento" : "Novo departamento"} subtitle={sel ? "Atualize os dados do departamento." : "Crie um grupo para organizar os membros."}>
+            <div className="mx-b">
+              <label className="sr" htmlFor="dp-nome">Nome do departamento</label>
+              <input id="dp-nome" className="ed-tit" placeholder="Nome do departamento" maxLength={150} value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+              <div className="vw">
+                <EditRow icon={Flag} label="Fundação" htmlFor="dp-fund"><input id="dp-fund" className="ed-in" type="date" value={form.fund} onChange={(e) => setForm({ ...form, fund: e.target.value })} /></EditRow>
+                <EditRow icon={CalendarHeart} label="Congresso" htmlFor="dp-cong"><input id="dp-cong" className="ed-in" type="date" value={form.cong} onChange={(e) => setForm({ ...form, cong: e.target.value })} /></EditRow>
               </div>
             </div>
-          </div>
-
-          <AppModal
-            className="text-white flex flex-col"
-            isOpen={modalIsOpen && modalType === "new"}
-            onRequestClose={closeModal}
-            contentLabel="Novo Departamento"
-          >
-            <div className="flex flex-col justify-center self-center bg-azul mt-[25vh] rounded-lg shadow-xl">
-              <ModalCloseButton onClick={closeModal} />
-              <h2 className="text-white text1 text-4xl flex justify-center">
-                Novo Departamento
-              </h2>
-
-              <div className="flex flex-col px-10">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Nome
-                </label>
-
-                <input
-                  type="text"
-                  className="px-4 py-3 rounded-lg text2 text-slate-500"
-                  placeholder="Digite o Nome..."
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="flex px-10">
-                <div className="flex flex-col">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Data da Fundação
-                  </label>
-
-                  <input
-                    type="date"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    value={birth}
-                    onChange={(e) => setBirth(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col ml-5">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Data do Congresso
-                  </label>
-
-                  <input
-                    type="date"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    value={data_congresso}
-                    onChange={(e) => setDataCongresso(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col px-10 pb-10">
-                <button
-                  className="border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg"
-                  onClick={handleRegister}
-                  >
-                  Enviar
-                </button>
-              </div>
+            <div className="mx-f">
+              <button type="button" className="btn ghost" onClick={voltar}>Cancelar</button>
+              <button type="submit" className="btn pri" disabled={!form.nome.trim() || salvando}>{sel ? "Salvar alterações" : "Criar departamento"}</button>
             </div>
-          </AppModal>
-
-          <AppModal
-            className="text-white flex flex-col"
-            isOpen={modalIsOpen && modalType === "edit"}
-            onRequestClose={closeModal}
-            contentLabel="Editar Departamento"
-          >
-            <div className="flex flex-col justify-center self-center bg-azul mt-[25vh] rounded-lg shadow-xl">
-              <ModalCloseButton onClick={closeModal} />
-              <h2 className="text-white text1 text-4xl flex justify-center">
-                Editar Departamento
-              </h2>
-
-              <div className="flex flex-col px-10">
-                <label className="text-white text1 text-xl mt-5 mb-1">
-                  Nome
-                </label>
-
-                <input
-                  type="text"
-                  className="px-4 py-3 rounded-lg text2 text-slate-500"
-                  placeholder="Digite o Nome..."
-                  value={editNome}
-                  onChange={(e) => setEditNome(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="flex px-10">
-                <div className="flex flex-col">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Data da Aniversário
-                  </label>
-
-                  <input
-                    type="date"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    value={editBirth}
-                    onChange={(e) => setEditBirth(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col ml-5">
-                  <label className="text-white text1 text-xl mt-5 mb-1">
-                    Data do Congresso
-                  </label>
-
-                  <input
-                    type="date"
-                    className="px-4 py-3 rounded-lg text2 text-slate-500"
-                    value={editDataCongresso}
-                    onChange={(e) => setEditDataCongresso(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col px-10 pb-10">
-                <button
-                  className="border-2 px-4 py-2 mt-7 rounded-lg text2 text-white text-lg"
-                  onClick={() =>
-                    selectedDepartamento && handleUpdate(selectedDepartamento)
-                  }
-                  >
-                  Enviar
-                </button>
-              </div>
-            </div>
-          </AppModal>
-        </div>
-        <ToastContainer />
+          </Modal>
+          <ToastContainer />
+        </>
+      )}
+    >
+      <div className="toolbar">
+        <SearchBox value={busca} onChange={setBusca} placeholder="Pesquisar departamentos..." />
+        <SortMenu options={SORTS} value={ordem} onChange={setOrdem} />
+        <button type="button" className="btn-add" onClick={novo}><Plus className="i s20" aria-hidden="true" />Novo Departamento</button>
       </div>
-    </main>
+
+      {lista.length === 0 ? (
+        <div className="card empty">
+          <h3 className="t1" style={{ fontSize: 20, color: "#1f2937" }}>Nenhum departamento encontrado</h3>
+          <p style={{ marginTop: 6 }}>{busca ? "Tente ajustar sua busca" : "Crie o primeiro departamento"}</p>
+        </div>
+      ) : (
+        <div className="cards">
+          {lista.map((d) => (
+            <article key={d.id_departamento} className="card lc">
+              <button type="button" className="hit" aria-label={`Ver ${d.nome}`} onClick={() => { setSel(d); setModal("det"); }} />
+              <div className="lc-top"><span className="av" aria-hidden="true"><Users className="i" /></span></div>
+              <h3 className="lc-tit">{d.nome}</h3>
+              <p className="lc-big"><b>{Number(d.qtd_membros || 0)}</b>{Number(d.qtd_membros || 0) === 1 ? "membro" : "membros"}</p>
+              <div className="lc-foot">
+                <p className="xc-meta"><CalendarHeart className="i" aria-hidden="true" /><span>{congresso(d.data_congresso)}</span></p>
+                <p className="xc-meta"><Flag className="i" aria-hidden="true" /><span>{fundacao(d.birth)}</span></p>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </PageShell>
   );
 }

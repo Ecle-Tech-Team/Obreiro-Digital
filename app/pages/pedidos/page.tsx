@@ -1,865 +1,227 @@
-'use client'
-import { AddButton, AppModal, DataTable, FilterButton, PageTitle, SearchField } from '@/app/components/shared/MemberStyle';
-import React, { useState, useEffect } from 'react'
-import { CircleCheck, CircleX, Clock3, Package, Trash2, X } from "lucide-react";
-import { format } from 'date-fns';
-import MenuLateral from '@/app/components/menuLateral/menuLateral'
-import Link from 'next/link'
-import api from '../../api/api';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import PedidosResponder, { podeResponderPedidos } from '@/app/components/pedidosResponder/PedidosResponder';
-import { parseDateOnly } from "@/app/utils/date";
+"use client";
 
-interface Igreja {
-  id_igreja: number;
-  nome: string;
-};
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { toast, ToastContainer } from "react-toastify";
+import { Calendar, Hash, Lock, MessageSquare, Package, Pencil, Plus, Tag, Trash2, Truck } from "lucide-react";
 
-interface User {
-  id_user: number;
-  id_igreja: number;
-};
+import PedidosResponder, { podeResponderPedidos, situacaoTag } from "@/app/components/pedidosResponder/PedidosResponder";
+import { ConfirmDialog, EditRow, Modal, ViewRow } from "@/app/components/ui/Modal";
+import { apiMessage, PageShell, SearchBox, SortMenu } from "@/app/components/ui/PageParts";
+import { brDate } from "@/app/utils/date";
+import api from "../../api/api";
 
-interface Pedidos {
-  id_pedido: number;
-  nome_produto: string;
-  categoria_produto: string;
-  quantidade: number;
-  data_pedido: string;
-  status_pedido: string;
-  data_entrega: string;
-  motivo_recusa: string;
-  respondido?: number | boolean;
-  id_igreja: number;
-};
+import "react-toastify/dist/ReactToastify.css";
 
-export default function pedidos() {
+interface Pedido { id_pedido: number; nome_produto: string; categoria_produto: string; quantidade: number; data_pedido: string; status_pedido: string | null; data_entrega: string | null; motivo_recusa: string | null; respondido?: number | boolean; id_igreja: number }
+type Sort = "recent" | "oldest" | "name-asc" | "name-desc" | "qtd";
+type Situacao = "todos" | "Em Andamento" | "Entregue" | "Recusado";
+type Form = { nome: string; cat: string; qtd: string; data: string };
+
+const CATEGORIAS = ["Limpeza", "Cozinha", "Descartável", "Material de Construção", "Eletrônico", "Eletroeletrônico", "Móvel"];
+const SORTS: [Sort, string][] = [["recent", "Mais recentes"], ["oldest", "Mais antigos"], ["name-asc", "Nome A-Z"], ["name-desc", "Nome Z-A"], ["qtd", "Maior quantidade"]];
+const COLS = "minmax(0, 1fr) 130px 140px 170px";
+const toastConfig = { position: "top-center" as const, autoClose: 1800, theme: "colored" as const };
+const hoje = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+const situacao = (p: Pedido) => p.status_pedido || "Em Andamento";
+
+export default function Pedidos() {
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [busca, setBusca] = useState("");
+  const [ordem, setOrdem] = useState<Sort>("recent");
+  const [filtro, setFiltro] = useState<Situacao>("todos");
   const [podeResponder, setPodeResponder] = useState(false);
-  useEffect(() => { setPodeResponder(podeResponderPedidos(sessionStorage.getItem('cargo'), sessionStorage.getItem('id_matriz'))); }, []);
-  const [nome_produto, setNomeProduto] = useState<string>('');
-  const [categoria_produto, setCategoriaProduto] = useState<string>('');
-  const [quantidade, setQuantidade] = useState<number>(0);
-  const [data_pedido, setDataPedido] = useState<string>('');
+  const [versao, setVersao] = useState(0);
 
-  const [editNomeProduto, setEditNomeProduto] = useState<string>('');
-  const [editCategoriaProduto, setEditCategoriaProduto] = useState<string>('');
-  const [editQuantidade, setEditQuantidade] = useState<number>(0);
-  const [editDataPedido, setEditDataPedido] = useState<string>('');
+  const [modal, setModal] = useState<"det" | "form" | null>(null);
+  const [sel, setSel] = useState<Pedido | null>(null);
+  const [form, setForm] = useState<Form>({ nome: "", cat: "", qtd: "1", data: hoje() });
+  const [salvando, setSalvando] = useState(false);
+  const [paraExcluir, setParaExcluir] = useState<Pedido | null>(null);
 
-  const [status_pedido, setStatusPedido] = useState<string>('');
-  // const [data_entrega, setDataEntrega] = useState<string>('');
-  // const [motivo_recusa, setMotivoRecusa] = useState<string>('');
-
-  const [totalPedidos, setTotalPedidos] = useState<number>(0);
-  const [pedidosEntregues, setPedidosEntregues] = useState<number>(0);
-  const [pedidosEmAndamento, setPedidosEmAndamento] = useState<number>(0);
-  const [pedidosRecusados, setPedidosRecusados] = useState<number>(0);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [pedidoToDelete, setPedidoToDelete] = useState<number | null>(null);
-
-  const handleDeleteClick = (id_pedido: number) => {
-    setPedidoToDelete(id_pedido);
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!pedidoToDelete) return;
-
+  const carregar = useCallback(async () => {
+    const igreja = sessionStorage.getItem("id_igreja");
+    if (!igreja) return;
     try {
-      await api.delete(`/pedido/${pedidoToDelete}`);
-      const notifyDelete = () => {
-      toast.success('Pedido deletado com sucesso!', {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-        });
+      const { data } = await api.get(`/pedido/${igreja}`);
+      setPedidos(Array.isArray(data) ? data : []);
+    } catch {
+      setPedidos([]);
     }
-
-      setPedidos(pedidos.filter(m => m.id_pedido !== pedidoToDelete));
-      notifyDelete();
-      window.location.reload();
-    } catch (error) {
-      toast.error('Erro ao remover pedido.');
-    } finally {
-      setIsDeleteModalOpen(false);
-      setPedidoToDelete(null);
-    }
-  };
-  const [searchTerm, setSearchTerm] = useState('');
-  const [allPedidos, setAllPedidos] = useState<Pedidos[]>([]); // Lista completa
-  const [filteredPedidos, setFilteredPedidos] = useState<Pedidos[]>([]); //Lista filtrada
-
-  useEffect(() => {
-    const fetchTotalPedidos = async () => {
-      try {
-        const id_igreja = sessionStorage.getItem('id_igreja');
-        const response = await api.get(`/pedido/count/total/${id_igreja}`);
-        setTotalPedidos(response.data);
-      } catch (error) {
-        console.error('Erro ao buscar total de pedidos:', error);
-      }
-    }
-
-    fetchTotalPedidos();
   }, []);
 
   useEffect(() => {
-    const fetchPedidosEntregues = async () => {
-      try {
-        const id_igreja = sessionStorage.getItem('id_igreja');
-        const response = await api.get(`/pedido/count/entregue/${id_igreja}`);
-        setPedidosEntregues(response.data);
-      } catch (error) {
-        console.error('Erro ao buscar pedidos entregues:', error);
-      }
-    }
+    setPodeResponder(podeResponderPedidos(sessionStorage.getItem("cargo"), sessionStorage.getItem("id_matriz")));
+    void carregar();
+  }, [carregar]);
 
-    fetchPedidosEntregues();
-  }, []);
+  const contagem = useMemo(() => {
+    const c: Record<Situacao, number> = { todos: pedidos.length, "Em Andamento": 0, Entregue: 0, Recusado: 0 };
+    for (const p of pedidos) c[situacao(p) as Situacao] = (c[situacao(p) as Situacao] || 0) + 1;
+    return c;
+  }, [pedidos]);
 
-  useEffect(() => {
-    const fetchPedidosEmAndamento = async () => {
-      try {
-        const id_igreja = sessionStorage.getItem('id_igreja');
-        const response = await api.get(`pedido/count/em-andamento/${id_igreja}`);
-        setPedidosEmAndamento(response.data);
-      } catch (error) {
-        console.error('Erro ao buscar pedidos em andamento:', error);
-      }
-    }
-
-    fetchPedidosEmAndamento();
-  }, []);
-
-  useEffect(() => {
-    const fetchPedidosRecusados = async() => {
-      try {
-        const id_igreja = sessionStorage.getItem('id_igreja');
-        const response = await api.get(`pedido/count/recusados/${id_igreja}`);
-        setPedidosRecusados(response.data);
-      } catch (error) {
-        console.error('Erro ao buscar pedidos em andamento:', error);
-      }
-    }
-
-    fetchPedidosRecusados();
-  }, []); 
-
-  const [pedidos, setPedidos] = useState<Pedidos[]>([]);
-
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {        
-        const id_igreja = sessionStorage.getItem('id_igreja');             
-        const pedidoResponse = await api.get(`/pedido/${id_igreja}`);
-        setPedidos(pedidoResponse.data);
-        setAllPedidos(pedidoResponse.data);
-        setFilteredPedidos(pedidoResponse.data);
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
+  const lista = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    const cmp: Record<Sort, (a: Pedido, b: Pedido) => number> = {
+      recent: (a, b) => String(b.data_pedido).localeCompare(String(a.data_pedido)) || b.id_pedido - a.id_pedido,
+      oldest: (a, b) => String(a.data_pedido).localeCompare(String(b.data_pedido)) || a.id_pedido - b.id_pedido,
+      "name-asc": (a, b) => a.nome_produto.localeCompare(b.nome_produto),
+      "name-desc": (a, b) => b.nome_produto.localeCompare(a.nome_produto),
+      qtd: (a, b) => b.quantidade - a.quantidade,
     };
+    return pedidos
+      .filter((p) => filtro === "todos" || situacao(p) === filtro)
+      .filter((p) => !termo || `${p.nome_produto} ${p.categoria_produto}`.toLowerCase().includes(termo))
+      .sort(cmp[ordem]);
+  }, [pedidos, busca, ordem, filtro]);
 
-    fetchUserData();
-  }, []);
+  const novo = () => { setSel(null); setForm({ nome: "", cat: "", qtd: "1", data: hoje() }); setModal("form"); };
+  const editar = () => { if (sel) { setForm({ nome: sel.nome_produto, cat: sel.categoria_produto, qtd: String(sel.quantidade), data: String(sel.data_pedido).slice(0, 10) }); setModal("form"); } };
+  const fechar = () => { setModal(null); setSel(null); };
+  const voltar = () => setModal(sel ? "det" : null);
 
-  const [igreja, setIgreja] = useState<Igreja[]>([]);
-
-  useEffect(() => {
-    const fetchIgrejas = async () => {
-      try {
-        const response = await api.get('/pedido/igreja');
-        setIgreja(response.data);
-      } catch (error) {
-        console.error('Error fetching igrejas:', error);
-      }
-    };
-
-    fetchIgrejas()
-  }, []);
-
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [sortCriteria, setSortCriteria] = useState<'recent' | 'oldest' | 'name-asc' | 'name-desc' | 'birth'>('recent');
-
-    const sortPedidos = (pedidos: Pedidos[]) => {
-      const sorted = [...pedidos];
-
-      switch (sortCriteria) {
-        case 'recent':
-          return sorted.sort((a, b) => b.id_pedido - a.id_pedido);
-        case 'oldest':
-          return sorted.sort((a, b) => a.id_pedido - b.id_pedido);
-        case 'name-asc':
-          return sorted.sort((a, b) => a.nome_produto.localeCompare(b.nome_produto));
-        case 'name-desc':
-          return sorted.sort((a, b) => b.nome_produto.localeCompare(a.nome_produto));
-        case 'birth':
-          return sorted.sort((a, b) => 
-            new Date(b.data_pedido).getTime() - new Date(a.data_pedido).getTime()
-          );
-        default:
-          return sorted;
-      }
-    };
-
-  const sortedPedidos = sortPedidos(filteredPedidos);
-
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
-
-    if (term.trim() === '') {
-        setFilteredPedidos(allPedidos);
-        return;
-    }
-
-    const lowercasedTerm = term.toLowerCase();
-
-    const filtered = allPedidos.filter(pedidos => {
-        // Converte todos os campos para string antes de verificar
-        const nomeStr = pedidos.nome_produto ? pedidos.nome_produto.toString().toLowerCase() : '';
-        const catStr = pedidos.categoria_produto ? pedidos.categoria_produto.toString().toLowerCase() : '';
-        const numeroStr = pedidos.data_pedido ? pedidos.data_pedido.toString() : '';
-
-        return (
-            nomeStr.includes(lowercasedTerm) ||
-            catStr.includes(lowercasedTerm) ||
-            numeroStr.includes(lowercasedTerm)
-        );
-    });
-
-    setFilteredPedidos(filtered);
-  };
-
-  const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
-  const [modalIsOpen, setModalIsOpen] = useState(false);
-
-  const openModal = (type: 'new' | 'edit', pedidos?: Pedidos) => {
-    setModalType(type);
-    if (type === 'new') {
-      setNomeProduto('');
-      setCategoriaProduto('');
-      setQuantidade(0);
-      setDataPedido('');      
-    } else if (type === 'edit' && pedidos) {
-      setSelectedPedidos(pedidos);
-      setEditNomeProduto(pedidos.nome_produto);
-      setEditCategoriaProduto(pedidos.categoria_produto);
-      setEditQuantidade(pedidos.quantidade);
-      setEditDataPedido(format(parseDateOnly(pedidos.data_pedido), 'yyyy-MM-dd'));
-      setStatusPedido(pedidos.status_pedido);      
-      // setMotivoRecusa(pedidos.motivo_recusa);
-      // setDataEntrega(pedidos.data_entrega);
-    }
-    setModalIsOpen(true);
-  }; 
-
-  const closeModal = () => {
-    setModalIsOpen(false);
-    setModalType(null);
-  }; 
-
-  const [selectedPedidos, setSelectedPedidos] = useState<Pedidos | null>(null);
-
-  useEffect(() => {
-    if (selectedPedidos) {
-      setNomeProduto(selectedPedidos.nome_produto || '');
-      setCategoriaProduto(selectedPedidos.categoria_produto || '');
-      setQuantidade(selectedPedidos.quantidade || 0);
-      setDataPedido(selectedPedidos.data_pedido || '');
-      setStatusPedido(selectedPedidos.status_pedido || '');      
-    }
-  }, [selectedPedidos]);
-
-  async function handleRegister(event: React.FormEvent) {
-    event.preventDefault();
-
-    const notifySuccess = () => {
-      toast.success('Pedido realizado com sucesso!', {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyWarn = () => {
-      toast.warn('Todos os campos devem ser preenchidos!', {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyError = () => {
-      toast.error('Erro no pedido, Tente novamente.', {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
+  async function salvar(event?: React.FormEvent) {
+    event?.preventDefault();
+    const qtd = Number(form.qtd);
+    if (!form.nome.trim() || !form.cat || !form.data) return void toast.warn("Preencha o item, a categoria e a data.", toastConfig);
+    if (!Number.isInteger(qtd) || qtd < 1) return void toast.warn("A quantidade deve ser um número inteiro maior que zero.", toastConfig);
+    const dados = { nome_produto: form.nome.trim(), categoria_produto: form.cat, quantidade: qtd, data_pedido: form.data };
+    setSalvando(true);
     try {
-      if(nome_produto === "" || categoria_produto === "" || quantidade === 0 || data_pedido === "" ) {
-        notifyWarn();
-        return;
+      if (sel) {
+        await api.put(`/pedido/${sel.id_pedido}/${sel.id_igreja}`, dados);
+        await carregar();
+        setSel({ ...sel, ...dados });
+        setModal("det");
+        toast.success("Pedido atualizado!", toastConfig);
       } else {
-        const data = {
-          nome_produto,
-          categoria_produto,
-          quantidade,
-          data_pedido
-        };
-
-        const response = await api.post('/pedido', data);
-
-        notifySuccess();
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        await api.post("/pedido", dados);
+        await carregar();
+        setVersao((v) => v + 1);
+        fechar();
+        toast.success("Pedido enviado!", toastConfig);
       }
     } catch (error) {
-      notifyError();
+      toast.error(apiMessage(error, "Não foi possível salvar o pedido."), toastConfig);
+    } finally {
+      setSalvando(false);
     }
-  };
+  }
 
-  const handleUpdate = async (pedidos: Pedidos | null) => {
-    const notifySuccess = () => {
-      toast.success('Movimentação atualizada com sucesso!', {
-        position: 'top-center',
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: 'colored',
-      });
-    };
-
-    const notifySuccessResponse = () => {
-      toast.success('Pedido Respondido com sucesso!', {
-        position: 'top-center',
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: 'colored',
-      });
-    };
-
-    const notifyWarn = () => {
-      toast.warn('Todos os campos devem ser preenchidos!', {
-        position: 'top-center',
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: 'colored',
-      });
-    };
-
-    const notifyError = () => {
-      toast.error('Erro na atualização, Tente novamente.', {
-        position: 'top-center',
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: 'colored',
-      });
-    };
-
-    const notifyResponseFalse = () => {
-      toast.error('Pedido Recusado com sucesso!', {
-        position: 'top-center',
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: 'colored',
-      });
-    };
-
+  async function excluir() {
+    if (!paraExcluir) return;
     try {
-      if (!pedidos) {
-        console.error('No selected pedidos for update');
-        return;
-      }
-
-      if (!editNomeProduto || !editCategoriaProduto || !editQuantidade || !editDataPedido) {
-        notifyWarn();
-        return;
-      }
-
-      const dados = {
-        nome_produto: editNomeProduto,
-        categoria_produto: editCategoriaProduto,
-        quantidade: editQuantidade,
-        data_pedido: editDataPedido,
-        // data_entrega,
-        // motivo_recusa
-      }
-
-      setPedidos((prevPedidos) =>
-        prevPedidos.map((u) => (u.id_pedido === pedidos.id_pedido ? { ...u, ...dados } : u))
-      );
-
-      const response = await api.put(`/pedido/${pedidos?.id_pedido}/${pedidos?.id_igreja}`, dados);
-
-      notifySuccess();
-
-      closeModal();
-      setSelectedPedidos(null)
-
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      await api.delete(`/pedido/${paraExcluir.id_pedido}`);
+      await carregar();
+      setVersao((v) => v + 1);
+      fechar();
+      toast.success("Pedido removido.", toastConfig);
     } catch (error) {
-      console.error('Error updating financas:', error);
-      notifyError();
+      toast.error(apiMessage(error, "Erro ao remover pedido."), toastConfig);
+    } finally {
+      setParaExcluir(null);
     }
-  };
+  }
+
+  const categorias = form.cat && !CATEGORIAS.includes(form.cat) ? [form.cat, ...CATEGORIAS] : CATEGORIAS;
+  const SITUACOES: [Situacao, string][] = [["todos", "Todos"], ["Em Andamento", "Em andamento"], ["Entregue", "Entregues"], ["Recusado", "Recusados"]];
 
   return (
-    <main>
-      <div className='flex'>
-        <MenuLateral/>
-        <div className='app-content'>
-          <nav className="mb-6 md:mb-0" aria-label="Navegação">
-            <ol className="flex flex-wrap items-center text-sm text-gray-600">
-              <li><Link href={'/../../pages/inicio'} className="text3 transition-colors hover:text-azul">Início</Link></li>
-              <li className="mx-2" aria-hidden="true">&#62;</li>
-              <li className="text3 font-semibold text-azul" aria-current="page">Pedidos</li>
-            </ol>
-          </nav>
-
-          <div className="page-toolbar od-reference-toolbar mt-6">
-            <div>
-              <PageTitle>Pedidos</PageTitle>
-            </div>
-
-            <div className="page-toolbar-actions">
-              <div className="relative flex min-w-0 flex-1">
-                <div className="od-list-controls flex w-full min-w-0 flex-wrap items-center gap-2">
-
-                  {/* Botão de filtro */}
-                  <div className="relative flex items-center">
-                    <FilterButton
-                      onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    />
-                    {/* Dropdown de filtros */}
-                    {isFilterOpen && (
-                      <div className="od-filter-menu">
-                      <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === 'recent' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
-                          }`}
-
-                          onClick={() => {
-                            setSortCriteria('recent');
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Adicionados recentemente
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === 'oldest' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
-                          }`}
-
-                          onClick={() => {
-                            setSortCriteria('oldest');
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Adicionados antigamente
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === 'name-asc' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
-                          }`}
-
-                          onClick={() => {
-                            setSortCriteria('name-asc');
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Nome A-Z
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === 'name-desc' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
-                          }`}
-                          onClick={() => {
-                            setSortCriteria('name-desc');
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Nome Z-A
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === 'birth' ? 'bg-blue-100 text-blue-500 text1' : 'text-gray-800 hover:bg-gray-100 text1'
-                          }`}
-                          onClick={() => {
-                            setSortCriteria('birth');
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Data do Pedido
-                        </button>
-                      </div>
-                    )}
+    <PageShell
+      crumbs={[{ label: "Início", href: "/pages/inicio" }, { label: "Pedidos" }]}
+      title="Pedidos"
+      after={(
+        <>
+          <Modal open={modal === "det" && !!sel} onClose={fechar} title="Detalhes do pedido" subtitle={sel ? `Pedido em ${brDate(sel.data_pedido)}` : ""}>
+            {sel && (
+              <>
+                <div className="mx-b">
+                  <span className={situacaoTag(sel.status_pedido)}>{situacao(sel)}</span>
+                  <h3 className="xc-tit" style={{ marginTop: -6, fontSize: 24 }}>{sel.nome_produto}</h3>
+                  <div className="vw">
+                    <ViewRow icon={Tag} label="Categoria">{sel.categoria_produto}</ViewRow>
+                    <ViewRow icon={Hash} label="Quantidade">{sel.quantidade} {sel.quantidade === 1 ? "unidade" : "unidades"}</ViewRow>
+                    <ViewRow icon={Calendar} label="Data do pedido">{brDate(sel.data_pedido)}</ViewRow>
+                    {sel.status_pedido === "Entregue" && sel.data_entrega && <ViewRow icon={Truck} label="Entregue em">{brDate(sel.data_entrega)}</ViewRow>}
+                    {sel.status_pedido === "Recusado" && sel.motivo_recusa && <ViewRow icon={MessageSquare} label="Motivo da recusa" text>{sel.motivo_recusa}</ViewRow>}
                   </div>
-
-                  {/* Campo de pesquisa */}
-                  <div className="min-w-0 flex-1">
-                    <SearchField
-                      type="text"
-                      placeholder="Pesquisar pedidos..."
-
-                      value={searchTerm}
-                      onChange={(e) => handleSearch(e.target.value)}
-                    />
-                  </div>
+                  {sel.respondido ? <p className="mx-note"><Lock className="i s18" aria-hidden="true" />Pedido já respondido: não pode mais ser editado.</p> : null}
                 </div>
-              </div>
-              <div className="flex min-w-0">
-                <AddButton onClick={() => openModal ('new')}>Novo Pedido</AddButton>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 md:mt-6 xl:grid-cols-4">
-            <div className='bg-azul rounded-xl p-5'>
-              <div>
-                <Package size={36} className="text-white" aria-hidden="true"/>
-                <h3 className='text-white text1 text-3xl mr-6 mt-2'>Pedidos</h3>
-              </div>
-              <div className="flex mt-2">
-                <p className='text-white text2 text-xl'>{totalPedidos}</p>
-              </div>
-            </div>
-
-            <div className='bg-white rounded-xl p-5 shadow-xl'>
-              <div>
-                <Clock3 size={36} className="text-azul" aria-hidden="true"/>
-                <h3 className='text-black text1 text-3xl mr-6 mt-2'>Em Andamento</h3>
-              </div>
-              <div className="flex mt-2">
-                <p className='text-black text2 text-xl'>{pedidosEmAndamento}</p>
-              </div>
-            </div>
-
-            <div className='bg-white rounded-xl p-5 shadow-xl'>
-              <div>
-                <CircleX size={36} className="text-azul" aria-hidden="true"/>
-                <h3 className='text-black text1 text-3xl mr-6 mt-2'>Recusados</h3>
-              </div>
-              <div className="flex mt-2">
-                <p className='text-black text2 text-xl'>{pedidosRecusados}</p>
-              </div>
-            </div>
-
-            <div className='bg-white rounded-xl p-5 shadow-xl'>
-              <div>
-                <CircleCheck size={36} className="text-azul" aria-hidden="true"/>
-                <h3 className='text-black text1 text-3xl mr-6 mt-2'>Entregues</h3>
-              </div>
-              <div className="flex mt-2">
-                <p className='text-black text2 text-xl'>{pedidosEntregues}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 min-w-0">
-            <div className='min-w-0'>
-              <div className="page-table-scroll max-h-[65vh]">
-                {sortedPedidos.length === 0 ? (
-                  <p className="text-center text-black text1 text-4xl mt-5 text-gray-4">Nenhum pedido encontrado.</p>
-                ) : (
-                  <DataTable>
-                    <thead className='sticky top-0'>
-                      <tr className='bg-azul text-white rounded-xl'>
-                        <th className='text1 text-white text-2xl px-[7vh] py-2 '>Nome</th>                                              
-                        <th className='text1 text-white text-2xl px-[7vh] py-2'>Categoria</th>                      
-                        <th className='text1 text-white text-2xl px-[6vh] py-2'>Quantidade</th>                      
-                        <th className='text1 text-white text-2xl px-[7vh] py-2'>Status</th>                      
-                        <th className='text1 text-white text-2xl px-[7vh] py-2'>Data do Pedido</th>   
-                        <th className='sm:px-1 md:px-1 lg:px-1 py-2'></th>                   
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {sortedPedidos.map((ped) =>(
-                        <tr key={ped.id_pedido} onClick={() => ped && openModal('edit', ped)} className='cursor-pointer hover:bg-slate-200'>
-                          <td data-label="Nome" className='text-center text2 text-xl py-3'>{ped.nome_produto}</td>
-                          <td data-label="Categoria" className='text-center text2 text-xl py-3'>{ped.categoria_produto}</td>
-                          <td data-label="Quantidade" className='text-center text2 text-xl py-3'>{ped.quantidade}</td>
-                          <td data-label="Status" className='text-center text2 text-xl py-3'>{ped.status_pedido}</td>
-                          <td data-label="Data do Pedido" className='text-center text2 text-xl py-3'>{format(parseDateOnly(ped.data_pedido), 'dd/MM/yyyy')}</td>
-                          <td data-label="Ações" className='text-center text2 text-xl py-3 pr-10'>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteClick(ped.id_pedido);
-                              }}
-                              className='px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600'
-                            >
-                              <Trash2 width={30} height={40} aria-label='lixo Icon' />
-                            </button>                          
-                          </td> 
-                        </tr>
-                      ))}
-                    </tbody>
-                  </DataTable>
-                )}
-              </div>
-            </div>
-            {podeResponder && (
-              <PedidosResponder onRespondido={() => setTimeout(() => window.location.reload(), 1500)} />
+                <div className="mx-f split">
+                  <button type="button" className="btn dng-g" onClick={() => setParaExcluir(sel)}><Trash2 className="i s18" aria-hidden="true" />Excluir</button>
+                  {!sel.respondido && <button type="button" className="btn pri" onClick={editar}><Pencil className="i s18" aria-hidden="true" />Editar</button>}
+                </div>
+              </>
             )}
+          </Modal>
 
-            <AppModal
-              isOpen={isDeleteModalOpen}
-              onRequestClose={() => setIsDeleteModalOpen(false)}
-              contentLabel="Confirmar exclusão"
-              className="fixed inset-0 flex items-center justify-center p-4"
-              overlayClassName="fixed inset-0 bg-white bg-opacity-70"
-            >
-              <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-                <h2 className="text1 text-xl text-black font-bold mb-4">Confirmar Exclusão</h2>
-                <p className="text2 text-gray-600 mb-6">Você tem certeza que deseja remover este pedido?</p>
-                <div className="flex justify-end space-x-4">
-                  <button
-                    onClick={() => setIsDeleteModalOpen(false)}
-                    className="text2 px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={handleDeleteConfirm}
-                    className="text2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                  >
-                    Confirmar
-                  </button>
-                </div>
+          <Modal open={modal === "form"} onClose={fechar} as="form" onSubmit={salvar} title={sel ? "Editar pedido" : "Novo pedido"} subtitle={sel ? "Corrija os dados enquanto o pedido não for respondido." : "O pedido vai para a igreja responsável aprovar."}>
+            <div className="mx-b">
+              {sel && <span className={situacaoTag(sel.status_pedido)}>{situacao(sel)}</span>}
+              <label className="sr" htmlFor="p-nome">O que você precisa?</label>
+              <input id="p-nome" className="ed-tit" placeholder="O que você precisa?" maxLength={150} value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+              <div className="vw">
+                <EditRow icon={Tag} label="Categoria" htmlFor="p-cat">
+                  <select id="p-cat" className="ed-in" value={form.cat} onChange={(e) => setForm({ ...form, cat: e.target.value })}>
+                    <option value="">Selecione</option>
+                    {categorias.map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </EditRow>
+                <EditRow icon={Hash} label="Quantidade" htmlFor="p-qtd"><input id="p-qtd" className="ed-in" type="number" min={1} step={1} value={form.qtd} onChange={(e) => setForm({ ...form, qtd: e.target.value })} /></EditRow>
+                <EditRow icon={Calendar} label="Data" htmlFor="p-data"><input id="p-data" className="ed-in" type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} /></EditRow>
               </div>
-            </AppModal>
+            </div>
+            <div className="mx-f">
+              <button type="button" className="btn ghost" onClick={voltar}>Cancelar</button>
+              <button type="submit" className="btn pri" disabled={!form.nome.trim() || salvando}>{sel ? "Salvar alterações" : "Enviar pedido"}</button>
+            </div>
+          </Modal>
 
-            <AppModal
-              className="text-white flex flex-col" 
-              isOpen={modalIsOpen && modalType === 'new'} 
-              onRequestClose={closeModal}
-              contentLabel="Novo Pedido"
-            >
-              <div className='flex flex-col justify-center self-center bg-azul mt-[20vh] rounded-lg shadow-xl'>
-                <div className='cursor-pointer flex place-content-end rounded-lg'>
-                  <X onClick={closeModal} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
-                </div>
-                <div className='flex flex-col px-10 pb-10'>
+          <ConfirmDialog
+            open={!!paraExcluir}
+            onCancel={() => setParaExcluir(null)}
+            onConfirm={excluir}
+            title="Excluir pedido?"
+            message={<>O pedido “{paraExcluir?.nome_produto}” será cancelado e removido. Essa ação não pode ser desfeita.</>}
+          />
+          <ToastContainer />
+        </>
+      )}
+    >
+      {podeResponder && <PedidosResponder key={versao} onRespondido={carregar} />}
 
-                  <h2 className='text-white text1 text-4xl flex justify-center'>Novo Pedido</h2>
-
-                  <div className='flex flex-col mr-5'>
-                    <label className='text-white text1 text-xl mt-5 mb-1'>Nome</label>
-
-                    <input                    
-                      type="text" 
-                      className='px-4 py-3 rounded-lg text2 text-slate-500'
-                      placeholder='Digite o Nome...'
-                      value={nome_produto}
-                      onChange={(e) => setNomeProduto(e.target.value)}
-                      required 
-                    />
-                  </div>
-
-                  <div className='flex flex-col mr-5'>
-                    <label className='text-white text1 text-xl mt-5 mb-1'>Categoria</label>
-
-                    <select                    
-                      className='px-4 py-3 rounded-lg text2 bg-white text-slate-500'
-                      value={categoria_produto}
-                      onChange={(e) => setCategoriaProduto(e.target.value)}
-                      required 
-                      >
-                      <option value="" disabled>Selecione</option>
-                      <option value="Limpeza">Limpeza</option>
-                      <option value="Cozinha">Cozinha</option>
-                      <option value="Descartável">Descartável</option>
-                      <option value="Material de Construção">Material de Construção</option>
-                      <option value="Eletrônico">Eletrônico</option>
-                      <option value="Eletroeletrônico">Eletroeletrônico</option>
-                      <option value="Móvel">Móvel</option>
-                    </select>                    
-                  </div>
-
-                  <div className="flex">
-                    <div className='flex flex-col mr-5'>
-                      <label className='text-white text1 text-xl mt-5 mb-1'>Quantidade</label>
-
-                      <input                    
-                        type="text" 
-                        className='px-4 py-3 rounded-lg text2 text-slate-500'                      
-                        value={quantidade}
-                        onChange={(e) => setQuantidade(Number(e.target.value))}
-                        required 
-                      />
-                    </div>
-
-                    <div className='flex flex-col mr-5'>
-                      <label className='text-white text1 text-xl mt-5 mb-1'>Data do Pedido</label>
-
-                      <input                    
-                        type="date" 
-                        className='px-4 py-3 rounded-lg text2 text-slate-500'
-                        placeholder='Digite o Nome...'
-                        value={data_pedido}
-                        onChange={(e) => setDataPedido(e.target.value)}
-                        required 
-                        />
-                    </div>
-                  </div>                
-                  <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
-                </div>
-              </div>
-            </AppModal>
-
-            <AppModal
-              className="text-white flex flex-col" 
-              isOpen={modalIsOpen && modalType === 'edit'} 
-              onRequestClose={closeModal}
-              contentLabel="Ver Pedido"
-              >
-              <div className='flex flex-col justify-center self-center bg-azul mt-[20vh] rounded-lg shadow-xl'>
-                <div className='cursor-pointer flex place-content-end rounded-lg'>
-                  <X onClick={closeModal} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
-                </div>
-                <div className='flex flex-col px-10 pb-10'>
-                  <h2 className='text-white text1 text-4xl flex justify-center'>Ver Pedido</h2>
-
-                  <div className='flex flex-col'>
-                    <label className='text-white text1 text-xl mt-5 mb-1'>Nome</label>
-
-                    <input                    
-                      type="text" 
-                      className='px-4 py-3 rounded-lg text2 text-slate-500'
-                      placeholder='Digite o Nome...'
-                      value={editNomeProduto}
-                      disabled={!!selectedPedidos?.respondido}
-                      onChange={(e) => setEditNomeProduto(e.target.value)}
-                      required 
-                    />
-                  </div>
-
-                  <div className='flex flex-col'>
-                    <label className='text-white text1 text-xl mt-5 mb-1'>Categoria</label>
-
-                    <select                    
-                      className='px-4 py-3 rounded-lg text2 bg-white text-slate-500'
-                      value={editCategoriaProduto}
-                      disabled={!!selectedPedidos?.respondido}
-                      onChange={(e) => setEditCategoriaProduto(e.target.value)}
-                      required 
-                      >
-                      <option value="" disabled>Selecione</option>
-                      <option value="Limpeza">Limpeza</option>
-                      <option value="Cozinha">Cozinha</option>
-                      <option value="Descartável">Descartável</option>
-                      <option value="Material de Construção">Material de Construção</option>
-                      <option value="Eletrônico">Eletrônico</option>
-                      <option value="Eletroeletrônico">Eletroeletrônico</option>
-                      <option value="Móvel">Móvel</option>
-                    </select>                    
-                  </div>
-
-                  <div className="flex">
-                    <div className='flex flex-col mr-5'>
-                      <label className='text-white text1 text-xl mt-5 mb-1'>Quantidade</label>
-
-                      <input                    
-                        type="text" 
-                        className='px-4 py-3 rounded-lg text2 text-slate-500'                      
-                        value={editQuantidade}
-                      disabled={!!selectedPedidos?.respondido}
-                        onChange={(e) => setEditQuantidade(Number(e.target.value))}
-                        required 
-                        />
-                    </div>
-
-                    <div className='flex flex-col'>
-                      <label className='text-white text1 text-xl mt-5 mb-1'>Data do Pedido</label>
-
-                      <input                    
-                        type="date" 
-                        className='px-4 py-3 rounded-lg text2 text-slate-500'                      
-                        value={editDataPedido}
-                      disabled={!!selectedPedidos?.respondido}
-                        onChange={(e) => setEditDataPedido(e.target.value)}
-                        required 
-                        />
-                    </div>
-                  </div>
-
-                  <div className='flex flex-col'>
-                    <label className='text-white text1 text-xl mt-5 mb-1'>Situação</label>
-                    <p className='px-4 py-3 rounded-lg text2 bg-white text-slate-700'>
-                      {selectedPedidos?.status_pedido || 'Em Andamento'}
-                      {selectedPedidos?.status_pedido === 'Entregue' && selectedPedidos?.data_entrega ? ` em ${format(parseDateOnly(selectedPedidos.data_entrega), 'dd/MM/yyyy')}` : ''}
-                      {selectedPedidos?.status_pedido === 'Recusado' && selectedPedidos?.motivo_recusa ? ` — ${selectedPedidos.motivo_recusa}` : ''}
-                    </p>
-                    <span className='text2 text-white text-sm mt-1'>
-                      {selectedPedidos?.respondido ? 'Pedido já respondido: não pode mais ser editado.' : 'A resposta (entregue ou recusado) é dada pela igreja responsável.'}
-                    </span>
-                  </div>
-
-
-                  {!selectedPedidos?.respondido && (
-                    <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={() => selectedPedidos && handleUpdate(selectedPedidos)}>Atualizar</button>
-                  )}
-
-                </div>
-              </div>
-            </AppModal>
-
-          </div>
-        </div>
-        <ToastContainer />
+      <h2 className="sec-t" style={{ marginTop: podeResponder ? 12 : 0 }}>Meus pedidos</h2>
+      <div className="toolbar">
+        <SearchBox value={busca} onChange={setBusca} placeholder="Pesquisar pedidos..." />
+        <SortMenu options={SORTS} value={ordem} onChange={setOrdem} />
+        <button type="button" className="btn-add" onClick={novo}><Plus className="i s20" aria-hidden="true" />Novo Pedido</button>
       </div>
-    </main>
-  )
+      <div className="list-bar">
+        <div className="tabs" role="tablist" aria-label="Filtrar por situação" style={{ background: "#e9edf5" }}>
+          {SITUACOES.map(([k, label]) => <button key={k} type="button" role="tab" className={filtro === k ? "on" : ""} aria-selected={filtro === k} onClick={() => setFiltro(k)}>{label} · {contagem[k] || 0}</button>)}
+        </div>
+        <span className="list-n">{lista.length} {lista.length === 1 ? "pedido" : "pedidos"}</span>
+      </div>
+      <div className="tbl-wrap fin">
+        <div className="dt">
+          <div className="dt-h" style={{ gridTemplateColumns: COLS }}><span>Pedido</span><span>Quantidade</span><span>Data</span><span className="r">Situação</span></div>
+          {lista.map((p) => (
+            <div key={p.id_pedido} className="dt-r" style={{ gridTemplateColumns: COLS, minHeight: 68 }}>
+              <button type="button" className="hit" aria-label={`Ver pedido ${p.nome_produto}`} onClick={() => { setSel(p); setModal("det"); }} />
+              <div className="c-desc" data-label="Pedido">
+                <div className="mb">
+                  <span className="fx-ico box" aria-hidden="true"><Package className="i" /></span>
+                  <div><p className="mb-n"><span className="mb-t">{p.nome_produto}</span></p><p className="mb-c">{p.categoria_produto}<span className="only-m"> · {p.quantidade} un. · {brDate(p.data_pedido)}</span></p></div>
+                </div>
+              </div>
+              <span className="c-hm" data-label="Quantidade">{p.quantidade} un.</span>
+              <span className="c-data" data-label="Data">{brDate(p.data_pedido)}</span>
+              <span className="c-val" data-label="Situação"><span className={situacaoTag(p.status_pedido)}>{situacao(p)}</span></span>
+            </div>
+          ))}
+          {lista.length === 0 && <p className="empty">{pedidos.length ? "Nenhum pedido neste filtro." : "Nenhum pedido feito ainda."}</p>}
+        </div>
+      </div>
+    </PageShell>
+  );
 }

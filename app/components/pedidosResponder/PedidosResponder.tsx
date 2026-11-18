@@ -1,19 +1,19 @@
 'use client'
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { format } from 'date-fns';
+import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import { AppModal, DataTable, ModalCloseButton, ModalSurface } from '@/app/components/shared/MemberStyle';
+import { Calendar, Check, Church, MessageSquare, Package, Truck } from 'lucide-react';
+import { Modal, ViewRow } from '@/app/components/ui/Modal';
+import { apiMessage } from '@/app/components/ui/PageParts';
+import { brDate } from '@/app/utils/date';
 import api from '@/app/api/api';
-import { parseDateOnly } from "@/app/utils/date";
 
-interface PedidoRecebido {
+export interface PedidoRecebido {
   id_pedido: number;
   nome_produto: string;
   categoria_produto: string;
   quantidade: number;
   data_pedido: string;
-  status_pedido: string;
+  status_pedido: string | null;
   data_entrega: string | null;
   motivo_recusa: string | null;
   respondido: number | boolean;
@@ -30,43 +30,41 @@ export function podeResponderPedidos(cargo: string | null, idMatriz: string | nu
   return !ehFilial && (cargo === 'Pastor' || cargo === 'Pastor Matriz' || cargo === 'Obreiro Matriz');
 }
 
-const hoje = () => format(new Date(), 'yyyy-MM-dd');
-const dataBR = (valor: string | null) => (valor ? format(parseDateOnly(valor), 'dd/MM/yyyy') : '');
+export const situacaoTag = (status?: string | null) =>
+  status === 'Entregue' ? 'tag tag-ok' : status === 'Recusado' ? 'tag tag-rec' : 'tag tag-and';
 
-// Lista de pedidos que a igreja do usuário deve responder: os próprios (quando ela não tem
-// matriz) e os das filiais. Responder marca o pedido como entregue ou recusado.
+const hoje = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+// "Responder pedidos": um cartão por pedido, com Entregar e Recusar.
 export default function PedidosResponder({ onRespondido }: { onRespondido?: () => void }) {
   const [pedidos, setPedidos] = useState<PedidoRecebido[]>([]);
-  const [carregando, setCarregando] = useState(true);
+  const [carregado, setCarregado] = useState(false);
   const [mostrarRespondidos, setMostrarRespondidos] = useState(false);
   const [acao, setAcao] = useState<Acao | null>(null);
   const [dataEntrega, setDataEntrega] = useState(hoje());
   const [motivo, setMotivo] = useState('');
   const [enviando, setEnviando] = useState(false);
 
-  const carregar = async () => {
+  const carregar = useCallback(async () => {
     try {
-      const response = await api.get('/pedido/recebidos');
-      setPedidos(response.data);
+      const { data } = await api.get('/pedido/recebidos');
+      setPedidos(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Erro ao buscar pedidos para responder:', error);
     } finally {
-      setCarregando(false);
+      setCarregado(true);
     }
-  };
+  }, []);
 
-  useEffect(() => { carregar(); }, []);
+  useEffect(() => { void carregar(); }, [carregar]);
 
-  const abrir = (pedido: PedidoRecebido, tipo: Acao['tipo']) => {
-    setAcao({ pedido, tipo });
-    setDataEntrega(hoje());
-    setMotivo('');
-  };
+  const abrir = (pedido: PedidoRecebido, tipo: Acao['tipo']) => { setAcao({ pedido, tipo }); setDataEntrega(hoje()); setMotivo(''); };
 
-  const responder = async () => {
+  const responder = async (event?: React.FormEvent) => {
+    event?.preventDefault();
     if (!acao) return;
-    if (acao.tipo === 'Entregue' && !dataEntrega) { toast.warn('Informe a data de entrega.', { position: 'top-center' }); return; }
-    if (acao.tipo === 'Recusado' && !motivo.trim()) { toast.warn('Informe o motivo da recusa.', { position: 'top-center' }); return; }
+    if (acao.tipo === 'Entregue' && !dataEntrega) return void toast.warn('Informe a data de entrega.', { position: 'top-center' });
+    if (acao.tipo === 'Recusado' && !motivo.trim()) return void toast.warn('Informe o motivo da recusa.', { position: 'top-center' });
     setEnviando(true);
     try {
       await api.put(`/pedido/${acao.pedido.id_pedido}/responder`, acao.tipo === 'Entregue'
@@ -77,110 +75,80 @@ export default function PedidosResponder({ onRespondido }: { onRespondido?: () =
       await carregar();
       onRespondido?.();
     } catch (error) {
-      const message = axios.isAxiosError(error) && error.response?.data?.message ? error.response.data.message : 'Não foi possível responder o pedido.';
-      toast.error(message, { position: 'top-center', autoClose: 4000 });
+      toast.error(apiMessage(error, 'Não foi possível responder o pedido.'), { position: 'top-center', autoClose: 4000 });
     } finally {
       setEnviando(false);
     }
   };
 
-  const pendentes = pedidos.filter(p => !p.respondido);
+  const pendentes = pedidos.filter((p) => !p.respondido);
   const visiveis = mostrarRespondidos ? pedidos : pendentes;
 
   return (
-    <section className="mt-10 min-w-0" aria-labelledby="pedidos-responder-titulo">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="pedidos-responder-titulo" className="text1 text-2xl text-black">
-          Pedidos para responder {pendentes.length > 0 && <span className="ml-2 rounded-full bg-azul px-3 py-1 text-base text-white">{pendentes.length}</span>}
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }} aria-labelledby="rp-h">
+      <div className="list-bar">
+        <h2 id="rp-h" className="sec-t">
+          Responder pedidos{' '}
+          {carregado && <span className={pendentes.length ? 'tag tag-and' : 'tag tag-ok'}>{pendentes.length ? `${pendentes.length} ${pendentes.length === 1 ? 'pendente' : 'pendentes'}` : 'Nenhum pendente'}</span>}
         </h2>
-        <label className="text2 flex items-center gap-2 text-gray-700">
-          <input type="checkbox" checked={mostrarRespondidos} onChange={e => setMostrarRespondidos(e.target.checked)} />
-          Mostrar já respondidos
-        </label>
+        <label className="chk"><input type="checkbox" checked={mostrarRespondidos} onChange={(e) => setMostrarRespondidos(e.target.checked)} />Mostrar já respondidos</label>
       </div>
-      <p className="text2 mt-1 text-gray-600">Pedidos da sua igreja e das igrejas subordinadas. Marque como entregue ou recuse informando o motivo.</p>
+      <p className="list-n" style={{ fontSize: 15 }}>Pedidos que sua igreja responde: os das igrejas subordinadas e os próprios. Marque como entregue ou recuse informando o motivo.</p>
+      {carregado && visiveis.length === 0 ? (
+        <p className="card empty">{mostrarRespondidos ? 'Nenhum pedido recebido.' : 'Nenhum pedido aguardando resposta.'}</p>
+      ) : (
+        <div className="cards">
+          {visiveis.map((p) => (
+            <article key={p.id_pedido} className="card lc">
+              <div className="lc-top"><span className="av" aria-hidden="true"><Package className="i" /></span><span className={situacaoTag(p.status_pedido)}>{p.status_pedido || 'Em Andamento'}</span></div>
+              <h3 className="lc-tit" style={{ fontSize: 18 }}>{p.quantidade}× {p.nome_produto}</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <p className="xc-meta"><Church className="i" aria-hidden="true" /><span>{p.nome_igreja}</span></p>
+                <p className="xc-meta"><Calendar className="i" aria-hidden="true" /><span>Pedido em {brDate(p.data_pedido)}</span></p>
+              </div>
+              <div className="lc-foot row">
+                {p.respondido ? (
+                  <span className="list-n">{p.status_pedido === 'Entregue' && p.data_entrega ? `Entregue em ${brDate(p.data_entrega)}` : p.motivo_recusa ? `Recusado: ${p.motivo_recusa}` : 'Pedido já respondido'}</span>
+                ) : (
+                  <div className="lc-acts">
+                    <button type="button" className="btn rec" onClick={() => abrir(p, 'Recusado')}>Recusar</button>
+                    <button type="button" className="btn ok" onClick={() => abrir(p, 'Entregue')}><Check className="i s18" aria-hidden="true" />Entregar</button>
+                  </div>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
 
-      <div className="page-table-scroll mt-4 max-h-[50vh]">
-        {carregando ? (
-          <p className="text2 text-gray-600">Carregando...</p>
-        ) : visiveis.length === 0 ? (
-          <p className="text2 text-gray-600">{mostrarRespondidos ? 'Nenhum pedido recebido.' : 'Nenhum pedido aguardando resposta.'}</p>
-        ) : (
-          <DataTable>
-            <thead className="sticky top-0">
-              <tr className="bg-azul text-white">
-                <th className="text1 px-4 py-2 text-white">Igreja</th>
-                <th className="text1 px-4 py-2 text-white">Produto</th>
-                <th className="text1 px-4 py-2 text-white">Quantidade</th>
-                <th className="text1 px-4 py-2 text-white">Data do Pedido</th>
-                <th className="text1 px-4 py-2 text-white">Situação</th>
-                <th className="text1 px-4 py-2 text-white">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visiveis.map(p => (
-                <tr key={p.id_pedido}>
-                  <td data-label="Igreja" className="text2 py-3 text-center">{p.nome_igreja}</td>
-                  <td data-label="Produto" className="text2 py-3 text-center">{p.nome_produto} <span className="text-gray-500">({p.categoria_produto})</span></td>
-                  <td data-label="Quantidade" className="text2 py-3 text-center">{p.quantidade}</td>
-                  <td data-label="Data do Pedido" className="text2 py-3 text-center">{dataBR(p.data_pedido)}</td>
-                  <td data-label="Situação" className="text2 py-3 text-center">
-                    {p.status_pedido}
-                    {p.status_pedido === 'Entregue' && p.data_entrega && <span className="block text-sm text-gray-500">em {dataBR(p.data_entrega)}</span>}
-                    {p.status_pedido === 'Recusado' && p.motivo_recusa && <span className="block text-sm text-gray-500">{p.motivo_recusa}</span>}
-                  </td>
-                  <td data-label="Ações" className="text2 py-3 text-center">
-                    {p.respondido ? <span className="text-gray-500">Respondido</span> : (
-                      <div className="flex flex-wrap justify-center gap-2">
-                        <button type="button" className="rounded-lg bg-green-600 px-3 py-2 text-white hover:bg-green-700" onClick={() => abrir(p, 'Entregue')}>Entregar</button>
-                        <button type="button" className="rounded-lg bg-red-500 px-3 py-2 text-white hover:bg-red-600" onClick={() => abrir(p, 'Recusado')}>Recusar</button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </DataTable>
-        )}
-      </div>
-
-      <AppModal
-        isOpen={!!acao}
-        onRequestClose={() => setAcao(null)}
-        contentLabel="Responder pedido"
-        ariaHideApp={false}
-        overlayClassName="fixed inset-0 z-50 bg-slate-950/55"
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      <Modal
+        open={!!acao}
+        onClose={() => setAcao(null)}
+        as="form"
+        onSubmit={responder}
+        title={acao?.tipo === 'Entregue' ? 'Marcar como entregue' : 'Recusar pedido'}
+        subtitle={acao?.tipo === 'Entregue' ? 'Informe quando o pedido foi entregue.' : 'A igreja verá o motivo da recusa.'}
       >
         {acao && (
-          <ModalSurface className="w-full max-w-md p-6">
-            <div className="flex items-start justify-between gap-4">
-              <h3 className="text1 text-xl text-black">{acao.tipo === 'Entregue' ? 'Marcar como entregue' : 'Recusar pedido'}</h3>
-              <ModalCloseButton onClick={() => setAcao(null)} />
+          <>
+            <div className="mx-b">
+              <div className="vw">
+                <ViewRow icon={Church} label="Igreja">{acao.pedido.nome_igreja}</ViewRow>
+                <ViewRow icon={Package} label="Pedido">{acao.pedido.quantidade}× {acao.pedido.nome_produto}</ViewRow>
+              </div>
+              {acao.tipo === 'Entregue' ? (
+                <div className="ed-f"><label className="ed-l" htmlFor="rp-data"><Truck className="i s18" style={{ display: 'inline', marginRight: 6 }} aria-hidden="true" />Data de entrega</label><input id="rp-data" className="ed-in" type="date" value={dataEntrega} onChange={(e) => setDataEntrega(e.target.value)} /></div>
+              ) : (
+                <div className="ed-f"><label className="ed-l" htmlFor="rp-mot"><MessageSquare className="i s18" style={{ display: 'inline', marginRight: 6 }} aria-hidden="true" />Motivo da recusa</label><textarea id="rp-mot" className="ed-in" maxLength={1000} placeholder="Ex.: já temos estoque suficiente na matriz" value={motivo} onChange={(e) => setMotivo(e.target.value)} /></div>
+              )}
             </div>
-            <p className="text2 mt-2 text-gray-700">
-              {acao.pedido.quantidade}x {acao.pedido.nome_produto} — {acao.pedido.nome_igreja}
-            </p>
-            {acao.tipo === 'Entregue' ? (
-              <label className="text2 mt-4 flex flex-col gap-1 text-gray-800">
-                Data de entrega
-                <input type="date" className="rounded-lg border px-4 py-3" value={dataEntrega} onChange={e => setDataEntrega(e.target.value)} required />
-              </label>
-            ) : (
-              <label className="text2 mt-4 flex flex-col gap-1 text-gray-800">
-                Motivo da recusa
-                <textarea className="rounded-lg border px-4 py-3" rows={3} maxLength={1000} value={motivo} onChange={e => setMotivo(e.target.value)} required />
-              </label>
-            )}
-            <div className="mt-6 flex justify-end gap-3">
-              <button type="button" className="text2 rounded-lg px-5 py-2 text-gray-700 hover:bg-gray-100" onClick={() => setAcao(null)}>Cancelar</button>
-              <button type="button" disabled={enviando} className={`text2 rounded-lg px-5 py-2 text-white disabled:opacity-60 ${acao.tipo === 'Entregue' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-500 hover:bg-red-600'}`} onClick={responder}>
-                {acao.tipo === 'Entregue' ? 'Confirmar entrega' : 'Confirmar recusa'}
-              </button>
+            <div className="mx-f">
+              <button type="button" className="btn ghost" onClick={() => setAcao(null)}>Cancelar</button>
+              <button type="submit" disabled={enviando} className={`btn ${acao.tipo === 'Entregue' ? 'ok' : 'dng'}`}>{acao.tipo === 'Entregue' ? 'Confirmar entrega' : 'Confirmar recusa'}</button>
             </div>
-          </ModalSurface>
+          </>
         )}
-      </AppModal>
+      </Modal>
     </section>
   );
 }

@@ -1,581 +1,208 @@
-'use client'
-import { AddButton, AppModal, DataTable, PageTitle } from '@/app/components/shared/MemberStyle';
-import React, { useState, useEffect } from 'react'
-import { Eye, EyeOff, Wallet } from "lucide-react";
-import { format } from 'date-fns';
-import MenuLateral from '@/app/components/menuLateral/menuLateral'
-import Link from 'next/link'
-import api from '../../api/api';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { parseDateOnly } from "@/app/utils/date";
+"use client";
 
-interface Saldo {
-  id_saldo: number;
-  saldo: number;
-  id_igreja: number;
-};
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { toast, ToastContainer } from "react-toastify";
+import { ArrowDownLeft, ArrowUpRight, Calendar, Eye, EyeOff, FileText, Lock, Pencil, Plus, Tag, Wallet } from "lucide-react";
 
-interface Igreja {
-  id_igreja: number;
-  nome: string;
-};
+import { EditRow, Modal, ViewRow } from "@/app/components/ui/Modal";
+import { apiMessage, PageShell } from "@/app/components/ui/PageParts";
+import { brDate } from "@/app/utils/date";
+import { brl, cents, toApiValue, toInputValue } from "@/app/utils/money";
+import api from "../../api/api";
 
-interface User {
-  id_user: number;
-  id_igreja: number;
-};
+import "react-toastify/dist/ReactToastify.css";
 
-interface Financas {
-  id_financas: number;
-  tipo: string;
-  categoria: string;
-  valor: string;
-  descricao: string;
-  data: string;
-  id_igreja: number;
-};
+interface Movimento { id_financas: number; tipo: "Entrada" | "Saída"; categoria: string; valor: string; descricao: string; data: string; id_igreja: number }
+type Filtro = "todos" | "ent" | "sai";
+type Form = { tipo: "Entrada" | "Saída"; valor: string; categoria: string; data: string; descricao: string };
 
-export default function financeiro() {
-  const [allVisible, setAllVisible] = useState(true);
-  const [saldoVisivel, setSaldoVisivel] = useState(false);
-  const [gastoVisivel, setGastoVisivel] = useState(false);
-  const [entradaVisivel, setEntradaVisivel] = useState(false);
+const CATEGORIAS = ["Oferta Simples", "Oferta Especial", "Dízimo", "Contribuição para Missões", "Contribuição para Obras"];
+const OCULTO = "R$ ••••";
+const COLS = "130px minmax(0, 1fr) 200px";
+const toastConfig = { position: "top-center" as const, autoClose: 1800, theme: "colored" as const };
+const hoje = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
-  const [tipo, setTipo] = useState<string>('')
-  const [categoria, setCategoria] = useState<string>('')
-  const [valor, setValor] = useState<string>('')
-  const [descricao, setDescricao] = useState<string>('')
-  const [data, setData] = useState<string>('')
-  const [nomeIgreja, setNomeIgreja] = useState<number>(0)
+export default function Financeiro() {
+  const [movs, setMovs] = useState<Movimento[]>([]);
+  const [saldo, setSaldo] = useState<string | null>(null);
+  const [visivel, setVisivel] = useState(true);
+  const [filtro, setFiltro] = useState<Filtro>("todos");
+  const [semAcesso, setSemAcesso] = useState(false);
 
-  const [editTipo, setEditTipo] = useState<string>('')
-  const [editCategoria, setEditCategoria] = useState<string>('')
-  const [editValor, setEditValor] = useState<string>('')
-  const [editDescricao, setEditDescricao] = useState<string>('')
-  const [editData, setEditData] = useState<string>('') 
-  const [editNomeIgreja, setEditNomeIgreja] = useState<number>(0)
+  const [modal, setModal] = useState<"det" | "form" | null>(null);
+  const [sel, setSel] = useState<Movimento | null>(null);
+  const [form, setForm] = useState<Form>({ tipo: "Entrada", valor: "", categoria: "", data: hoje(), descricao: "" });
+  const [salvando, setSalvando] = useState(false);
 
-  const [saldoAtual, setSaldo] = useState<Saldo | null>(null);
-
-  useEffect(() => {
-    const fetchSaldo = async () => {
-      try {
-        const userResponse = await api.get('/cadastro');
-        setUser(userResponse.data);
-        if (userResponse.data && userResponse.data.id_igreja) {
-          const response = await api.get(`/financas/saldo/${userResponse.data.id_igreja}`);       
-          setSaldo(response.data)
-        }
-      } catch (error) {
-        console.error('Error fetching saldo:', error);
-      }
-    };
-
-    fetchSaldo();
-  }, [])
-
-  const [financas, setFinancas] = useState<Financas[]>([]);
-
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {        
-        const userResponse = await api.get('/cadastro');
-        setUser(userResponse.data);
-        if (userResponse.data && userResponse.data.id_igreja) {
-          const idIgreja = userResponse.data.id_igreja;
-          const response = await api.get(`/financas/${idIgreja}`);
-          setFinancas(response.data);
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
-
-    fetchUserData();
-  }, []);
-
-  const [igreja, setIgreja] = useState<Igreja[]>([]);
-
-  useEffect(() => {
-    const fetchIgrejas = async () => {
-      try {
-        const response = await api.get('/departamento/igreja');
-        setIgreja(response.data);
-      } catch (error) {
-        console.error('Error fetching igrejas:', error);
-      }
-    };
-
-    fetchIgrejas()
-  }, []);
-
-  const [modalType, setModalType] = useState<'new' | 'edit' | null>(null);
-  const [modalIsOpen, setModalIsOpen] = useState(false);
-
-  const openModal = (type: 'new' | 'edit', financas?: Financas) => {
-    setModalType(type);
-    if (type === 'new') {
-      setTipo('');
-      setCategoria('');
-      setValor('');
-      setDescricao('');
-      setData('');   
-      setNomeIgreja(0);   
-      setNomeIgreja(0);
-    } else if (type === 'edit'&& financas) {
-      setSelectedFinancas(financas);
-      setEditTipo(financas.tipo);
-      setEditCategoria(financas.categoria);
-      setEditValor(financas.valor);
-      setEditDescricao(financas.descricao);
-      setEditData(format(parseDateOnly(financas.data), 'yyyy-MM-dd'));      
-      setEditNomeIgreja(financas.id_igreja)
-    }
-    setModalIsOpen(true);
-  };
-
-  const closeModal = () => {
-    setModalIsOpen(false);
-    setModalType(null);
-  };
-
-  const [selectedFinancas, setSelectedFinancas] = useState<Financas | null>(null)
-
-  useEffect(() => {
-    if (selectedFinancas) {
-      setTipo(selectedFinancas.tipo || '');
-      setCategoria(selectedFinancas.categoria || '');
-      setValor(selectedFinancas.valor || '');
-      setDescricao(selectedFinancas.descricao || '');
-      setData(selectedFinancas.data || ''); 
-      setNomeIgreja(selectedFinancas.id_igreja || 0);    
-    }
-  }, [selectedFinancas]);
-
-  async function handleRegister(event: React.FormEvent) {
-    event.preventDefault();
-
-    const notifySuccess = () => {
-      toast.success('Movimentação realizada com sucesso!', {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-        });
-    }
-
-    const notifyWarn = () => {
-      toast.warn('Todos os campos devem ser preenchidos!', {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-        });
-    }
-
-    const notifyError = () => {
-      toast.error('Erro na movimentação, Tente novamente.', {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    }
-
+  const carregar = useCallback(async () => {
+    const igreja = sessionStorage.getItem("id_igreja");
+    if (!igreja) return;
     try {
-      if (tipo === "Selecione um Tipo" || categoria === "Selecione" || valor === "" || descricao === "" || data === "" || nomeIgreja === 0) {
-        notifyWarn();
-        return;
+      const [lista, s] = await Promise.all([api.get(`/financas/${igreja}`), api.get(`/financas/saldo/${igreja}`)]);
+      setMovs(Array.isArray(lista.data) ? lista.data : []);
+      setSaldo(String(s.data?.saldo ?? "0.00"));
+    } catch (error) {
+      // O financeiro é só para pastores.
+      if ((error as { response?: { status?: number } })?.response?.status === 403) setSemAcesso(true);
+      else toast.error("Erro ao carregar o financeiro.", toastConfig);
+    }
+  }, []);
+
+  useEffect(() => { void carregar(); }, [carregar]);
+
+  const totais = useMemo(() => {
+    let ent = 0n, sai = 0n;
+    for (const m of movs) { if (m.tipo === "Entrada") ent += cents(m.valor); else sai += cents(m.valor); }
+    return { ent, sai, nE: movs.filter((m) => m.tipo === "Entrada").length, nS: movs.filter((m) => m.tipo === "Saída").length };
+  }, [movs]);
+
+  const lista = useMemo(() => movs
+    .filter((m) => filtro === "todos" || (filtro === "ent" ? m.tipo === "Entrada" : m.tipo === "Saída"))
+    .sort((a, b) => String(b.data).localeCompare(String(a.data)) || b.id_financas - a.id_financas), [movs, filtro]);
+
+  const valorTxt = (m: Movimento) => (visivel ? brl(m.tipo === "Saída" ? -cents(m.valor) : cents(m.valor), true) : OCULTO);
+  const mostrar = (v: bigint) => (visivel ? brl(v) : OCULTO);
+
+  const novo = () => { setSel(null); setForm({ tipo: "Entrada", valor: "", categoria: "", data: hoje(), descricao: "" }); setModal("form"); };
+  const editar = () => { if (sel) { setForm({ tipo: sel.tipo, valor: toInputValue(sel.valor), categoria: sel.categoria, data: String(sel.data).slice(0, 10), descricao: sel.descricao || "" }); setModal("form"); } };
+  const fechar = () => { setModal(null); setSel(null); };
+  const voltar = () => setModal(sel ? "det" : null);
+
+  async function salvar(event?: React.FormEvent) {
+    event?.preventDefault();
+    const valor = toApiValue(form.valor);
+    if (!valor) return void toast.warn("Informe um valor válido, por exemplo 150,00.", toastConfig);
+    if (!form.categoria || !form.data || !form.descricao.trim()) return void toast.warn("Preencha categoria, data e descrição.", toastConfig);
+    const dados = { tipo: form.tipo, categoria: form.categoria, valor, descricao: form.descricao.trim(), data: form.data };
+    setSalvando(true);
+    try {
+      if (sel) {
+        await api.put(`/financas/${sel.id_financas}/${sel.id_igreja}`, dados);
+        await carregar();
+        setSel({ ...sel, ...dados });
+        setModal("det");
+        toast.success("Movimentação atualizada!", toastConfig);
       } else {
-        const dados = {
-          tipo,
-          categoria,
-          valor,
-          descricao,
-          data,
-          id_igreja: nomeIgreja
-        }
-
-        const response = await api.post('/financas', dados)
-
-        notifySuccess()
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        await api.post("/financas", { ...dados, id_igreja: sessionStorage.getItem("id_igreja") });
+        await carregar();
+        fechar();
+        toast.success("Movimentação registrada!", toastConfig);
       }
-    } catch {
-      notifyError();
+    } catch (error) {
+      toast.error(apiMessage(error, "Não foi possível salvar a movimentação."), toastConfig);
+    } finally {
+      setSalvando(false);
     }
   }
 
-  const handleUpdate = async (financas: Financas | null) => {
-    const notifySuccess = () => {
-      toast.success('Movimentação atualizada com sucesso!', {
-        position: 'top-center',
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: 'colored',
-      });
-    };
+  // Categoria antiga (fora da lista atual) continua aparecendo para não ser trocada sem querer.
+  const categorias = form.categoria && !CATEGORIAS.includes(form.categoria) ? [form.categoria, ...CATEGORIAS] : CATEGORIAS;
 
-    const notifyWarn = () => {
-      toast.warn('Todos os campos devem ser preenchidos!', {
-        position: 'top-center',
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: 'colored',
-      });
-    };
-
-    const notifyError = () => {
-      toast.error('Erro na atualização, Tente novamente.', {
-        position: 'top-center',
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: 'colored',
-      });
-    };
-
-    try {
-      if(!financas) {
-        console.error('No selected financas for update');
-        return;
-      }
-
-      if (!editTipo || !editCategoria || !editValor || !editDescricao || !editData || !editNomeIgreja) {
-        notifyWarn();
-        return;
-      }
-
-      const dados = {
-        tipo: editTipo,
-        categoria: editCategoria,
-        valor: editValor,
-        descricao: editDescricao,
-        data: editData,
-        nomeIgreja: editNomeIgreja
-      }
-
-      const response = await api.put(`/financas/${financas?.id_financas}/${financas?.id_igreja}`, dados);
-
-      notifySuccess();
-
-      closeModal();
-      setSelectedFinancas(null);
-    } catch (error) {
-      console.error('Error updating financas:', error);
-      notifyError();
-    }
+  if (semAcesso) {
+    return (
+      <PageShell crumbs={[{ label: "Início", href: "/pages/inicio" }, { label: "Financeiro" }]} title="Financeiro">
+        <div className="card empty"><Lock className="i s32" style={{ margin: "0 auto 12px", color: "#5271FF" }} aria-hidden="true" /><h3 className="t1" style={{ fontSize: 20, color: "#1f2937" }}>Acesso restrito</h3><p style={{ marginTop: 6 }}>Somente pastores acessam o financeiro da igreja.</p></div>
+      </PageShell>
+    );
   }
 
   return (
-    <main className="min-h-screen bg-gray-100">
-      <div className="flex flex-col md:flex-row">
-        <MenuLateral/>
-        <div className="app-content">
-          <div className="od-breadcrumb mt-8 xs:mt-10 sm:mt-12">
-            <Link href={'/../../pages/inicio'} className='text-gray-600 text-sm xs:text-base lg:text-lg text3 hover:text-azul transition-colors duration-200'>Início</Link>
-            <span className="text-gray-400 mx-2">&#62;</span>
-            <span className="text-azul text-sm xs:text-base lg:text-lg text3 font-semibold">Financeiro</span>
-          </div>
-
-          <div className="page-toolbar mt-6 justify-between">
-            <div className="flex items-center">
-              <PageTitle>Financeiro</PageTitle>
-              <button
-                onClick={() => {
-                  setAllVisible(!allVisible);
-                  setSaldoVisivel(!allVisible);
-                  setEntradaVisivel(!allVisible);
-                  setGastoVisivel(!allVisible);
-                }}
-                className="ml-3 xs:ml-4 p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-                aria-label={allVisible ? "Ocultar todos" : "Mostrar todos"}
-              >
-                {allVisible ? <Eye size={32} aria-hidden="true" /> : <EyeOff size={32} aria-hidden="true" />}
-              </button>
-            </div>
-
-            <div className='flex'>
-              <AddButton onClick={() => openModal('new')}>Nova Movimentação</AddButton>
-            </div>
-
-          </div>
-
-          <div className='mt-6'>
-            <div className='bg-azul w-full rounded-xl p-5 sm:max-w-xs'>
-              <div>
-                <Wallet size={36} className="text-white" aria-hidden="true"/>
-                <h3 className='text-white text1 text-3xl mr-6 mt-2'>Saldo</h3>
-              </div>
-              <div className='flex mt-2'>              
-              {allVisible && saldoVisivel && saldoAtual && (
-                <p className='text-white text2 text-xl'>R$ {saldoAtual.saldo}</p>
-              )}
-                <button className='ml-3 mr-6' onClick={() => setSaldoVisivel(!saldoVisivel)}>
-                  {saldoVisivel ? <Eye size={26} className="text-white" aria-hidden="true" /> : <EyeOff size={26} className="text-white" aria-hidden="true" />}
-                </button>
-              </div>
-            </div>                   
-          </div>
-
-          <div className='mt-6 min-w-0'>
-            <div className="page-table-scroll max-h-[65vh]">
-              {financas.length === 0 ? (
-                <p className="text-center text-black text1 text-4xl mt-5 text-gray-4">Nenhuma movimentação encontrada.</p>
-              ) : (            
-                <DataTable className='text-black'>
-                  <thead className='sticky top-0'>
-                    <tr className='bg-azul text-white rounded-xl'>
-                      <th className='text1 text-white text-2xl px-[13.9vh] py-2'>Tipo</th>
-                      <th className='text1 text-white text-2xl px-[13.9vh] py-2'>Categoria</th>
-                      <th className='text1 text-white text-2xl px-[13.9vh] py-2'>Valor</th>
-                      <th className='text1 text-white text-2xl px-[13.9vh] py-2'>Data</th>                      
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {financas.map((mov) => (                    
-                      <tr key={mov.id_financas} onClick={() => mov && openModal('edit', mov)} className='cursor-pointer hover:bg-slate-200'>
-                        <td data-label="Tipo" className='text-center text2 text-xl py-3'>{mov.tipo}</td>
-                        <td data-label="Categoria" className='text-center text2 text-xl py-3'>{mov.categoria}</td>
-                        <td data-label="Valor" className='text-center text2 text-xl py-3'>{mov.valor}</td>
-                        <td data-label="Data" className='text-center text2 text-xl py-3'>{format(parseDateOnly(mov.data), 'dd/MM/yyyy')}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </DataTable>
-              )}
-            </div>
-          </div>
-
-          <AppModal
-            className="text-white flex flex-col" 
-            isOpen={modalIsOpen && modalType === 'new'} 
-            onRequestClose={closeModal}
-            contentLabel="Nova Movimentação"
-          >
-            <div className='flex flex-col justify-center self-center bg-azul p-10 mt-[15vh] rounded-lg shadow-xl'>
-
-              <h2 className='text-white text1 text-4xl flex justify-center'>Nova Movimentação</h2>
-
-              <div className='flex flex-col'>
-                <label className='text-white text1 text-xl mt-5 mb-1'>Tipo</label>
-
-                <select 
-                  className='px-4 py-3 rounded-lg text2 bg-white text-slate-500' 
-                  value={tipo}
-                  onChange={(e) => setTipo(e.target.value)}
-                >
-                  <option value="" disabled>Selecione um Tipo</option>
-                  <option value="Entrada">Entrada</option>
-                  <option value="Saída">Saída</option>
-                </select>
-              </div>  
-
-              <div className='flex flex-col'>
-                <label className='text-white text1 text-xl mt-5 mb-1'>Categoria</label>
-
-                <select 
-                  className='px-4 py-3 rounded-lg text2 bg-white text-slate-500' 
-                  value={categoria}
-                  onChange={(e) => setCategoria(e.target.value)}
-                >                  
-                  <option value="" disabled>Selecione</option>
-                  <option value="OFerta Simples">OFerta Simples</option>
-                  <option value="Oferta Especial">Oferta Especial</option>
-                  <option value="Dízimo">Dízimo</option>
-                  <option value="Contribuição para Missões">Contribuição para Missões</option>
-                  <option value="Contribuição para Obras">Contribuição para Obras</option>
-                </select>
-              </div> 
-
-              <div className='flex'>
-                <div className='flex flex-col mr-5'>
-                  <label className='text-white text1 text-xl mt-5 mb-1'>Valor</label>
-
-                  <input                    
-                    type="text" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
-                    placeholder='Digite o Valor...'
-                    value={valor}
-                    onChange={(e) => setValor(e.target.value)}
-                    required 
-                  />
+    <PageShell
+      crumbs={[{ label: "Início", href: "/pages/inicio" }, { label: "Financeiro" }]}
+      title="Financeiro"
+      titleExtra={(
+        <button type="button" className="ttl-btn" style={{ width: 52, height: 52 }} aria-label={visivel ? "Ocultar valores" : "Mostrar valores"} aria-pressed={!visivel} onClick={() => setVisivel((v) => !v)}>
+          {visivel ? <Eye className="i s32" aria-hidden="true" /> : <EyeOff className="i s32" aria-hidden="true" />}
+        </button>
+      )}
+      after={(
+        <>
+          <Modal open={modal === "det" && !!sel} onClose={fechar} title="Detalhes da movimentação" subtitle={sel ? brDate(sel.data) : ""}>
+            {sel && (
+              <>
+                <div className="mx-b">
+                  <span className={sel.tipo === "Entrada" ? "tag tag-ok" : "tag tag-rec"}>{sel.tipo}</span>
+                  <h3 className="xc-tit" style={{ marginTop: -6, fontSize: 30 }}>{valorTxt(sel)}</h3>
+                  <div className="vw">
+                    <ViewRow icon={Tag} label="Categoria">{sel.categoria}</ViewRow>
+                    <ViewRow icon={Calendar} label="Data">{brDate(sel.data)}</ViewRow>
+                    <ViewRow icon={FileText} label="Descrição">{sel.descricao || "—"}</ViewRow>
+                  </div>
                 </div>
+                <div className="mx-f"><button type="button" className="btn pri" onClick={editar}><Pencil className="i s18" aria-hidden="true" />Editar</button></div>
+              </>
+            )}
+          </Modal>
 
-                <div className='flex flex-col'>
-                  <label className='text-white text1 text-xl mt-5 mb-1'>Data</label>
-
-                  <input                    
-                    type="date" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
-                    placeholder='Digite o Valor...'
-                    value={data}
-                    onChange={(e) => setData(e.target.value)}
-                    required 
-                    />
-                </div>
+          <Modal open={modal === "form"} onClose={fechar} as="form" onSubmit={salvar} title={sel ? "Editar movimentação" : "Nova movimentação"} subtitle={sel ? "Corrija os dados do lançamento. O saldo é recalculado." : "Registre uma entrada ou saída do caixa."}>
+            <div className="mx-b">
+              <div className="chips" role="radiogroup" aria-label="Tipo">
+                {(["Entrada", "Saída"] as const).map((t) => <label key={t}><input type="radio" name="fm-tipo" value={t} checked={form.tipo === t} onChange={() => setForm({ ...form, tipo: t })} />{t}</label>)}
               </div>
-
-              <div className='flex flex-col'>
-                <label className='text-white text1 text-xl mt-5 mb-1'>Descrição</label>
-
-                <input                    
-                  type="text" 
-                  className='px-4 pt-3 pb-14 rounded-lg text2 text-slate-500'
-                  placeholder='Digite a Descrição...'
-                  value={descricao}
-                  onChange={(e) => setDescricao(e.target.value)}
-                  required 
-                  />
+              <label className="sr" htmlFor="fm-val">Valor</label>
+              <input id="fm-val" className="ed-tit" inputMode="decimal" placeholder="R$ 0,00" maxLength={16} value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value.replace(/[^\d.,]/g, "") })} />
+              <div className="vw">
+                <EditRow icon={Tag} label="Categoria" htmlFor="fm-cat">
+                  <select id="fm-cat" className="ed-in" value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })}>
+                    <option value="" disabled>Selecione</option>
+                    {categorias.map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                </EditRow>
+                <EditRow icon={Calendar} label="Data" htmlFor="fm-data"><input id="fm-data" className="ed-in" type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} /></EditRow>
+                <EditRow icon={FileText} label="Descrição" htmlFor="fm-desc"><input id="fm-desc" className="ed-in" placeholder="Ex.: Culto de domingo" maxLength={255} value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} /></EditRow>
               </div>
-
-              <div className='flex flex-col'>
-                <label className='text-white text1 text-xl mt-5 mb-1'>Igreja</label>
-
-                <select 
-                  className='bg-white px-4 py-3 rounded-lg text2 text-slate-500'
-                  value={nomeIgreja}
-                  onChange={(e) => setNomeIgreja(Number(e.target.value))}                 
-                  required 
-                >
-                  <option value={0} disabled>Selecione uma Igreja</option>
-                    {igreja.map((igreja) => (
-                      <option
-                        key={igreja.id_igreja}
-                        value={igreja.id_igreja}
-                      >
-                        {igreja.nome}
-                      </option>                      
-                    ))}     
-                </select>
-              </div>
-
-              <div className='flex flex-col'>                  
-                <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={handleRegister}>Enviar</button>
-              </div>
-
             </div>
-          </AppModal>
-          <AppModal
-            className="text-white flex flex-col" 
-            isOpen={modalIsOpen && modalType === 'edit'} 
-            onRequestClose={closeModal}
-            contentLabel="Editar Movimentação"
-          >
-            <div className='flex flex-col justify-center self-center bg-azul p-10 mt-[15vh] rounded-lg shadow-xl'>
-
-              <h2 className='text-white text1 text-4xl flex justify-center'>Editar Movimentação</h2>
-
-              <div className='flex flex-col'>
-                <label className='text-white text1 text-xl mt-5 mb-1'>Tipo</label>
-
-                <select 
-                  className='px-4 py-3 rounded-lg text2 bg-white text-slate-500' 
-                  value={editTipo}
-                  onChange={(e) => setEditTipo(e.target.value)}
-                >
-                  <option value="" disabled>Selecione um tipo</option>
-                  <option value="Entrada">Entrada</option>
-                  <option value="Saída">Saída</option>
-                </select>
-              </div>  
-
-              <div className='flex flex-col'>
-                <label className='text-white text1 text-xl mt-5 mb-1'>Categoria</label>
-
-                <select 
-                  className='px-4 py-3 rounded-lg text2 bg-white text-slate-500' 
-                  value={editCategoria}
-                  onChange={(e) => setEditCategoria(e.target.value)}
-                >                  
-                  <option value="OFerta Simples">OFerta Simples</option>
-                  <option value="Oferta Especial">Oferta Especial</option>
-                  <option value="Dízimo">Dízimo</option>
-                  <option value="Contribuição para Missões">Contribuição para Missões</option>
-                  <option value="Contribuição para Obras">Contribuição para Obras</option>
-                </select>
-              </div> 
-
-              <div className='flex'>
-                <div className='flex flex-col mr-5'>
-                  <label className='text-white text1 text-xl mt-5 mb-1'>Valor</label>
-
-                  <input                    
-                    type="text" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
-                    placeholder='Digite o Valor...'
-                    value={editValor}
-                    onChange={(e) => setEditValor(e.target.value)}
-                    required 
-                  />
-                </div>
-
-                <div className='flex flex-col'>
-                  <label className='text-white text1 text-xl mt-5 mb-1'>Data</label>
-
-                  <input                    
-                    type="date" 
-                    className='px-4 py-3 rounded-lg text2 text-slate-500'
-                    placeholder='Digite o Valor...'
-                    value={editData}
-                    onChange={(e) => setEditData(e.target.value)}
-                    required 
-                    />
-                </div>
-              </div>
-
-              <div className='flex flex-col'>
-                <label className='text-white text1 text-xl mt-5 mb-1'>Descrição</label>
-
-                <input                    
-                  type="text" 
-                  className='px-4 pt-3 pb-14 rounded-lg text2 text-slate-500'
-                  placeholder='Digite a Descrição...'
-                  value={editDescricao}
-                  onChange={(e) => setEditDescricao(e.target.value)}
-                  required 
-                  />
-              </div>
-
-              <div className='flex flex-col'>                  
-                <button className='border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg' onClick={() => selectedFinancas && handleUpdate(selectedFinancas)}>Enviar</button>
-              </div>
-
+            <div className="mx-f">
+              <button type="button" className="btn ghost" onClick={voltar}>Cancelar</button>
+              <button type="submit" className="btn pri" disabled={!toApiValue(form.valor) || salvando}>{sel ? "Salvar alterações" : "Registrar movimentação"}</button>
             </div>
-          </AppModal>
-
+          </Modal>
+          <ToastContainer />
+        </>
+      )}
+    >
+      <div className="toolbar" style={{ justifyContent: "flex-end", marginTop: -12 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+          <Link href="/pages/relatorio" className="btn" style={{ minHeight: 48 }}><FileText className="i s20" aria-hidden="true" />Ver relatório</Link>
+          <button type="button" className="btn-add" onClick={novo}><Plus className="i s20" aria-hidden="true" />Nova Movimentação</button>
         </div>
-        <ToastContainer />
       </div>
-    </main>
-  )
+
+      <div className="kpis">
+        <div className="card kpi ent"><p className="kpi-l"><ArrowDownLeft className="i" aria-hidden="true" />Entradas</p><p className="kpi-v">{mostrar(totais.ent)}</p></div>
+        <div className="card kpi sai"><p className="kpi-l"><ArrowUpRight className="i" aria-hidden="true" />Saídas</p><p className="kpi-v">{mostrar(totais.sai)}</p></div>
+        <div className="card kpi res"><p className="kpi-l"><Wallet className="i" aria-hidden="true" />Saldo</p><p className="kpi-v">{saldo === null ? "—" : mostrar(cents(saldo))}</p></div>
+      </div>
+
+      <div className="list-bar">
+        <div className="tabs" role="tablist" aria-label="Filtrar movimentações">
+          {([["todos", "Todos", movs.length], ["ent", "Entradas", totais.nE], ["sai", "Saídas", totais.nS]] as [Filtro, string, number][]).map(([k, l, n]) => (
+            <button key={k} type="button" role="tab" className={filtro === k ? "on" : ""} aria-selected={filtro === k} onClick={() => setFiltro(k)}>{l} · {n}</button>
+          ))}
+        </div>
+        <span className="list-n">{lista.length} {lista.length === 1 ? "movimentação" : "movimentações"}</span>
+      </div>
+
+      <div className="tbl-wrap fin">
+        <div className="dt">
+          <div className="dt-h" style={{ gridTemplateColumns: COLS }}><span>Data</span><span>Descrição</span><span className="r">Valor</span></div>
+          {lista.map((m) => (
+            <div key={m.id_financas} className="dt-r" style={{ gridTemplateColumns: COLS, minHeight: 68 }}>
+              <button type="button" className="hit" aria-label={`Ver movimentação ${m.descricao}`} onClick={() => { setSel(m); setModal("det"); }} />
+              <span className="c-data" data-label="Data">{brDate(m.data)}</span>
+              <div className="c-desc" data-label="Descrição">
+                <div className="mb">
+                  <span className={`fx-ico ${m.tipo === "Entrada" ? "in" : "out"}`} aria-hidden="true">{m.tipo === "Entrada" ? <ArrowDownLeft className="i" /> : <ArrowUpRight className="i" />}</span>
+                  <div><p className="mb-n"><span className="mb-t">{m.descricao || m.categoria}</span></p><p className="mb-c">{m.categoria}<span className="only-m"> · {brDate(m.data)}</span></p></div>
+                </div>
+              </div>
+              <span className="c-val" data-label="Valor"><span className={`val ${m.tipo === "Entrada" ? "pos" : "neg"}`}>{valorTxt(m)}</span></span>
+            </div>
+          ))}
+          {lista.length === 0 && <p className="empty">{movs.length ? "Nenhuma movimentação neste filtro." : "Nenhuma movimentação registrada ainda."}</p>}
+        </div>
+      </div>
+    </PageShell>
+  );
 }

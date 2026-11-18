@@ -1,472 +1,176 @@
 "use client";
-import { AddButton, DataTable, FilterButton, PageTitle, SearchField } from '@/app/components/shared/MemberStyle';
-import React, { useState, useEffect, useRef } from "react";
-import { ChevronDown } from "lucide-react";
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import MenuLateral from "@/app/components/menuLateral/menuLateral";
-import ModalIgrejaDetalhes from "@/app/components/igrejaModal/ModalIgreja";
-import Link from "next/link";
-import api from "../../api/api";
 import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { Church, Map as MapIcon, MapPin, Plus, TriangleAlert, UserRound } from "lucide-react";
+
 import NovaFilialModal from "@/app/components/filiais/NovaFilialModal";
 import ConvitePastorModal from "@/app/components/filiais/ConvitePastorModal";
+import { Modal, ViewRow } from "@/app/components/ui/Modal";
+import { initials, PageShell, SearchBox, SortMenu } from "@/app/components/ui/PageParts";
+import { brDate } from "@/app/utils/date";
+import { displayPhone } from "@/app/utils/phone";
+import api from "../../api/api";
 
-interface FilialInfo {
-  id_igreja: number;
-  total_pastores: number;
-  convite_expira_em: string | null;
-}
+import "react-toastify/dist/ReactToastify.css";
 
-interface Igreja {
-  id_igreja: number;
-  nome: string;
-  cnpj: string;
-  data_fundacao: string;
-  ministerio: string;
-  setor: string;
-  cep: string;
-  endereco: string;
-  bairro: string;
-  cidade: string;
-  id_matriz: number;
-}
+interface Igreja { id_igreja: number; nome: string; cnpj: string; data_fundacao: string; ministerio: string; setor: string; cep: string; endereco: string; bairro: string; cidade: string; id_matriz: number | null }
+interface Situacao { id_igreja: number; total_pastores: number; pastor_nome: string | null; convite_expira_em: string | null }
+type Sort = "nome" | "cidade" | "recent";
+type Aba = "membros" | "obreiros" | "departamentos";
+
+const SORTS: [Sort, string][] = [["nome", "Nome A-Z"], ["cidade", "Cidade"], ["recent", "Adicionadas recentemente"]];
+const ABAS: [Aba, string][] = [["membros", "Membros"], ["obreiros", "Obreiros"], ["departamentos", "Departamentos"]];
+const COLS = { membros: ["Nome", "Código", "Celular", "Nascimento"], obreiros: ["Nome", "Email", "Cargo", "Nascimento"], departamentos: ["Nome", "Fundação", "Congresso", "Membros"] };
+const ROTAS = { membros: "/membro/matriz/", obreiros: "/cadastro/matriz/", departamentos: "/departamento/matriz/" };
+
+type Linha = Record<string, string | number | null>;
+const linhaDe = (aba: Aba, r: Linha): string[] => aba === "membros"
+  ? [String(r.nome ?? ""), String(r.cod_membro ?? ""), displayPhone(r.numero as string) || "—", brDate(r.birth as string)]
+  : aba === "obreiros"
+    ? [String(r.nome ?? ""), String(r.email ?? ""), String(r.cargo ?? ""), brDate(r.birth as string)]
+    : [String(r.nome ?? ""), brDate(r.birth as string) || "—", brDate(r.data_congresso as string) || "—", r.qtd_membros != null ? String(r.qtd_membros) : "—"];
 
 export default function Igrejas() {
-  // Só o Pastor Matriz cria filiais e convida pastores; usuários da matriz veem a situação.
-  const [cargoUsuario, setCargoUsuario] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [filiaisInfo, setFiliaisInfo] = useState<Record<number, FilialInfo>>({});
-  const [novaFilialAberta, setNovaFilialAberta] = useState(false);
-  const [conviteFilial, setConviteFilial] = useState<{ id_igreja: number; nome: string } | null>(null);
-  const isPastorMatriz = cargoUsuario === "Pastor Matriz";
-  const recarregar = () => setReloadKey(key => key + 1);
+  const [igrejas, setIgrejas] = useState<Igreja[]>([]);
+  const [situacao, setSituacao] = useState<Record<number, Situacao>>({});
+  const [busca, setBusca] = useState("");
+  const [ordem, setOrdem] = useState<Sort>("nome");
+  const [cargo, setCargo] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
 
-  useEffect(() => { setCargoUsuario(sessionStorage.getItem("cargo")); }, []);
+  const [sel, setSel] = useState<Igreja | null>(null);
+  const [aba, setAba] = useState<Aba>("membros");
+  const [linhas, setLinhas] = useState<Linha[] | null>(null);
+  const [novaAberta, setNovaAberta] = useState(false);
+  const [convite, setConvite] = useState<{ id_igreja: number; nome: string; nova?: boolean } | null>(null);
 
-  useEffect(() => {
-    if (cargoUsuario !== "Pastor Matriz" && cargoUsuario !== "Obreiro Matriz") return;
-    api.get("/igreja/filiais")
-      .then(({ data }) => setFiliaisInfo(Object.fromEntries((data as FilialInfo[]).map(item => [item.id_igreja, item]))))
-      .catch(error => console.error("Erro ao buscar filiais:", error));
-  }, [cargoUsuario, reloadKey]);
+  const pastorMatriz = cargo === "Pastor Matriz";
+  const recarregar = () => setReload((n) => n + 1);
 
-  const situacaoPastor = (igreja: Igreja) => {
-    const info = filiaisInfo[igreja.id_igreja];
-    if (!info) return <span className="text-gray-500">—</span>;
-    if (info.total_pastores > 0) return <span className="text-green-700">Ativo</span>;
-    const acao = (rotulo: string) => isPastorMatriz && (
-      <button
-        type="button"
-        className="ml-2 rounded-lg bg-azul px-3 py-1 text-base text-white hover:bg-blue-600"
-        onClick={(e) => { e.stopPropagation(); setConviteFilial({ id_igreja: igreja.id_igreja, nome: igreja.nome }); }}
-      >
-        {rotulo}
-      </button>
-    );
-    if (info.convite_expira_em) {
-      return <span className="text-amber-700">Convite até {format(new Date(info.convite_expira_em), "dd/MM")}{acao("Novo link")}</span>;
-    }
-    return <span className="text-red-600">Sem pastor{acao("Convidar")}</span>;
-  };
-  const [nome, setNome] = useState<string>("");
-  const [cnpj, setCnpj] = useState<string>("");
-  const [data_fundacao, setDataFundacao] = useState<string>("");
-  const [ministerio, setMinisterio] = useState<string>("");
-  const [setor, setSetor] = useState<string>("");
-  const [cep, setCep] = useState<string>("");
-  const [endereco, setEndereco] = useState<string>("");
-  const [cidade, setCidade] = useState<string>("");
-  const [bairro, setBairro] = useState<string>("");
-  const [aceitoTermos, setAceitoTermos] = useState<boolean>(false);
-
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [igrejaToDelete, setIgrejaToDelete] = useState<number | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [allIgrejas, setAllIgrejas] = useState<Igreja[]>([]); // Lista completa
-  const [filteredIgrejas, setFilteredIgrejas] = useState<Igreja[]>([]); // Lista filtrada
-
-  const handleDeleteClick = (id_igreja: number) => {
-    setIgrejaToDelete(id_igreja);
-    setIsDeleteModalOpen(true);
-  };
-
-  // const handleDeleteConfirm = async () => {
-  //   if (!igrejaToDelete) return;
-
-  //   try {
-  //     await api.delete(`/igreja/${igrejaToDelete}`);
-  //     const notifyDelete = () => {
-  //       toast.success("Igreja deletada com sucesso!", {
-  //         position: "top-center",
-  //         autoClose: 1500,
-  //         hideProgressBar: false,
-  //         closeOnClick: true,
-  //         pauseOnHover: true,
-  //         draggable: true,
-  //         progress: undefined,
-  //         theme: "colored",
-  //       });
-  //     };
-
-  //     setIgrejas(igrejas.filter((i) => i.id_igreja !== igrejaToDelete));
-  //     notifyDelete();
-  //   } catch (error) {
-  //     toast.error("Erro ao remover igreja.");
-  //   } finally {
-  //     setIsDeleteModalOpen(false);
-  //     setIgrejaToDelete(null);
-  //   }
-  // };
-
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-  };
-
-  const handleClickOutside = (event: MouseEvent) => {
-    if (
-      dropdownRef.current &&
-      !dropdownRef.current.contains(event.target as Node)
-    ) {
-      setIsDropdownOpen(false);
-    }
-  };
+  useEffect(() => { setCargo(sessionStorage.getItem("cargo")); }, []);
 
   useEffect(() => {
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+    const id_user = sessionStorage.getItem("id_user");
+    api.get(`/igreja/subordinadasUser/${id_user}`).then(({ data }) => setIgrejas(Array.isArray(data) ? data : [])).catch(() => setIgrejas([]));
+    api.get("/igreja/filiais").then(({ data }) => setSituacao(Object.fromEntries((data as Situacao[]).map((s) => [s.id_igreja, s])))).catch(() => setSituacao({}));
+  }, [reload]);
+
+  // Dados da aba aberta nos detalhes.
+  useEffect(() => {
+    if (!sel) return;
+    setLinhas(null);
+    api.get(`${ROTAS[aba]}${sel.id_igreja}`).then(({ data }) => setLinhas(Array.isArray(data) ? data : [])).catch(() => setLinhas([]));
+  }, [sel, aba]);
+
+  const lista = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    const cmp: Record<Sort, (a: Igreja, b: Igreja) => number> = {
+      nome: (a, b) => (a.id_matriz == null ? -1 : b.id_matriz == null ? 1 : a.nome.localeCompare(b.nome)),
+      cidade: (a, b) => `${a.cidade} ${a.bairro}`.localeCompare(`${b.cidade} ${b.bairro}`),
+      recent: (a, b) => b.id_igreja - a.id_igreja,
     };
-  }, []);
+    return igrejas.filter((i) => !termo || `${i.nome} ${i.cidade} ${i.bairro} ${i.setor} ${i.cnpj}`.toLowerCase().includes(termo)).sort(cmp[ordem]);
+  }, [igrejas, busca, ordem]);
 
-  useEffect(() => {
-    const fetchIgrejasSubordinadas = async () => {
-      try {
-        const id_user = sessionStorage.getItem("id_user");
-
-        const response = await api.get(`/igreja/subordinadasUser/${id_user}`);
-        setAllIgrejas(response.data);
-        setFilteredIgrejas(response.data);
-      } catch (error) {
-        console.error("Erro ao buscar igrejas subordinadas:", error);
-      }
-    };
-
-    fetchIgrejasSubordinadas();
-  }, [reloadKey]);
-
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
-
-    if (term.trim() === "") {
-      setFilteredIgrejas(allIgrejas);
-      return;
-    }
-
-    const lowercasedTerm = term.toLowerCase();
-
-    const filtered = allIgrejas.filter((igreja) => {
-      // Converte todos os campos para string antes de verificar
-      const nomeStr = igreja.nome ? igreja.nome.toString().toLowerCase() : "";
-      const codStr = igreja.cnpj ? igreja.cnpj.toString().toLowerCase() : "";
-      const enderecoStr = igreja.endereco
-        ? igreja.endereco.toString().toLocaleLowerCase()
-        : "";
-
-      return (
-        nomeStr.includes(lowercasedTerm) ||
-        codStr.includes(lowercasedTerm) ||
-        enderecoStr.includes(lowercasedTerm)
-      );
-    });
-
-    setFilteredIgrejas(filtered);
-  };
-
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [sortCriteria, setSortCriteria] = useState<
-    "recent" | "oldest" | "name-asc" | "name-desc" | "birth"
-  >("recent");
-
-  const sortIgrejas = (igrejas: Igreja[]) => {
-    const sorted = [...igrejas];
-
-    switch (sortCriteria) {
-      case "recent":
-        // Adicionados recentemente (maior ID primeiro)
-        return sorted.sort((a, b) => b.id_igreja - a.id_igreja);
-
-      case "oldest":
-        // Adicionados há mais tempo (menor ID primeiro)
-        return sorted.sort((a, b) => a.id_igreja - b.id_igreja);
-
-      case "name-asc":
-        // Ordem alfabética A-Z
-        return sorted.sort((a, b) => a.nome.localeCompare(b.nome));
-
-      case "name-desc":
-        // Ordem alfabética Z-A
-        return sorted.sort((a, b) => b.nome.localeCompare(a.nome));
-
-      case "birth":
-        // Por data de nascimento (mais jovens primeiro)
-        return sorted.sort(
-          (a, b) =>
-            new Date(b.data_fundacao).getTime() -
-            new Date(a.data_fundacao).getTime()
-        );
-
-      default:
-        return sorted;
-    }
-  };
-  const sortedIgrejas = sortIgrejas(filteredIgrejas);
-
-  const [modalIgreja, setModalIgreja] = useState<Igreja | null>(null);
+  const pastorDe = (i: Igreja) => situacao[i.id_igreja]?.pastor_nome || null;
 
   return (
-    <main>
-      <div className="flex">
-        <MenuLateral />
-        <div className="app-content">
-          <div className="od-breadcrumb pt-2">
-            <Link
-              href={"/../../pages/inicio"}
-              className="text-cinza text-lg text3"
-            >
-              Início &#62;
-            </Link>
-            <Link
-              href={"/../../pages/igrejas"}
-              className="text-cinza text-lg text3 ml-2"
-            >
-              Igrejas &#62;
-            </Link>
-          </div>
-
-          <div className="page-toolbar mt-6">
-            <div
-              className="relative min-w-0"
-              ref={dropdownRef}
-            >
-              <button onClick={toggleDropdown} className="flex items-center gap-2">
-                <PageTitle>Igrejas</PageTitle>
-                <ChevronDown
-                  width={24}
-                  height={24} aria-label="Arrow Icon"
-                  className={`${
-                    isDropdownOpen ? "rotate-180" : ""
-                  } transition-transform`}
-                />
-              </button>
-
-              {isDropdownOpen && (
-                <div className="mt-4 absolute bg-white shadow-lg rounded-lg z-50">
-                  <Link
-                    href={"/../../pages/membros"}
-                    className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
-                  >
-                    Membros
-                  </Link>
-                  <Link
-                    href={"/../../pages/obreiros"}
-                    className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
-                  >
-                    Obreiros
-                  </Link>
-                  <Link
-                    href={"/../../pages/departamentos"}
-                    className="block text2 text-black text-xl p-3 rounded hover:bg-slate-200"
-                  >
-                    Departamentos
-                  </Link>
+    <PageShell
+      crumbs={[{ label: "Início", href: "/pages/inicio" }, { label: "Membros", href: "/pages/membros" }, { label: "Igrejas" }]}
+      title="Igrejas"
+      titleLinks={[{ label: "Membros", href: "/pages/membros" }, { label: "Obreiros", href: "/pages/obreiros" }, { label: "Departamentos", href: "/pages/departamentos" }]}
+      after={(
+        <>
+          <Modal open={!!sel} onClose={() => setSel(null)} size="wide" title="Detalhes da igreja" subtitle={sel ? `CNPJ ${sel.cnpj}` : ""}>
+            {sel && (
+              <div className="mx-b">
+                <div className="pf"><span className="av" aria-hidden="true"><Church className="i" /></span><div><h3 className="xc-tit">{sel.nome}</h3><span className={sel.id_matriz == null ? "tag tag-mat" : "tag tag-loc"}>{sel.id_matriz == null ? "Matriz" : "Filial"}</span></div></div>
+                <div className="vw cols">
+                  <ViewRow icon={UserRound} label="Pastor">{pastorDe(sel) || "Sem pastor"}</ViewRow>
+                  <ViewRow icon={MapPin} label="Local">{sel.bairro} · {sel.cidade}</ViewRow>
+                  <ViewRow icon={MapIcon} label="Setor">{sel.setor || "—"}</ViewRow>
                 </div>
-              )}
-            </div>
-            <div className="page-toolbar-actions">
-              <div className="relative flex min-w-0 flex-1">
-                <div className="flex w-full min-w-0">
-                  {/* Botão de filtro */}
-                  <div className="od-list-controls relative flex w-full min-w-0 items-center gap-2">
-                    <FilterButton
-                      onClick={() => setIsFilterOpen(!isFilterOpen)}
-
-                     />
-                    <div className="flex-1">
-                      <SearchField
-                        type="text"
-                        placeholder="Pesquisar igrejas..."
-
-                        value={searchTerm}
-                        onChange={(e) => handleSearch(e.target.value)}
-                      />
-                    </div>
-                    {/* Dropdown de filtros */}
-                    {isFilterOpen && (
-                      <div className="od-filter-menu absolute right-100 top-20 mt-2 w-48 bg-white rounded-lg shadow-lg z-10">
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "recent"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("recent");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Adicionados recentemente
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "oldest"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("oldest");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Adicionados antigamente
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "name-asc"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("name-asc");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Nome A-Z
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "name-desc"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("name-desc");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Nome Z-A
-                        </button>
-
-                        <button
-                          className={`block w-full text-left px-4 py-2 ${
-                            sortCriteria === "birth"
-                              ? "bg-blue-100 text-blue-500 text1"
-                              : "text-gray-800 hover:bg-gray-100 text1"
-                          }`}
-                          onClick={() => {
-                            setSortCriteria("birth");
-                            setIsFilterOpen(false);
-                          }}
-                        >
-                          Data de Fundação
-                        </button>
+                <div className="tabs" role="tablist" aria-label="Dados da igreja">
+                  {ABAS.map(([k, label]) => <button key={k} type="button" role="tab" className={aba === k ? "on" : ""} aria-selected={aba === k} onClick={() => setAba(k)}>{label}</button>)}
+                </div>
+                <div className="tbl-wrap">
+                  <div className="dt" style={{ minWidth: 560 }}>
+                    <div className="dt-h" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>{COLS[aba].map((c) => <span key={c}>{c}</span>)}</div>
+                    {linhas === null && <p className="empty">Carregando...</p>}
+                    {linhas?.length === 0 && <p className="empty">Nada cadastrado.</p>}
+                    {linhas?.map((r, idx) => (
+                      <div key={idx} className="dt-r" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>
+                        {linhaDe(aba, r).map((v, j) => <span key={j} data-label={COLS[aba][j]}>{v}</span>)}
                       </div>
-                    )}
+                    ))}
                   </div>
                 </div>
               </div>
-              <div className="flex min-w-0">
-                <div className="flex justify-center">
-                  {isPastorMatriz && <AddButton onClick={() => setNovaFilialAberta(true)}>Nova Igreja</AddButton>}
-                </div>
-              </div>
-            </div>
-          </div>
+            )}
+          </Modal>
 
-          <div className="mt-6 min-w-0">
-            <div className="page-table-scroll max-h-[70vh]">
-              {sortedIgrejas.length === 0 ? (
-                <p className="p-6 text-center text-black text1 text-xl sm:text-2xl">
-                  Nenhuma igreja encontrada.
-                </p>
-              ) : (
-                <DataTable className="text-black">
-                  <thead className="sticky top-0">
-                    <tr className="bg-azul text-white rounded-xl">
-                      <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[12vh] py-2">
-                        CNPJ
-                      </th>
-                      <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[15vh] py-2">
-                        Nome
-                      </th>
-                      <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[10vh] py-2">
-                        Cidade
-                      </th>
-                      <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[10vh] py-2">
-                        Bairro
-                      </th>
-                      <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[10vh] py-2">
-                        Setor
-                      </th>
-                      <th className="text1 text-white text-2xl sm:px-5 md:px-10 lg:px-[6vh] py-2">
-                        Pastor
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedIgrejas.map((igreja) => (
-                      <tr
-                        key={igreja.id_igreja}
-                        onClick={() => setModalIgreja(igreja)}
-                        className="cursor-pointer hover:bg-slate-200"
-                      >
-                        <td data-label="CNPJ" className="text-center text2 text-xl">
-                          {igreja.cnpj}
-                        </td>
-                        <td data-label="Nome" className="text-center text2 text-xl py-3">
-                          {igreja.nome}
-                        </td>
-                        <td data-label="Cidade" className="text-center text2 text-xl">
-                          {igreja.cidade}
-                        </td>
-                        <td data-label="Bairro" className="text-center text2 text-xl">
-                          {igreja.bairro}
-                        </td>
-                        <td data-label="Setor" className="text-center text2 text-xl">
-                          {igreja.setor}
-                        </td>
-                        <td data-label="Pastor" className="text-center text2 text-lg">
-                          {situacaoPastor(igreja)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </DataTable>
-              )}
-            </div>
-          </div>
           <NovaFilialModal
-            isOpen={novaFilialAberta}
-            onClose={() => setNovaFilialAberta(false)}
-            onCreated={(filial) => { setNovaFilialAberta(false); recarregar(); setConviteFilial(filial); }}
+            isOpen={novaAberta}
+            onClose={() => setNovaAberta(false)}
+            onCreated={(filial) => { setNovaAberta(false); recarregar(); setConvite({ ...filial, nova: true }); }}
           />
-          <ConvitePastorModal filial={conviteFilial} onClose={() => setConviteFilial(null)} onGenerated={recarregar} />
+          <ConvitePastorModal
+            filial={convite}
+            onClose={() => { if (convite?.nova) toast.success("Filial cadastrada!", { position: "top-center", autoClose: 1800 }); setConvite(null); }}
+            onGenerated={recarregar}
+          />
           <ToastContainer />
-          {/* Modal de detalhes da igreja */}
-          {modalIgreja && (
-            <ModalIgrejaDetalhes
-              igreja={modalIgreja}
-              onClose={() => setModalIgreja(null)}
-            />
-          )}
-        </div>
+        </>
+      )}
+    >
+      <div className="toolbar">
+        <SearchBox value={busca} onChange={setBusca} placeholder="Pesquisar igrejas..." />
+        <SortMenu options={SORTS} value={ordem} onChange={setOrdem} />
+        {pastorMatriz && <button type="button" className="btn-add" onClick={() => setNovaAberta(true)}><Plus className="i s20" aria-hidden="true" />Nova Igreja</button>}
       </div>
-    </main>
+
+      {lista.length === 0 ? (
+        <div className="card empty">
+          <h3 className="t1" style={{ fontSize: 20, color: "#1f2937" }}>Nenhuma igreja encontrada</h3>
+          <p style={{ marginTop: 6 }}>{busca ? "Tente ajustar sua busca" : "Cadastre a primeira filial"}</p>
+        </div>
+      ) : (
+        <div className="cards">
+          {lista.map((i) => {
+            const info = situacao[i.id_igreja];
+            const pastor = pastorDe(i);
+            const ehMatriz = i.id_matriz == null;
+            return (
+              <article key={i.id_igreja} className="card lc">
+                <button type="button" className="hit" aria-label={`Ver ${i.nome}`} onClick={() => { setAba("membros"); setSel(i); }} />
+                <div className="lc-top">
+                  <span className="av" aria-hidden="true"><Church className="i" /></span>
+                  <span className={ehMatriz ? "tag tag-mat" : "tag tag-loc"}>{ehMatriz ? "Matriz" : `Filial${i.setor ? ` · ${i.setor}` : ""}`}</span>
+                </div>
+                <h3 className="lc-tit">{i.nome}</h3>
+                <p className="xc-meta"><MapPin className="i" aria-hidden="true" /><span>{i.bairro} · {i.cidade}</span></p>
+                <div className="lc-foot row">
+                  {pastor ? (
+                    <span className="lc-person"><span className="av sm" aria-hidden="true">{initials(pastor)}</span><span><small>Pastor</small>{pastor}</span></span>
+                  ) : info?.convite_expira_em ? (
+                    <>
+                      <span className="lc-warn"><TriangleAlert className="i" aria-hidden="true" />Convite até {format(new Date(info.convite_expira_em), "dd/MM")}</span>
+                      {pastorMatriz && <button type="button" className="btn lc-act" onClick={() => setConvite({ id_igreja: i.id_igreja, nome: i.nome })}>Novo link</button>}
+                    </>
+                  ) : (
+                    <>
+                      <span className="lc-warn"><TriangleAlert className="i" aria-hidden="true" />Sem pastor</span>
+                      {pastorMatriz && !ehMatriz && <button type="button" className="btn pri lc-act" onClick={() => setConvite({ id_igreja: i.id_igreja, nome: i.nome })}>Convidar pastor</button>}
+                    </>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </PageShell>
   );
 }
