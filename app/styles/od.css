@@ -439,3 +439,20 @@ select.au-in{padding-right:12px}
   .tbl-wrap.fin .c-desc{grid-column:1}
   .tbl-wrap.fin .c-val{grid-column:2}
 }
+/* Configurações (estilos próprios da tela no design) */
+.opt{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:22px 24px;border:1px solid #e2e8f0;border-radius:16px;background:#fff;box-shadow:0 10px 24px #00000008;text-align:left;font:700 17px var(--font-poppins),sans-serif;color:#0f172a;transition:border-color .15s,box-shadow .15s}
+.opt:hover{border-color:#c7d2fe;box-shadow:0 10px 24px #5271FF14}
+.opt > .i{width:44px;height:44px;padding:10px;margin-bottom:10px;border-radius:12px;background:#eff6ff;color:#3f5ee6}
+.opt small{font:700 14px var(--font-nunito),sans-serif;color:#64748b}
+.opt.red{color:#b91c1c}.opt.red small{color:#b91c1c}.opt.red > .i{background:#fef2f2;color:#dc2626}
+.out{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border:0;border-radius:12px;background:#ef4444;color:#fff;font:700 16px var(--font-nunito),sans-serif}
+.out:hover{background:#dc2626}
+.out .i{width:20px;height:20px}
+.term h3{margin:12px 0 4px;font:700 16px var(--font-poppins),sans-serif;color:#1f2937}
+.term p{font-size:14px;line-height:1.5;color:#475569}
+.opt.dead{cursor:default}
+/* Celular estreito: nas linhas de edição o campo desce para baixo do rótulo, com largura inteira. */
+@media (max-width:479px){
+  .ed-r{grid-template-columns:20px minmax(0,1fr);row-gap:6px}
+  .ed-r > :nth-child(n+3){grid-column:2}
+}

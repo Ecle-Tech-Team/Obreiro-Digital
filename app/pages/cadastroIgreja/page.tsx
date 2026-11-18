@@ -1,435 +1,151 @@
 'use client'
-import { AppModal } from '@/app/components/shared/MemberStyle';
-import React from 'react'
-import Image from 'next/image'
-import api from '../../api/api';
-import { useState } from 'react';
+import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import logo from '@/public/images/icon-white.png'
+import { ArrowRight } from 'lucide-react';
 
-export default function cadastroIgreja() {
-    const [nome, setNome] = useState<string>('');
-    const [cnpj, setCnpj] = useState<string>('');    
-    const [data_fundacao, setDataFundacao] = useState<string>('');
-    const [ministerio, setMinisterio] = useState<string>('');
-    const [setor, setSetor] = useState<string>('');
-    const [cep, setCep] = useState<string>('');
-    const [endereco, setEndereco] = useState<string>('');
-    const [cidade, setCidade] = useState<string>('');
-    const [bairro, setBairro] = useState<string>('');
-    const [aceitoTermos, setAceitoTermos] = useState<boolean>(false);
+import { AuthInput, AuthShell, AuthSteps } from '@/app/components/auth/AuthParts';
+import { TermosConteudo } from '@/app/components/auth/Termos';
+import { Modal } from '@/app/components/ui/Modal';
+import { apiMessage } from '@/app/components/ui/PageParts';
+import api from '../../api/api';
 
-    const router = useRouter();
+const vazio = { nome: '', cnpj: '', data_fundacao: '', ministerio: '', setor: '', cep: '', cidade: '', endereco: '', bairro: '' };
+type Campo = keyof typeof vazio;
+const OBRIGATORIOS: [Campo, string][] = [
+  ['nome', 'Informe o nome da igreja.'],
+  ['cnpj', 'Informe o CNPJ.'],
+  ['data_fundacao', 'Informe a data de fundação.'],
+  ['ministerio', 'Informe o ministério.'],
+  ['cep', 'Informe o CEP.'],
+  ['cidade', 'Informe a cidade.'],
+  ['endereco', 'Informe a rua e o número.'],
+  ['bairro', 'Informe o bairro.'],
+];
 
-    const [modalIsOpen, setModalIsOpen] = useState(false);
+// 12345678000190 -> 12.345.678/0001-90 (aceita digitação parcial).
+function mascaraCnpj(v: string) {
+  const d = v.replace(/\D/g, '').slice(0, 14);
+  return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d)/, '$1-$2');
+}
+const mascaraCep = (d: string) => (d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d);
+const hoje = () => new Date().toISOString().slice(0, 10);
 
-    const openModal = () => {
-        if (nome === "" || nome === null || cnpj === "" || cnpj === null || data_fundacao === "" || data_fundacao === null || ministerio === "" || ministerio === null || setor === "" || setor === null || cep === "" || cep === null || endereco === "" || endereco === null || bairro === "" || bairro === null || cidade === "" || cidade === null) {
-            toast.warn('Preencha todos os campos!', {
-                position: "top-center",
-                autoClose: 1500,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-                theme: "colored",
-            });
-        } else {
-            setModalIsOpen(true);
-        }
-    };
+export default function CadastroIgreja() {
+  const router = useRouter();
+  const [dados, setDados] = useState(vazio);
+  const [erros, setErros] = useState<Partial<Record<Campo, string>>>({});
+  const [termos, setTermos] = useState(false);
+  const [aceito, setAceito] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [buscandoCep, setBuscandoCep] = useState(false);
 
-    const closeModal = () => {
-        setModalIsOpen(false);
-    };
+  const set = (k: Campo, v: string) => { setDados((d) => ({ ...d, [k]: v })); setErros((e) => ({ ...e, [k]: undefined })); };
+  const campo = (k: Campo) => ({ value: dados[k], error: erros[k], onChange: (e: React.ChangeEvent<HTMLInputElement>) => set(k, e.target.value) });
 
-    async function ConsultCep (cep: string) {
-        try {
-            const response = await api.post(`/cep/${cep}`);
-
-            setEndereco(response.data.street);
-            setBairro(response.data.neighborhood);
-            setCidade(response.data.city);
-        } catch (error) {
-            toast.error('CEP invalido!', {
-                position: "top-center",
-                autoClose: 1500,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-                theme: "colored",
-            });
-        }
+  const buscarCep = async (cep: string) => {
+    setBuscandoCep(true);
+    try {
+      const { data } = await api.post(`/cep/${cep}`);
+      setDados((d) => ({ ...d, endereco: data.street || d.endereco, bairro: data.neighborhood || d.bairro, cidade: data.city || d.cidade }));
+      setErros((e) => ({ ...e, cep: undefined, cidade: undefined, endereco: undefined, bairro: undefined }));
+      // O CEP traz só a rua: leva o cursor para o fim dela, para completar o número.
+      if (data.street) setTimeout(() => {
+        const rua = document.getElementById('ci-endereco') as HTMLInputElement | null;
+        rua?.focus();
+        rua?.setSelectionRange(rua.value.length, rua.value.length);
+      }, 0);
+    } catch {
+      setErros((e) => ({ ...e, cep: 'CEP não encontrado. Confira ou preencha o endereço manualmente.' }));
+    } finally {
+      setBuscandoCep(false);
     }
+  };
 
-    async function handleRegister(event: React.FormEvent){
-        event.preventDefault()
+  const continuar = (event: React.FormEvent) => {
+    event.preventDefault();
+    const novos: Partial<Record<Campo, string>> = {};
+    for (const [k, msg] of OBRIGATORIOS) if (!dados[k].trim()) novos[k] = msg;
+    if (!novos.cnpj && dados.cnpj.replace(/\D/g, '').length !== 14) novos.cnpj = 'O CNPJ tem 14 números.';
+    if (!novos.cep && dados.cep.length !== 8) novos.cep = 'O CEP tem 8 números.';
+    if (!novos.data_fundacao && dados.data_fundacao > hoje()) novos.data_fundacao = 'A data de fundação não pode estar no futuro.';
+    setErros(novos);
+    const primeiro = OBRIGATORIOS.find(([k]) => novos[k]);
+    if (primeiro) return void document.getElementById(`ci-${primeiro[0]}`)?.focus();
+    setAceito(false);
+    setTermos(true);
+  };
 
-        const notifySuccess = () => {
-            toast.success('Igreja cadastrada com sucesso!', {
-                position: "top-center",
-                autoClose: 1500,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-                theme: "colored",
-            });
-        }
-
-        const notifyWarn = () => {
-            toast.warn('Preencha os campos!', {
-                position: "top-center",
-                autoClose: 1500,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-                theme: "colored",
-            });
-        }
-
-        const notifyError = () => {
-            toast.error('Erro no Cadastro, Tente novamente.', {
-                position: "top-center",
-                autoClose: 1500,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-                theme: "colored",
-            });
-        }
-
-
-        if (!aceitoTermos) { 
-            toast.error('Você deve aceitar os termos de uso.', {
-                position: "top-center",
-                autoClose: 1500,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-                theme: "colored",
-            });
-            return;
-        }
-
-
-        try {
-            if (nome === "" || cnpj === "" || data_fundacao === "" || ministerio === "" || setor === "" || cep === "" || endereco === "" || bairro === "" || cidade === ""){
-                notifyWarn();
-            } else {
-                const dataRegister = {
-                    nome,
-                    cnpj,
-                    data_fundacao,
-                    ministerio,
-                    setor,
-                    cep,
-                    endereco,
-                    bairro,
-                    cidade
-                }
-
-                const response = await api.post('/igreja', dataRegister);
-
-                sessionStorage.setItem('igrejaCadastroId', String(response.data.id_igreja));
-                sessionStorage.setItem('igrejaCadastroNome', String(response.data.nome));
-                sessionStorage.setItem('igrejaCadastroToken', String(response.data.registration_token));
-
-                notifySuccess();
-
-                setTimeout(() => {
-                    router.push('/pages/cadastroPastor', { scroll: false });
-                }, 1500);
-            }
-        } catch {
-            notifyError();
-        }
+  const cadastrar = async () => {
+    if (!aceito) return;
+    setEnviando(true);
+    try {
+      const corpo = Object.fromEntries(Object.entries(dados).map(([k, v]) => [k, v.trim()]));
+      const { data } = await api.post('/igreja', corpo);
+      sessionStorage.setItem('igrejaCadastroId', String(data.id_igreja));
+      sessionStorage.setItem('igrejaCadastroNome', String(data.nome));
+      sessionStorage.setItem('igrejaCadastroToken', String(data.registration_token));
+      router.push('/pages/cadastroPastor', { scroll: false });
+    } catch (error) {
+      setEnviando(false);
+      setTermos(false);
+      toast.error(apiMessage(error, 'Não foi possível cadastrar a igreja. Tente novamente.'), { position: 'top-center', autoClose: 4000 });
     }
+  };
 
   return (
-    <main className='registration-page'>
-        <div className='bg-azul min-h-screen flex justify-center px-4 py-8'>
-            <div className='flex justify-center items-center w-full'>
-                <div className='w-full max-w-xl'>
-                    <div className='flex justify-center'>
-                        <Image src={logo} width={75} height={10} alt=''/>
-                        <h2 className='ml-3 font-extrabold text-4xl text-white text1'>OBREIRO<br/>DIGITAL</h2>
-                    </div>
-
-                    <div className='flex flex-col'>
-                        <div>
-                            <h1 className='text-white text-4xl mt-10 text1 flex justify-center'>Cadastro de Igreja</h1>
-                            <p className='text-white text-xl text2 mt-2 flex justify-center mb-6'>Cadastre sua igreja para começar a usar o Obreiro Digital!</p>
-                        </div>
-                        <div className='registration-fields flex flex-col justify-center items-stretch'>
-                            <div className='flex flex-col'>
-                                <label className='text-white text1 text-xl mt-2 mb-1'>Nome</label>
-
-                                <input 
-                                    className='px-4 py-3.5 w-[40vh] mb-1 text2 rounded-lg text-black' 
-                                    type="text" 
-                                    placeholder='Digite o Nome...'
-                                    value={nome}
-                                    onChange={e => setNome(e.target.value)}
-                                    maxLength={150}
-                                    required
-                                />
-                            </div>
-
-                            <div className='flex'>
-                                <div className='flex flex-col'>
-                                    <label className='text-white text1 text-xl mt-2 mb-1'>CNPJ</label>
-
-                                    <input 
-                                        className='px-4 py-3 mb-1 w-[19vh] text2 rounded-lg text-black' 
-                                        type="text" 
-                                        placeholder='Digite o CNPJ...'
-                                        value={cnpj}
-                                        onChange={e => setCnpj(e.target.value)}
-                                        maxLength={16}
-                                        required
-                                    />
-                                </div>
-
-                                <div className='flex flex-col ml-3'>
-                                    <label className='text-white text1 text-xl mt-2 mb-1'>Data da Fundação</label>
-
-                                    <input 
-                                        className='px-4 py-3 mb-1 w-[19vh] text2 rounded-lg text-black' 
-                                        type="date" 
-                                        value={data_fundacao}
-                                        onChange={e => setDataFundacao(e.target.value)}
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div className='flex'>
-                                <div className='flex flex-col'>
-                                    <label className='text-white text1 text-xl mt-2 mb-1'>Ministério</label>
-
-                                    <input 
-                                        className='px-4 py-3 mb-1 w-[19vh] text2 rounded-lg text-black' 
-                                        type="text" 
-                                        placeholder='Digite o Ministério...'
-                                        value={ministerio}
-                                        onChange={e => setMinisterio(e.target.value)}
-                                        maxLength={150}
-                                        required
-                                    />
-                                </div>
-
-                                <div className='flex flex-col ml-3'>
-                                    <label className='text-white text1 text-xl mt-2 mb-1'>Setor</label>
-
-                                    <input 
-                                        className='px-4 py-3 mb-1 w-[19vh] text2 rounded-lg text-black' 
-                                        type="text" 
-                                        placeholder='Digite o Setor' 
-                                        value={setor} 
-                                        onChange={e => setSetor(e.target.value)}    
-                                        maxLength={150}                                  
-                                    />
-                                </div>
-                            </div>
-
-                            <div className='flex'>
-                                <div className='flex flex-col'>
-                                    <label className='text-white text1 text-xl mt-2 mb-1'>CEP</label>
-
-                                    <input 
-                                        className='px-4 py-3 mb-1 w-[19vh] text2 rounded-lg text-black' 
-                                        type="text" 
-                                        placeholder='Digite o CEP...'
-                                        value={cep}
-                                        onChange={(e) =>{
-                                            const cep = e.target.value;
-
-                                            if (cep.length === 8) {
-                                                ConsultCep(cep);
-                                            }
-                                            setCep(cep);
-                                        }}
-                                        maxLength={8}
-                                        required
-                                    />
-                                </div>
-
-                                <div className='flex flex-col ml-3'>
-                                    <label className='text-white text1 text-xl mt-2 mb-1'>Endereço</label>
-
-                                    <input 
-                                        className='px-4 py-3 mb-1 w-[19vh] text2 rounded-lg text-black' 
-                                        type="text" 
-                                        placeholder='Digite o Endereço'
-                                        value={endereco}
-                                        onChange={e => setEndereco(e.target.value)}
-                                        maxLength={150}
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div className='flex'>
-                                <div className='flex flex-col'>
-                                    <label className='text-white text1 text-xl mt-2 mb-1'>Bairro</label>
-
-                                    <input 
-                                        className='px-4 py-3 mb-1 w-[19vh] text2 rounded-lg text-black' 
-                                        type="text" 
-                                        placeholder='Digite o Bairro...'
-                                        value={bairro}
-                                        onChange={e => setBairro(e.target.value)}
-                                        maxLength={150}
-                                        required
-                                    />
-                                </div>
-
-                                <div className='flex flex-col ml-3'>
-                                    <label className='text-white text1 text-xl mt-2 mb-1'>Cidade</label>
-
-                                    <input 
-                                        className='px-4 py-3 mb-1 w-[19vh] text2 rounded-lg text-black' 
-                                        type="text" 
-                                        placeholder='Digite a Cidade'
-                                        value={cidade}
-                                        onChange={e => setCidade(e.target.value)}
-                                        maxLength={150}
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <button type='submit' className='border-2 rounded-lg h-12 w-full mt-3 border-white text2 text-white active:bg-white active:text-azul' onClick={openModal}>Cadastrar</button>
-                            <ToastContainer />
-                        </div>
-                    </div>
-                </div>
-
-                <AppModal
-                    className="text-white flex flex-col" 
-                    isOpen={modalIsOpen} 
-                    onRequestClose={closeModal}
-                    contentLabel="Termo de Uso"
-                >
-                    <div className='flex flex-col justify-center self-center bg-azul p-10 mt-[15vh] rounded-lg shadow-xl'>
-                        <h2 className='text-white text1 text-4xl flex justify-center'>Termos de uso</h2>
-
-                        <div className='flex flex-col justify-center self-center bg-white p-10 py-5 mt-[2vh] rounded-lg max-h-[45vh] overflow-y-auto'>
-                            <div>
-                                <h3 className='text1 text-black text-lg'>1. Consentimento</h3>
-                                <p className='text2 text-black leading-4 mt-1'>Ao utilizar o Sistema, você expressa seu<br/>consentimento para a coleta, armazenamento,<br/>processamento e uso dos seus dados pessoais de <br/>acordo com os termos estabelecidos neste Termo. <br/>Caso não concorde com estes termos, por favor, não <br/>prossiga utilizando o Sistema.</p>
-                            </div>
-
-                            <div className='mt-5'>
-                                <h3 className='text1 text-black text-lg'>2. Dados Coletados</h3>
-
-                                <p className='text2 text-black leading-4 mt-1'>O Sistema coleta e armazena os seguintes dados <br/>pessoais fornecidos por você:</p>
-                                <ul className='list-disc mt-2 pl-7'>
-                                    <li className='text2 text-black leading-4'>Informações de identificação pessoal: nome, <br/>endereço de e-mail, número de telefone, entre <br/>outros, conforme necessário para o uso dos <br/>serviços oferecidos pelo Sistema.</li>
-
-                                    <li className='text2 text-black leading-4 mt-2'>Informações de acesso: endereço IP, tipo de <br/>navegador, dados de cookies e outras <br/>informações de rastreamento coletadas <br/>automaticamente durante o uso do Sistema.</li>
-
-                                    <li className='text2 text-black leading-4 mt-2'>Outras informações fornecidas voluntariamente <br/>por você durante a interação com o Sistema.</li>
-                                </ul>
-                            </div>
-
-                            <div className='mt-5'>
-                                <h3 className='text1 text-black text-lg'>3. Uso dos Dados</h3>
-
-                                <p className='text2 text-black leading-4 mt-1'>Os dados pessoais coletados são utilizados <br/>para os seguintes propósitos:</p>
-                                <ul className='list-disc mt-2 pl-7'>
-                                    <li className='text2 text-black leading-4'>Prestação de serviços: para fornecer os serviços <br/>solicitados por você por meio do Sistema.</li>
-
-                                    <li className='text2 text-black leading-4 mt-2'>Personalização: para personalizar sua experiência <br/>de usuário e fornecer conteúdo relevante.</li>
-
-                                    <li className='text2 text-black leading-4 mt-2'>Comunicação: para responder a suas solicitações, <br/>fornecer suporte ao cliente e enviar comunicações <br/>relacionadas ao uso do Sistema.</li>
-
-                                    <li className='text2 text-black leading-4 mt-2'>Melhoria do Sistema: para analisar o desempenho <br/>do Sistema, realizar pesquisas e desenvolver novos <br/>recursos.</li>
-                                </ul>
-                            </div>
-
-                            <div className='mt-5'>
-                                <h3 className='text1 text-black text-lg'>4. Compartilhamento de Dados</h3>
-
-                                <p className='text2 text-black leading-4 mt-1'>Seus dados pessoais podem ser compartilhados <br/>com terceiros apenas nas seguintes circunstâncias:</p>
-                                <ul className='list-disc mt-2 pl-7'>
-                                    <li className='text2 text-black leading-4'>Parceiros de negócios: para fornecer serviços <br/>em conjunto ou facilitar transações relacionadas ao <br/>Sistema.</li>
-
-                                    <li className='text2 text-black leading-4 mt-2'>Cumprimento legal: para cumprir obrigações legais, <br/>responder a processos legais ou proteger os direitos, <br/>propriedade ou segurança do Sistema ou de terceiros.</li>                                    
-                                </ul>
-                            </div>
-
-                            <div className='mt-5'>
-                                <h3 className='text1 text-black text-lg'>5. Segurança dos Dados</h3>
-
-                                <p className='text2 text-black leading-4 mt-1'>Empregamos medidas de segurança técnicas, <br/>administrativas e físicas para proteger seus dados <br/>pessoais contra acesso não autorizado, divulgação, <br/>alteração ou destruição.</p>                                
-                            </div>
-
-                            <div className='mt-5'>
-                                <h3 className='text1 text-black text-lg'>6. Seus Direitos</h3>
-
-                                <p className='text2 text-black leading-4 mt-1'>Você possui os seguintes direitos em relação aos <br/>seus dados pessoais:</p>
-                                <ul className='list-disc mt-2 pl-7'>
-                                    <li className='text2 text-black leading-4'>Acessar e corrigir seus dados pessoais.</li>
-
-                                    <li className='text2 text-black leading-4 mt-2'>Solicitar a exclusão de seus dados pessoais, sujeito <br/>às obrigações legais ou contratuais.</li>
-
-                                    <li className='text2 text-black leading-4 mt-2'>Retirar o consentimento para o processamento de <br/>seus dados pessoais, quando aplicável.</li>
-                                </ul>
-                            </div>
-
-                            <div className='mt-5'>
-                                <h3 className='text1 text-black text-lg'>7. Alterações no Termo</h3>
-
-                                <p className='text2 text-black leading-4 mt-1'>Reservamo-nos o direito de atualizar este Termo <br/>periodicamente. Recomendamos que você reveja <br/>este Termo regularmente para estar ciente de <br/>quaisquer alterações.</p>
-                                <ul className='list-disc mt-2 pl-7'>
-                                    <li className='text2 text-black leading-4'>Acessar e corrigir seus dados pessoais.</li>
-
-                                    <li className='text2 text-black leading-4 mt-2'>Solicitar a exclusão de seus dados pessoais, sujeito <br/>às obrigações legais ou contratuais.</li>
-
-                                    <li className='text2 text-black leading-4 mt-2'>Retirar o consentimento para o processamento de <br/>seus dados pessoais, quando aplicável.</li>
-                                </ul>
-                            </div>
-
-                            <div className='mt-5'>
-                                <h3 className='text1 text-black text-lg'>8. Contato</h3>
-
-                                <p className='text2 text-black leading-4 mt-1'>Se você tiver dúvidas ou preocupações sobre este <br/>Termo ou o uso de seus dados pessoais, entre em <br/>contato conosco através dos canais de comunicação <br/>fornecidos no Sistema.</p>                                
-                            </div>
-
-                            <div className='mt-5'>                                
-                                <p className='text2 text-black leading-4'>Ao aceitar este Termo, você reconhece ter lido, <br/>compreendido e concordado com os termos e <br/>condições aqui estabelecidos, bem como com o <br/>uso dos seus dados pessoais conforme descrito.</p>                                
-                            </div>
-                        </div>
-
-                        <div className='flex mt-5 mb-2'>
-                            <input 
-                                type="checkbox" 
-                                className='w-8'
-                                checked={aceitoTermos}
-                                onChange={() => setAceitoTermos(!aceitoTermos)}
-                            />
-                            <span className='text2 text-white text-lg ml-2'>Li e concordo com os termos de uso.</span>
-                        </div>
-
-                        <button type='button' disabled={!aceitoTermos} className={`border-2 rounded-lg h-12 w-full mt-3 border-white text2 text-white ${!aceitoTermos ? 'opacity-50 cursor-not-allowed' : 'active:bg-white active:text-azul'}`} onClick={handleRegister}>Avançar</button>
-                    </div>
-                </AppModal>
-            </div>
+    <AuthShell wide after={<ToastContainer />}>
+      <AuthSteps steps={['Igreja', 'Termos', 'Pastor']} current={termos ? 1 : 0} />
+      <h1 className="au-h1">Cadastre sua igreja</h1>
+      <p className="au-sub">Comece pelos dados da igreja. Depois você aceita os termos e cadastra o pastor responsável.</p>
+      <form className="au-form" onSubmit={continuar} noValidate>
+        <div className="au-sec">
+          <p className="au-sec-t">Dados da igreja</p>
+          <div className="au-grid">
+            <div className="au-f full"><label htmlFor="ci-nome">Nome da igreja</label><AuthInput id="ci-nome" type="text" maxLength={150} placeholder="Ex.: Congregação Jardim Esperança" {...campo('nome')} /></div>
+            <div className="au-f"><label htmlFor="ci-cnpj">CNPJ</label><AuthInput id="ci-cnpj" type="text" inputMode="numeric" placeholder="00.000.000/0000-00" {...campo('cnpj')} onChange={(e) => set('cnpj', mascaraCnpj(e.target.value))} /></div>
+            <div className="au-f"><label htmlFor="ci-data_fundacao">Data de fundação</label><AuthInput id="ci-data_fundacao" type="date" max={hoje()} {...campo('data_fundacao')} /></div>
+            <div className="au-f"><label htmlFor="ci-ministerio">Ministério</label><AuthInput id="ci-ministerio" type="text" maxLength={150} placeholder="Nome do ministério" {...campo('ministerio')} /></div>
+            <div className="au-f"><label htmlFor="ci-setor">Setor <span style={{ fontWeight: 600, color: '#64748b' }}>(opcional)</span></label><AuthInput id="ci-setor" type="text" maxLength={150} placeholder="Ex.: 02" {...campo('setor')} /></div>
+          </div>
         </div>
-    </main>
-  )
+        <div className="au-sec">
+          <p className="au-sec-t">Endereço</p>
+          <div className="au-grid">
+            <div className="au-f">
+              <label htmlFor="ci-cep">CEP</label>
+              <AuthInput
+                id="ci-cep" type="text" inputMode="numeric" autoComplete="postal-code" placeholder="00000-000" aria-describedby="ci-cep-hint"
+                value={mascaraCep(dados.cep)} error={erros.cep}
+                onChange={(e) => {
+                  const cep = e.target.value.replace(/\D/g, '').slice(0, 8);
+                  set('cep', cep);
+                  if (cep.length === 8) void buscarCep(cep);
+                }}
+              />
+              <p className="au-hint" id="ci-cep-hint" aria-live="polite">{buscandoCep ? 'Buscando endereço…' : 'O endereço é preenchido pelo CEP.'}</p>
+            </div>
+            <div className="au-f"><label htmlFor="ci-cidade">Cidade</label><AuthInput id="ci-cidade" type="text" maxLength={150} autoComplete="address-level2" {...campo('cidade')} /></div>
+            <div className="au-f full"><label htmlFor="ci-endereco">Rua e número</label><AuthInput id="ci-endereco" type="text" maxLength={150} autoComplete="street-address" placeholder="Ex.: Rua das Oliveiras, 120" {...campo('endereco')} /></div>
+            <div className="au-f full"><label htmlFor="ci-bairro">Bairro</label><AuthInput id="ci-bairro" type="text" maxLength={150} {...campo('bairro')} /></div>
+          </div>
+        </div>
+        <button type="submit" className="au-btn">Continuar<ArrowRight className="i" aria-hidden="true" /></button>
+      </form>
+      <p className="au-foot">Já tem conta? <Link href="/pages/login" className="au-link" style={{ fontSize: 15 }}>Entrar</Link></p>
+
+      <Modal open={termos} onClose={() => { if (!enviando) setTermos(false); }} title="Termos de uso" subtitle="Leia antes de continuar o cadastro.">
+        <div className="mx-b term">
+          <TermosConteudo />
+          <label className="au-check" style={{ marginTop: 16 }}><input type="checkbox" checked={aceito} onChange={(e) => setAceito(e.target.checked)} />Li e concordo com os termos de uso.</label>
+        </div>
+        <div className="mx-f">
+          <button type="button" className="btn ghost" onClick={() => setTermos(false)} disabled={enviando}>Voltar</button>
+          <button type="button" className="btn pri" onClick={cadastrar} disabled={!aceito || enviando}>{enviando ? 'Cadastrando…' : 'Aceitar e continuar'}</button>
+        </div>
+      </Modal>
+    </AuthShell>
+  );
 }

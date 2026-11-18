@@ -1,839 +1,353 @@
 'use client'
-import { AppModal, PageTitle } from '@/app/components/shared/MemberStyle';
-import React, { useState, useEffect, useRef } from 'react';
-import { Bug, Church, KeyRound, LogOut, Mail, MessageCircle, ShieldCheck, UserRoundX, X } from "lucide-react";
-import MenuLateral from '@/app/components/menuLateral/menuLateral';
-import { format } from 'date-fns';
-import { toast, ToastContainer } from 'react-toastify';
-import Link from 'next/link';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast, ToastContainer } from 'react-toastify';
+import { Bug, Church, Flag, Hash, KeyRound, Lock, LogOut, Mail, MapPin, MessageCircle, Pencil, Plus, ShieldCheck, UserRoundX } from 'lucide-react';
+
+import { PageShell, apiMessage } from '@/app/components/ui/PageParts';
+import { ConfirmDialog, EditRow, Modal, ViewRow } from '@/app/components/ui/Modal';
+import { brDate, parseDateOnly } from '@/app/utils/date';
+import { TermosConteudo } from '@/app/components/auth/Termos';
 import api from '@/app/api/api';
-import axios from 'axios';
-import { parseDateOnly } from "@/app/utils/date";
 
 interface Igreja {
   id_igreja: number;
   nome: string;
-  cnpj: string;
-  setor: string;
-  ministerio: string;
-  cep:string;
-  endereco: string;
-  bairro: string;
-  cidade: string;
-  data_fundacao: Date;
+  cnpj: string | null;
+  setor: string | null;
+  ministerio: string | null;
+  cep: string | null;
+  endereco: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  data_fundacao: string | null;
+  id_matriz?: number | null;
 }
 
-export default function configuracoes() {
-  const router = useRouter();  
-  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [isPriavcyModalOpen, setIsPrivacyModalOpen] = useState(false);
+type Tela = null | 'logout' | 'dados' | 'email' | 'emailOk' | 'senha' | 'senhaOk' | 'bug' | 'termos' | 'apagar' | 'apagarOk';
 
-  const handleLogout = async () => {
-    try { await api.post('/login/logout'); }
-    catch { /* Token já expirado. */ }
-    finally {
-      sessionStorage.clear();
-      localStorage.clear();
-      router.push('/pages/login');
-    }
-  };  
+const MOTIVOS = ['Erro de navegação', 'Bug visual', 'Problema de cadastro', 'Erro nos dados', 'Outro'];
+const ok = (msg: string) => toast.success(msg, { position: 'top-center', autoClose: 1500 });
+const erro = (msg: string) => toast.error(msg, { position: 'top-center', autoClose: 4000 });
+const aviso = (msg: string) => toast.warn(msg, { position: 'top-center' });
+const Vazio = () => <span aria-hidden="true" />;
+const podeVerMatriz = () => typeof window !== 'undefined' && /Matriz$/.test(sessionStorage.getItem('cargo') || '');
 
-  const [isIgrejaModalOpen, setIsIgrejaModalOpen] = useState(false);
-  const [igrejaData, setIgrejaData] = useState<any>(null);
+function fundacao(valor?: string | null) {
+  const d = parseDateOnly(valor);
+  if (!valor || isNaN(d.getTime())) return '—';
+  const hoje = new Date();
+  let anos = hoje.getFullYear() - d.getFullYear();
+  if (hoje.getMonth() < d.getMonth() || (hoje.getMonth() === d.getMonth() && hoje.getDate() < d.getDate())) anos -= 1;
+  return anos > 0 ? `${brDate(valor)} · há ${anos} ${anos === 1 ? 'ano' : 'anos'}` : brDate(valor);
+}
 
-   // Buscar dados da igreja
-  const fetchIgrejaData = async () => {
-    try {
-      const id_igreja = sessionStorage.getItem('id_igreja');
-      if (!id_igreja) {
-        console.error('ID da igreja não encontrado');
-        return;
-      }
+const sair = (router: ReturnType<typeof useRouter>) => {
+  sessionStorage.clear();
+  localStorage.clear();
+  router.push('/pages/login');
+};
 
-      const response = await api.get(`/igreja/${id_igreja}`);
-      setIgrejaData(response.data);
-      setIsIgrejaModalOpen(true);
-    } catch (error) {
-      console.error('Erro ao buscar dados da igreja:', error);
-    }
-  };
+export default function Configuracoes() {
+  const router = useRouter();
+  const [tela, setTela] = useState<Tela>(null);
+  const [enviando, setEnviando] = useState(false);
+  const fechar = () => setTela(null);
 
-  const notifySuccess = () => {
-    toast.success('Igreja atualizada com sucesso!', {
-      position: 'top-center',
-      autoClose: 1500,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: 'colored',
-    });
-  };
+  // Dados da igreja
+  const [igreja, setIgreja] = useState<Igreja | null>(null);
+  const [rascunho, setRascunho] = useState<Igreja | null>(null);
+  const [podeEditar, setPodeEditar] = useState(false);
 
-  const notifySuccessAlterEmail = () => {
-    toast.success('Email atualizado com sucesso!', {
-      position: 'top-center',
-      autoClose: 1500,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: 'colored',
-    });
-  };
-
-  const notifySuccessAlterPassword = () => {
-    toast.success('Senha atualizada com sucesso!', {
-      position: 'top-center',
-      autoClose: 1500,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: 'colored',
-    });
-  };
-
-  const notifySuccessReportBug = () => {
-    toast.success('Bug reportado com sucesso!', {
-      position: 'top-center',
-      autoClose: 1500,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: 'colored',
-    });
-  };
-
-  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
-  const [isConfirmEmailModalOpen, setIsConfirmEmailModalOpen] = useState(false);
+  // Email e senha
   const [novoEmail, setNovoEmail] = useState('');
   const [senhaAtual, setSenhaAtual] = useState('');
+  const [novaSenha, setNovaSenha] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
 
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [isConfirmPasswordModalOpen, setIsConfirmPasswordModalOpen] = useState(false);
-  const [novoPassword, setNovoPassword] = useState('');
-  const [confirmarPassword, setConfirmarPassword] = useState('');
-
-  const [isBugModalOpen, setIsBugModalOpen] = useState(false);
-  const [motivo, setMotivo] = useState("");
-  const [descricao, setDescricao] = useState("");
-
-  const handleEnviar = async () => {    
-    if (!motivo || !descricao) {
-      alert("Preencha todos os campos!");
-      return;
-    }
-
-    try {
-      await api.post("/report", {
-        motivo,
-        descricao
-      });
-      notifySuccessReportBug();
-      setIsBugModalOpen(false);
-      setMotivo("");
-      setDescricao("");
-    } catch (error) {
-      console.error("Erro ao enviar relatório:", error);
-      alert("Erro ao enviar relatório. Tente novamente.");
-    }
-  };
-
-  const categoriasBug = [
-    "Erro de Navegação",
-    "Bug Visual",
-    "Problema de Cadastro",
-    "Erro nos Dados",
-    "Outro"
-  ];
-
-  const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false);
-  const [isConfirmDeleteModalOpen, setIsConfirmDeleteModalOpen] = useState(false);
+  // Bug e exclusão
+  const [motivo, setMotivo] = useState('');
+  const [descricao, setDescricao] = useState('');
   const [emailConfirmacao, setEmailConfirmacao] = useState('');
 
-  const handleDeleteAccount = async () => {
-    const id_user = sessionStorage.getItem('id_user');
+  const encerrarSessao = async () => {
+    try { await api.post('/login/logout'); } catch { /* Sessão já expirada. */ }
+    finally { sair(router); }
+  };
 
-    if (emailConfirmacao.trim().toLowerCase() !== sessionStorage.getItem("email")?.trim().toLowerCase()) {
-      alert('O email não corresponde ao seu cadastro.');
-      return;
-    }
-
+  const abrirDados = async () => {
+    const id = sessionStorage.getItem('id_igreja');
+    if (!id) return erro('Igreja não encontrada na sessão. Entre novamente.');
     try {
-      await api.delete(`/cadastro/${id_user}`);
-      sessionStorage.clear();
-      localStorage.clear();
-      router.push('/pages/login');
+      const { data } = await api.get(`/igreja/${id}`);
+      const cargo = sessionStorage.getItem('cargo');
+      setPodeEditar(cargo === 'Pastor' || cargo === 'Pastor Matriz');
+      setIgreja(data);
+      setRascunho(null);
+      setTela('dados');
     } catch (error) {
-      console.error('Erro ao deletar conta:', error);
-      alert(axios.isAxiosError(error) && error.response?.data?.message ? error.response.data.message : 'Erro ao deletar conta. Tente novamente.');
+      erro(apiMessage(error, 'Não foi possível carregar os dados da igreja.'));
     }
   };
 
+  const salvarIgreja = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!rascunho) return;
+    if (!rascunho.nome.trim()) return aviso('Informe o nome da igreja.');
+    setEnviando(true);
+    try {
+      const corpo = { ...rascunho, nome: rascunho.nome.trim(), data_fundacao: rascunho.data_fundacao ? String(rascunho.data_fundacao).slice(0, 10) : null };
+      await api.put(`/igreja/${rascunho.id_igreja}`, corpo);
+      setIgreja(corpo);
+      setRascunho(null);
+      ok('Dados da igreja atualizados!');
+    } catch (error) {
+      erro(apiMessage(error, 'Não foi possível salvar. Tente novamente.'));
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const abrirEmail = () => { setNovoEmail(''); setSenhaAtual(''); setTela('email'); };
+  const continuarEmail = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(novoEmail.trim())) return aviso('Digite um email válido.');
+    if (!senhaAtual) return aviso('Informe sua senha atual.');
+    setTela('emailOk');
+  };
+  const alterarEmail = async () => {
+    setEnviando(true);
+    try {
+      const email = novoEmail.trim();
+      await api.put(`/cadastro/${sessionStorage.getItem('id_user')}`, { email, senha_atual: senhaAtual });
+      sessionStorage.setItem('email', email);
+      setSenhaAtual('');
+      fechar();
+      ok('Email alterado com sucesso!');
+    } catch (error) {
+      setTela('email');
+      erro(apiMessage(error, 'Não foi possível alterar o email.'));
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const abrirSenha = () => { setSenhaAtual(''); setNovaSenha(''); setConfirmarSenha(''); setTela('senha'); };
+  const continuarSenha = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!senhaAtual) return aviso('Informe sua senha atual.');
+    if (!novaSenha || !confirmarSenha) return aviso('Preencha a nova senha e a confirmação.');
+    if (novaSenha !== confirmarSenha) return aviso('As senhas não coincidem.');
+    setTela('senhaOk');
+  };
+  const alterarSenha = async () => {
+    setEnviando(true);
+    try {
+      await api.put(`/cadastro/${sessionStorage.getItem('id_user')}`, { senha: novaSenha, senha_atual: senhaAtual });
+      setSenhaAtual(''); setNovaSenha(''); setConfirmarSenha('');
+      fechar();
+      ok('Senha alterada! Entre novamente com a nova senha.');
+      // A troca de senha encerra as outras sessões; esta também precisa de novo login.
+      setTimeout(() => sair(router), 1500);
+    } catch (error) {
+      setTela('senha');
+      erro(apiMessage(error, 'Não foi possível alterar a senha.'));
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const abrirBug = () => { setMotivo(''); setDescricao(''); setTela('bug'); };
+  const enviarBug = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!motivo) return aviso('Escolha o motivo.');
+    if (!descricao.trim()) return aviso('Conte o que aconteceu.');
+    setEnviando(true);
+    try {
+      await api.post('/report', { motivo, descricao: descricao.trim() });
+      fechar();
+      ok('Relatório enviado. Obrigado!');
+    } catch (error) {
+      erro(apiMessage(error, 'Não foi possível enviar o relatório.'));
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const apagarConta = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const atual = sessionStorage.getItem('email')?.trim().toLowerCase();
+    if (!emailConfirmacao.trim() || emailConfirmacao.trim().toLowerCase() !== atual) return aviso('O email não corresponde ao da sua conta.');
+    setEnviando(true);
+    try {
+      await api.delete(`/cadastro/${sessionStorage.getItem('id_user')}`);
+      sair(router);
+    } catch (error) {
+      erro(apiMessage(error, 'Não foi possível apagar a conta.'));
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const campo = (k: keyof Igreja) => ({
+    value: (rascunho?.[k] as string | null | undefined) ?? '',
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setRascunho((r) => (r ? { ...r, [k]: e.target.value } : r)),
+  });
+
+  const editando = !!rascunho;
+  const ehFilial = igreja?.id_matriz != null;
+  const tipoIgreja = ehFilial ? 'Filial' : podeVerMatriz() ? 'Matriz' : 'Igreja';
+
   return (
-    <main>
-      <div className='flex'>
-        <MenuLateral/>
-         <div className='app-content'>
-          <div className='od-breadcrumb pt-2'>
-            <Link href={'/../../pages/inicio'} className='text-cinza text-lg text3'>Início &#62;</Link>
-            <Link href={'/../../pages/configuracoes'} className='text-cinza text-lg text3 ml-2'>Configurações</Link>
-          </div>
-
-          <div className="mt-6">
-            <div className='flex flex-wrap items-center justify-between gap-4'>
-              <PageTitle>Configurações</PageTitle>
-
-              <div className='flex items-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-base text-white cursor-pointer hover:bg-red-600'>
-                <p className='' onClick={() => setIsLogoutModalOpen(true)}>Encerrar Sessão</p>
-                <LogOut width={32} height={32} aria-hidden="true"/>
-            </div>
-            </div>
-          </div>
-
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 xl:gap-6">
-            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={fetchIgrejaData}>
-              <Church width={32} height={32} aria-hidden="true" className="text-black" />
-              <span className="font-bold text-black">Dados da Igreja</span>
-              <span className="text-gray-500 text-sm">Visualizar dados da igreja</span>
-            </div>
-
-            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsEmailModalOpen(true)}>
-              <Mail width={32} height={32} aria-hidden="true" className="text-black" />
-              <span className="font-bold text-black">Alterar Email</span>
-              <span className="text-gray-500 text-sm">Novo email</span>
-            </div>
-
-            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsPasswordModalOpen(true)}>
-              <KeyRound width={32} height={32} aria-hidden="true" className="text-black" />
-              <span className="font-bold text-black">Alterar Senha</span>
-              <span className="text-gray-500 text-sm">Nova senha</span>
-            </div>
-
-            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsBugModalOpen(true)}>
-              <Bug width={32} height={32} aria-hidden="true" className="text-black" />
-              <span className="font-bold text-black">Relatar Bug</span>
-              <span className="text-gray-500 text-sm">Descreva o seu bug</span>
-            </div>
-
-            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer">
-              <MessageCircle width={32} height={32} aria-hidden="true" className="text-black" />
-              <span className="font-bold text-black">Solicitar Suporte</span>
-              <span className="text-gray-500 text-sm">Solicite suporte técnico</span>
-            </div>
-
-            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsPrivacyModalOpen(true)}>
-              <ShieldCheck width={32} height={32} aria-hidden="true" className="text-black" />
-              <span className="font-bold text-black">Privacidade</span>
-              <span className="text-gray-500 text-sm">Termos de privacidade</span>
-            </div>
-
-            <div className="bg-white py-6 px-8 rounded-lg shadow flex flex-col gap-2 hover:shadow-md cursor-pointer" onClick={() => setIsDeleteAccountModalOpen(true)}>
-              <UserRoundX width={32} height={32} aria-hidden="true" className="text-red-500" />
-              <span className="font-bold text-red-500">Apagar Conta</span>
-              <span className="text-red-400 text-sm">Deletar sua conta</span>
-            </div>
-          </div>
-
-          <AppModal
-            isOpen={isLogoutModalOpen}
-            onRequestClose={() => setIsLogoutModalOpen(false)}
-            contentLabel="Confirmar Logout"
-            className="fixed inset-0 flex items-center justify-center p-4"
-            overlayClassName="fixed inset-0 bg-white bg-opacity-70"
-          >
-            <div className="bg-white rounded-xl p-6 w-full max-w-md">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-800">Sair da Conta</h2>
-                <button 
-                  onClick={() => setIsLogoutModalOpen(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X className="h-6 w-6" aria-hidden="true" />
-                </button>
-              </div>
-
-              <p className="text-gray-600 mb-6">
-                Tem certeza que deseja sair da sua conta? Você será desconectado e
-                precisará fazer login novamente para acessar o sistema.
-              </p>
-
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setIsLogoutModalOpen(false)}
-                  className="px-5 py-2 rounded-lg text-gray-700 hover:bg-gray-100"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                >
-                  Sim, Sair
-                </button>
-              </div>
-            </div>
-          </AppModal>
-
-          <AppModal
-            isOpen={isIgrejaModalOpen}
-            onRequestClose={() => setIsIgrejaModalOpen(false)}
-            contentLabel="Dados da Igreja"
-            className="fixed inset-0 flex items-center justify-center"            
-          >
-            <div className="flex flex-col justify-center self-center bg-azul mt-[1vh] rounded-lg shadow-xl">
-               <div className='cursor-pointer flex place-content-end rounded-lg'>
-                  <X onClick={() => setIsIgrejaModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
-                </div>
-
-              <h2 className='text-white text1 text-4xl flex justify-center'>Sua Igreja</h2>
-
-              {igrejaData ? (
-                <div className="space-y-4 flex flex-col px-10">
-                  <div className='flex flex-col'>
-                    <label className="text-white text1 text-xl mt-1 mb-1">Nome</label>
-                    <input
-                      type="text"
-                      className="px-4 py-3 rounded-lg text2 text-black"
-                      value={igrejaData.nome}
-                      onChange={(e) => setIgrejaData({ ...igrejaData, nome: e.target.value })}
-                    />
-                  </div>
-
-                  <div className='flex flex-col'>
-                    <label className="text-white text1 text-xl mt-1 mb-1">CNPJ</label>
-                    <input
-                      type="text"
-                      className="px-4 py-3 rounded-lg text2 text-black"
-                      value={igrejaData.cnpj || ''}
-                      onChange={(e) => setIgrejaData({ ...igrejaData, cnpj: e.target.value })}
-                    />
-                  </div>
-                  <div className="flex gap-4">                  
-                    <div className='text-white flex flex-col'>
-                      <label className="text-white text1 text-xl mt-1 mb-1">Ministério</label>
-                      <input
-                        type="text"
-                        className="px-4 py-3 rounded-lg text2 text-black"
-                        value={igrejaData.ministerio || ''}
-                        onChange={(e) => setIgrejaData({ ...igrejaData, ministerio: e.target.value })}
-                      />
-                    </div>
-
-                    <div className='text-white flex flex-col'>
-                      <label className="text-white text1 text-xl mt-1 mb-1">Setor</label>
-                      <input
-                        type="text"
-                        className="px-4 py-3 rounded-lg text2 text-black"
-                        value={igrejaData.setor || ''}
-                        onChange={(e) => setIgrejaData({ ...igrejaData, setor: e.target.value })}
-                      />
-                    </div>  
-                  </div>                  
-
-                  <div className='text-white flex flex-col'>
-                    <label className="text-white text1 text-xl mt-1 mb-1">CEP</label>
-                    <input
-                        type="text"
-                        className="px-4 py-3 rounded-lg text2 text-black"
-                        value={igrejaData.cep || ''}
-                        onChange={(e) => setIgrejaData({ ...igrejaData, cep: e.target.value })}
-                      />
-                  </div>
-
-                  <div className='text-white flex flex-col'>
-                    <label className="text-white text1 text-xl mt-1 mb-1">Endereço</label>
-                    <input
-                      type="text"
-                      className="px-4 py-3 rounded-lg text2 text-black"
-                      value={igrejaData.endereco || ''}
-                      onChange={(e) => setIgrejaData({ ...igrejaData, endereco: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="flex gap-4">
-                    <div className='text-white flex flex-col'>
-                      <label className="text-white text1 text-xl mt-1 mb-1">Bairro</label>
-                      <input
-                        type="text"
-                        className="px-4 py-3 rounded-lg text2 text-black"
-                        value={igrejaData.bairro || ''}
-                        onChange={(e) => setIgrejaData({ ...igrejaData, bairro: e.target.value })}
-                      />
-                    </div>
-
-                    <div className='text-white flex flex-col'>
-                      <label className="text-white text1 text-xl mt-1 mb-1">Cidade</label>
-                      <input
-                        type="text"
-                        className="px-4 py-3 rounded-lg text2 text-black"
-                        value={igrejaData.cidade || ''}
-                        onChange={(e) => setIgrejaData({ ...igrejaData, cidade: e.target.value })}
-                        />
-                    </div>
-                  </div>
-
-                  <div className='text-white flex flex-col'>
-                    <label className="text-white text1 text-xl mt-1 mb-1">Data de Fundação</label>
-                    <input
-                      type="date"
-                      className="px-4 py-3 rounded-lg text2 text-black"
-                      value={(format( new Date (igrejaData.data_fundacao), 'yyyy-MM-dd')) || ''}
-                      onChange={(e) => setIgrejaData({ ...igrejaData, data_fundacao: e.target.value })}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <p className="text-center py-4">Carregando dados da igreja...</p>
-              )}              
-              <div className="flex flex-col px-10 pb-10">
-                <button
-                  onClick={async () => {
-                  try {
-                    await api.put(`/igreja/${igrejaData.id_igreja}`, {
-                    ...igrejaData,
-                    data_fundacao: format(parseDateOnly(igrejaData.data_fundacao), 'yyyy-MM-dd'),
-                  });;
-                    setIsIgrejaModalOpen(false);
-                    notifySuccess();
-                  } catch (error) {
-                    console.error('Erro ao atualizar igreja:', error);
-                    alert('Erro ao atualizar. Tente novamente.');
-                  }
-                }}
-                  className="border-2 px-4 py-3 mt-7 rounded-lg text2 text-white text-lg"
-                >
-                  Editar
-                </button>
-              </div>
-            </div>
-          </AppModal>
-
-          <AppModal
-            isOpen={isEmailModalOpen}
-            onRequestClose={() => setIsEmailModalOpen(false)}
-            contentLabel="Alterar Email"
-            className="fixed inset-0 flex items-center justify-center"            
-          >
-            <div className="flex flex-col justify-center self-center bg-azul mt-[1vh] rounded-lg shadow-xl">
-              <div className='cursor-pointer flex place-content-end rounded-lg'>
-                <X onClick={() => setIsEmailModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
-              </div>
-
-              <h2 className="text-xl text1 font-bold text-white mb-4 px-10">Novo Email</h2>
-
-              <div className="flex flex-col px-10 gap-4">
-                <input
-                  type="email"
-                  placeholder="Digite o novo email"
-                  className="w-full px-4 py-3 rounded-lg text2 text-black"
-                  value={novoEmail}
-                  onChange={(e) => setNovoEmail(e.target.value)}
-                />
-                <input
-                  type="password"
-                  placeholder="Digite sua senha atual"
-                  autoComplete="current-password"
-                  className="w-full px-4 py-3 rounded-lg text2 text-black"
-                  value={senhaAtual}
-                  onChange={(e) => setSenhaAtual(e.target.value)}
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 py-5 pr-4">                
-                <button
-                  onClick={() => {
-                    if (!novoEmail || !novoEmail.includes('@')) {
-                      alert('Digite um email válido.');
-                      return;
-                    }
-                    setIsEmailModalOpen(false);
-                    setIsConfirmEmailModalOpen(true);
-                  }}
-                  className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg hover:bg-azul-escuro"
-                >
-                  Avançar
-                </button>
-              </div>
-            </div>
-          </AppModal>
-
-          <AppModal
-            isOpen={isConfirmEmailModalOpen}
-            onRequestClose={() => setIsConfirmEmailModalOpen(false)}
-            contentLabel="Confirmar Alteração de Email"
-            className="fixed inset-0 flex items-center bg-black bg-opacity-5 justify-center"
-          >
-            <div className="bg-white rounded-xl p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Confirmar Alteração</h2>
-
-              <p className="text-gray-600 mb-6">Tem certeza que deseja alterar o email para <b>{novoEmail}</b>?</p>
-
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setIsConfirmEmailModalOpen(false)}
-                  className="px-5 py-2 rounded-lg text-gray-700 hover:bg-gray-100"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      const id_user = sessionStorage.getItem('id_user');
-                      await api.put(`/cadastro/${id_user}`, { email: novoEmail, senha_atual: senhaAtual });
-                      setSenhaAtual('');
-                      sessionStorage.setItem('email', novoEmail);
-                      setIsConfirmEmailModalOpen(false);
-                      notifySuccessAlterEmail();
-                    } catch (error) {
-                      console.error('Erro ao alterar email:', error);
-                      setIsConfirmEmailModalOpen(false);
-                      setIsEmailModalOpen(true);
-                      alert(axios.isAxiosError(error) && error.response?.data?.message ? error.response.data.message : 'Erro ao alterar email. Tente novamente.');
-                    }
-                  }}
-                  className="px-5 py-2 bg-azul text-white rounded-lg hover:bg-azul-escuro"
-                >
-                  Sim, Alterar
-                </button>
-              </div>
-            </div>
-          </AppModal>
-
-          <AppModal
-            isOpen={isPasswordModalOpen}
-            onRequestClose={() => setIsPasswordModalOpen(false)}
-            contentLabel="Alterar Senha"
-            className="fixed inset-0 flex items-center justify-center"            
-          >
-            <div className="flex flex-col justify-center self-center bg-azul mt-[1vh] rounded-lg shadow-xl">
-              <div className='cursor-pointer flex place-content-end rounded-lg'>
-                <X onClick={() => setIsPasswordModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
-              </div>
-
-              <h2 className="text-xl text1 font-bold text-white mb-4 px-10">Nova Senha</h2>
-
-              <div className="flex flex-col px-10 gap-4">
-
-                <input
-                  type="password"
-                  placeholder="Digite sua senha atual"
-                  autoComplete="current-password"
-                  className="w-full px-4 py-3 rounded-lg text2 text-black"
-                  value={senhaAtual}
-                  onChange={(e) => setSenhaAtual(e.target.value)}
-                />
-
-                <input
-                  type="password"
-                  placeholder="Digite o nova senha"
-                  className="px-4 py-3 rounded-lg text2 text-black"
-                  value={novoPassword}
-                  onChange={(e) => setNovoPassword(e.target.value)}
-                />
-
-                <input
-                  type="password"
-                  placeholder="Confirme a nova senha"
-                  className="px-4 py-3 rounded-lg text2 text-black"
-                  value={confirmarPassword}
-                  onChange={(e) => setConfirmarPassword(e.target.value)}
-                />
-              </div>
-
-              <div className="flex justify-end space-x-3 py-5 pr-4">                
-                <button
-                  onClick={() => {
-                    if (!novoPassword || !confirmarPassword) {
-                      alert('Preencha os dois campos de senha.');
-                      return;
-                    }
-                    if (novoPassword !== confirmarPassword) {
-                      alert('As senhas não coincidem.');
-                      return;
-                    }
-                    setIsPasswordModalOpen(false);
-                    setIsConfirmPasswordModalOpen(true);
-                  }}
-                  className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg hover:bg-azul-escuro"
-                >
-                  Avançar
-                </button>
-              </div>
-            </div>
-          </AppModal>
-
-          <AppModal
-            isOpen={isConfirmPasswordModalOpen}
-            onRequestClose={() => setIsConfirmPasswordModalOpen(false)}
-            contentLabel="Confirmar Alteração de Senha"
-            className="fixed inset-0 flex items-center bg-black bg-opacity-5 justify-center"
-          >
-            <div className="bg-white rounded-xl p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">Confirmar Alteração</h2>
-
-              <p className="text-gray-600 mb-6">Tem certeza que deseja alterar sua senha?</p>
-
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setIsConfirmPasswordModalOpen(false)}
-                  className="px-5 py-2 rounded-lg text-gray-700 hover:bg-gray-100"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      const id_user = sessionStorage.getItem('id_user');
-                      await api.put(`/cadastro/${id_user}`, { senha: novoPassword, senha_atual: senhaAtual });
-                      setSenhaAtual('');
-                      setIsConfirmPasswordModalOpen(false);
-                      notifySuccessAlterPassword();
-                      setNovoPassword('');
-                      setConfirmarPassword('');
-                      setTimeout(() => {
-                        sessionStorage.clear();
-                        localStorage.clear();
-                        router.push('/pages/login');
-                      }, 1500);
-                    } catch (error) {
-                      console.error('Erro ao alterar senha:', error);
-                      setIsConfirmPasswordModalOpen(false);
-                      setIsPasswordModalOpen(true);
-                      alert(axios.isAxiosError(error) && error.response?.data?.message ? error.response.data.message : 'Erro ao alterar senha. Tente novamente.');
-                    }
-                  }}
-                  className="px-5 py-2 bg-azul text-white rounded-lg hover:bg-azul-escuro"
-                >
-                  Sim, Alterar
-                </button>
-              </div>
-            </div>
-          </AppModal>
-
-          <AppModal
-            isOpen={isBugModalOpen}
-            onRequestClose={() => setIsBugModalOpen(false)}
-            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40"
-          >
-            <div className="flex flex-col justify-center self-center bg-azul mt-[1vh] rounded-lg shadow-xl">
-              <div className='cursor-pointer flex place-content-end rounded-lg'>
-                <X onClick={() => setIsBugModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
-              </div>
-
-              <h2 className="text-xl text1 font-bold text-white mb-4 px-10">Relatar Bug</h2>
-
-              <div className="flex flex-col px-10 gap-4">
-                <select
-                  className="bg-white text-black w-full px-4 py-3 border rounded-lg"
-                  value={motivo}
-                  onChange={(e) => setMotivo(e.target.value)}
-                >
-                  <option value="">Selecione o Motivo</option>
-                  {categoriasBug.map((categoria, index) => (
-                    <option key={index} value={categoria}>
-                      {categoria}
-                    </option>
-                  ))}
-                </select>
-
-                <textarea
-                  placeholder="Descrição do Bug"
-                  className="w-full px-4 py-3 rounded-lg text2 text-black"
-                  rows={4}
-                  value={descricao}
-                  onChange={(e) => setDescricao(e.target.value)}
-                  />
-
-                <div className="flex justify-end space-x-3 py-5">                  
-                  <button
-                    onClick={handleEnviar}
-                    className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-black rounded-lg hover:bg-azul-escuro"
-                    >
-                    Enviar Relatório
-                  </button>
-                </div>
-              </div>
-            </div>
-          </AppModal>
-
-          <AppModal
-            isOpen={isPriavcyModalOpen} 
-            onRequestClose={() => setIsPrivacyModalOpen(false)}
-            contentLabel="Termo de Uso"
-            className="fixed inset-0 flex flex-col items-center justify-center p-4"
-            overlayClassName="fixed inset-0 bg-white bg-opacity-70"
-          >
-            <div className='flex flex-col justify-center self-center bg-azul mt-[15vh] rounded-lg shadow-xl'>
-              <div className='cursor-pointer flex place-content-end rounded-lg'>
-                  <X onClick={() => setIsPrivacyModalOpen(false)} width={40} height={40} aria-label='close Icon' className='bg-red-500 hover:bg-red-600 rounded-tr-lg'/>
-                </div>
-              <h2 className='text-white text1 text-4xl flex justify-center'>Termos de uso</h2>
-
-              <div className='flex flex-col bg-white w-full max-w-2xl p-4 sm:p-8 rounded-lg max-h-[calc(100dvh-2rem)] overflow-y-auto'>
-                <div>
-                  <h3 className='text1 text-black text-lg'>1. Consentimento</h3>
-                  <p className='text2 text-black leading-4 mt-1'>Ao utilizar o Sistema, você expressa seu<br/>consentimento para a coleta, armazenamento,<br/>processamento e uso dos seus dados pessoais de <br/>acordo com os termos estabelecidos neste Termo. <br/>Caso não concorde com estes termos, por favor, não <br/>prossiga utilizando o Sistema.</p>
-                </div>
-
-                <div className='mt-5'>
-                  <h3 className='text1 text-black text-lg'>2. Dados Coletados</h3>
-
-                  <p className='text2 text-black leading-4 mt-1'>O Sistema coleta e armazena os seguintes dados <br/>pessoais fornecidos por você:</p>
-                  <ul className='list-disc mt-2 pl-7'>
-                    <li className='text2 text-black leading-4'>Informações de identificação pessoal: nome, <br/>endereço de e-mail, número de telefone, entre <br/>outros, conforme necessário para o uso dos <br/>serviços oferecidos pelo Sistema.</li>
-
-                    <li className='text2 text-black leading-4 mt-2'>Informações de acesso: endereço IP, tipo de <br/>navegador, dados de cookies e outras <br/>informações de rastreamento coletadas <br/>automaticamente durante o uso do Sistema.</li>
-
-                    <li className='text2 text-black leading-4 mt-2'>Outras informações fornecidas voluntariamente <br/>por você durante a interação com o Sistema.</li>
-                  </ul>
-                </div>
-
-                <div className='mt-5'>
-                  <h3 className='text1 text-black text-lg'>3. Uso dos Dados</h3>
-
-                  <p className='text2 text-black leading-4 mt-1'>Os dados pessoais coletados são utilizados <br/>para os seguintes propósitos:</p>
-                  <ul className='list-disc mt-2 pl-7'>
-                    <li className='text2 text-black leading-4'>Prestação de serviços: para fornecer os serviços <br/>solicitados por você por meio do Sistema.</li>
-
-                    <li className='text2 text-black leading-4 mt-2'>Personalização: para personalizar sua experiência <br/>de usuário e fornecer conteúdo relevante.</li>
-
-                    <li className='text2 text-black leading-4 mt-2'>Comunicação: para responder a suas solicitações, <br/>fornecer suporte ao cliente e enviar comunicações <br/>relacionadas ao uso do Sistema.</li>
-
-                    <li className='text2 text-black leading-4 mt-2'>Melhoria do Sistema: para analisar o desempenho <br/>do Sistema, realizar pesquisas e desenvolver novos <br/>recursos.</li>
-                  </ul>
-                </div>
-
-                <div className='mt-5'>
-                  <h3 className='text1 text-black text-lg'>4. Compartilhamento de Dados</h3>
-
-                  <p className='text2 text-black leading-4 mt-1'>Seus dados pessoais podem ser compartilhados <br/>com terceiros apenas nas seguintes circunstâncias:</p>
-                  <ul className='list-disc mt-2 pl-7'>
-                    <li className='text2 text-black leading-4'>Parceiros de negócios: para fornecer serviços <br/>em conjunto ou facilitar transações relacionadas ao <br/>Sistema.</li>
-
-                    <li className='text2 text-black leading-4 mt-2'>Cumprimento legal: para cumprir obrigações legais, <br/>responder a processos legais ou proteger os direitos, <br/>propriedade ou segurança do Sistema ou de terceiros.</li>                                    
-                  </ul>
-                </div>
-
-                <div className='mt-5'>
-                  <h3 className='text1 text-black text-lg'>5. Segurança dos Dados</h3>
-
-                  <p className='text2 text-black leading-4 mt-1'>Empregamos medidas de segurança técnicas, <br/>administrativas e físicas para proteger seus dados <br/>pessoais contra acesso não autorizado, divulgação, <br/>alteração ou destruição.</p>                                
-                </div>
-
-                <div className='mt-5'>
-                  <h3 className='text1 text-black text-lg'>6. Seus Direitos</h3>
-
-                  <p className='text2 text-black leading-4 mt-1'>Você possui os seguintes direitos em relação aos <br/>seus dados pessoais:</p>
-                  <ul className='list-disc mt-2 pl-7'>
-                    <li className='text2 text-black leading-4'>Acessar e corrigir seus dados pessoais.</li>
-
-                    <li className='text2 text-black leading-4 mt-2'>Solicitar a exclusão de seus dados pessoais, sujeito <br/>às obrigações legais ou contratuais.</li>
-
-                    <li className='text2 text-black leading-4 mt-2'>Retirar o consentimento para o processamento de <br/>seus dados pessoais, quando aplicável.</li>
-                  </ul>
-                </div>
-
-                <div className='mt-5'>
-                  <h3 className='text1 text-black text-lg'>7. Alterações no Termo</h3>
-
-                  <p className='text2 text-black leading-4 mt-1'>Reservamo-nos o direito de atualizar este Termo <br/>periodicamente. Recomendamos que você reveja <br/>este Termo regularmente para estar ciente de <br/>quaisquer alterações.</p>
-                  <ul className='list-disc mt-2 pl-7'>
-                    <li className='text2 text-black leading-4'>Acessar e corrigir seus dados pessoais.</li>
-
-                    <li className='text2 text-black leading-4 mt-2'>Solicitar a exclusão de seus dados pessoais, sujeito <br/>às obrigações legais ou contratuais.</li>
-
-                    <li className='text2 text-black leading-4 mt-2'>Retirar o consentimento para o processamento de <br/>seus dados pessoais, quando aplicável.</li>
-                  </ul>
-                </div>
-
-                <div className='mt-5'>
-                  <h3 className='text1 text-black text-lg'>8. Contato</h3>
-
-                  <p className='text2 text-black leading-4 mt-1'>Se você tiver dúvidas ou preocupações sobre este <br/>Termo ou o uso de seus dados pessoais, entre em <br/>contato conosco através dos canais de comunicação <br/>fornecidos no Sistema.</p>                                
-                </div>
-
-                <div className='mt-5'>                                
-                  <p className='text2 text-black leading-4'>Ao aceitar este Termo, você reconhece ter lido, <br/>compreendido e concordado com os termos e <br/>condições aqui estabelecidos, bem como com o <br/>uso dos seus dados pessoais conforme descrito.</p>                                
-                </div>
-              </div>                
-            </div>
-          </AppModal>
-
-          <AppModal
-            isOpen={isDeleteAccountModalOpen}
-            onRequestClose={() => setIsDeleteAccountModalOpen(false)}
-            contentLabel="Apagar Conta"
-            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40"
-          >
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4 text-red-600">Apagar Conta</h2>
-              <p className="mb-6">Tem certeza que deseja apagar sua conta? Essa ação é <b>irreversível</b>.</p>
-
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setIsDeleteAccountModalOpen(false)}
-                  className="px-5 py-2 rounded-lg text-gray-700 hover:bg-gray-100"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => {
-                    setIsDeleteAccountModalOpen(false);
-                    setIsConfirmDeleteModalOpen(true);
-                  }}
-                  className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                >
-                  Continuar
-                </button>
-              </div>
-            </div>
-          </AppModal>
-
-          <AppModal
-            isOpen={isConfirmDeleteModalOpen}
-            onRequestClose={() => setIsConfirmDeleteModalOpen(false)}
-            contentLabel="Confirmar Apagar Conta"
-            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40"
-          >
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4 text-red-600">Confirme seu Email</h2>
-              <p className="mb-4">Digite o seu email para confirmar a exclusão da conta:</p>
-
-              <input
-                type="email"
-                placeholder="Digite seu email"
-                className="w-full mb-4 px-4 py-2 border rounded"
-                value={emailConfirmacao}
-                onChange={(e) => setEmailConfirmacao(e.target.value)}
-              />
-
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setIsConfirmDeleteModalOpen(false)}
-                  className="px-5 py-2 rounded-lg text-gray-700 hover:bg-gray-100"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleDeleteAccount}
-                  className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                >
-                  Apagar Conta
-                </button>
-              </div>
-            </div>
-          </AppModal>
-         </div>
-         <ToastContainer />
+    <PageShell
+      crumbs={[{ label: 'Início', href: '/pages/inicio' }, { label: 'Configurações' }]}
+      title="Configurações"
+      titleAside={<button type="button" className="out" onClick={() => setTela('logout')}>Encerrar Sessão<LogOut className="i" aria-hidden="true" /></button>}
+      after={<ToastContainer />}
+    >
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 20 }}>
+        <button type="button" className="opt" onClick={abrirDados}><Church className="i" aria-hidden="true" />Dados da Igreja<small>Visualizar dados da igreja</small></button>
+        <button type="button" className="opt" onClick={abrirEmail}><Mail className="i" aria-hidden="true" />Alterar Email<small>Novo email</small></button>
+        <button type="button" className="opt" onClick={abrirSenha}><KeyRound className="i" aria-hidden="true" />Alterar Senha<small>Nova senha</small></button>
+        <button type="button" className="opt" onClick={abrirBug}><Bug className="i" aria-hidden="true" />Relatar Bug<small>Descreva o seu bug</small></button>
+        <button type="button" className="opt dead" aria-disabled="true" title="Em breve"><MessageCircle className="i" aria-hidden="true" />Solicitar Suporte<small>Em breve</small></button>
+        <button type="button" className="opt" onClick={() => setTela('termos')}><ShieldCheck className="i" aria-hidden="true" />Privacidade<small>Termos de privacidade</small></button>
+        <button type="button" className="opt red" onClick={() => { setEmailConfirmacao(''); setTela('apagar'); }}><UserRoundX className="i" aria-hidden="true" />Apagar Conta<small>Deletar sua conta</small></button>
       </div>
-    </main>
-  )
+
+      <ConfirmDialog
+        open={tela === 'logout'} onCancel={fechar} onConfirm={encerrarSessao}
+        title="Sair da conta?" message="Você precisará fazer login novamente para acessar o sistema."
+        confirmLabel="Sair" icon={LogOut} tone="info"
+      />
+
+      <Modal
+        open={tela === 'dados'} onClose={fechar}
+        as={editando ? 'form' : 'div'} onSubmit={salvarIgreja}
+        title={editando ? 'Editar dados da igreja' : 'Dados da igreja'}
+        subtitle={editando ? 'As alterações valem para todos os usuários da igreja.' : 'Igreja vinculada à sua conta.'}
+      >
+        {igreja && !editando && (
+          <>
+            <div className="mx-b">
+              <div className="pf">
+                <span className="av" aria-hidden="true"><Church className="i" /></span>
+                <div>
+                  <h3 className="xc-tit">{igreja.nome}</h3>
+                  <span className={ehFilial ? 'tag tag-loc' : 'tag tag-mat'}>{tipoIgreja}{igreja.setor ? ` · ${/^setor/i.test(igreja.setor.trim()) ? igreja.setor.trim() : `Setor ${igreja.setor.trim()}`}` : ''}</span>
+                </div>
+              </div>
+              <div className="vw">
+                <ViewRow icon={Hash} label="CNPJ">{igreja.cnpj || '—'}</ViewRow>
+                <ViewRow icon={Church} label="Ministério">{igreja.ministerio || '—'}</ViewRow>
+                <ViewRow icon={Flag} label="Fundação">{fundacao(igreja.data_fundacao)}</ViewRow>
+                <ViewRow icon={MapPin} label="Endereço" top>
+                  {[igreja.endereco, igreja.bairro].filter(Boolean).join(' · ') || '—'}
+                  {(igreja.cidade || igreja.cep) && <><br />{[igreja.cidade, igreja.cep && `CEP ${igreja.cep}`].filter(Boolean).join(' · ')}</>}
+                </ViewRow>
+              </div>
+            </div>
+            {podeEditar && (
+              <div className="mx-f">
+                <button type="button" className="btn pri" onClick={() => setRascunho({ ...igreja, data_fundacao: igreja.data_fundacao ? String(igreja.data_fundacao).slice(0, 10) : '' })}><Pencil className="i s18" aria-hidden="true" />Editar</button>
+              </div>
+            )}
+          </>
+        )}
+        {rascunho && (
+          <>
+            <div className="mx-b">
+              <label className="sr" htmlFor="dg-nome">Nome da igreja</label>
+              <input id="dg-nome" className="ed-tit" maxLength={150} {...campo('nome')} />
+              <div className="ed-f"><span className="ed-l">Dados da igreja</span>
+                <div className="vw">
+                  <EditRow icon={Hash} label="CNPJ" htmlFor="dg-cnpj"><input id="dg-cnpj" className="ed-in" maxLength={18} {...campo('cnpj')} /></EditRow>
+                  <EditRow icon={Flag} label="Fundação" htmlFor="dg-fund"><input id="dg-fund" className="ed-in" type="date" {...campo('data_fundacao')} /></EditRow>
+                  <EditRow icon={Church} label="Ministério" htmlFor="dg-min"><input id="dg-min" className="ed-in" maxLength={100} {...campo('ministerio')} /></EditRow>
+                  <EditRow icon={Plus} label="Setor" htmlFor="dg-set"><input id="dg-set" className="ed-in" maxLength={50} {...campo('setor')} /></EditRow>
+                </div>
+              </div>
+              <div className="ed-f"><span className="ed-l">Endereço</span>
+                <div className="vw">
+                  <EditRow icon={MapPin} label="CEP" htmlFor="dg-cep"><input id="dg-cep" className="ed-in" maxLength={9} inputMode="numeric" {...campo('cep')} /></EditRow>
+                  <EditRow icon={Vazio} label="Rua e nº" htmlFor="dg-end"><input id="dg-end" className="ed-in" maxLength={200} {...campo('endereco')} /></EditRow>
+                  <EditRow icon={Vazio} label="Bairro" htmlFor="dg-bai"><input id="dg-bai" className="ed-in" maxLength={100} {...campo('bairro')} /></EditRow>
+                  <EditRow icon={Vazio} label="Cidade" htmlFor="dg-cid"><input id="dg-cid" className="ed-in" maxLength={100} {...campo('cidade')} /></EditRow>
+                </div>
+              </div>
+            </div>
+            <div className="mx-f">
+              <button type="button" className="btn ghost" onClick={() => setRascunho(null)}>Cancelar</button>
+              <button type="submit" className="btn pri" disabled={enviando}>Salvar alterações</button>
+            </div>
+          </>
+        )}
+      </Modal>
+
+      <Modal open={tela === 'email'} onClose={fechar} as="form" onSubmit={continuarEmail} title="Alterar email" subtitle="Você passará a entrar no sistema com o novo email.">
+        <div className="mx-b">
+          <div className="vw">
+            <EditRow icon={Mail} label="Novo email" htmlFor="em-n"><input id="em-n" className="ed-in" type="email" autoComplete="email" placeholder="nome@exemplo.com" value={novoEmail} onChange={(e) => setNovoEmail(e.target.value)} /></EditRow>
+            <EditRow icon={Lock} label="Senha atual" htmlFor="em-s"><input id="em-s" className="ed-in" type="password" autoComplete="current-password" placeholder="Para confirmar que é você" value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} /></EditRow>
+          </div>
+        </div>
+        <div className="mx-f"><button type="button" className="btn ghost" onClick={fechar}>Cancelar</button><button type="submit" className="btn pri">Continuar</button></div>
+      </Modal>
+      <ConfirmDialog
+        open={tela === 'emailOk'} onCancel={() => setTela('email')} onConfirm={alterarEmail} busy={enviando}
+        title="Alterar email?" message={<>Seu email de acesso passará a ser <strong style={{ color: '#0f172a' }}>{novoEmail.trim()}</strong>.</>}
+        confirmLabel="Sim, alterar" icon={Mail} tone="info"
+      />
+
+      <Modal open={tela === 'senha'} onClose={fechar} as="form" onSubmit={continuarSenha} title="Alterar senha" subtitle="Use uma senha que você não usa em outros sites.">
+        <div className="mx-b">
+          <div className="vw">
+            <EditRow icon={Lock} label="Senha atual" htmlFor="sn-a"><input id="sn-a" className="ed-in" type="password" autoComplete="current-password" value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} /></EditRow>
+            <EditRow icon={KeyRound} label="Nova senha" htmlFor="sn-n"><input id="sn-n" className="ed-in" type="password" autoComplete="new-password" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} /></EditRow>
+            <EditRow icon={Vazio} label="Confirmar" htmlFor="sn-c"><input id="sn-c" className="ed-in" type="password" autoComplete="new-password" placeholder="Repita a nova senha" value={confirmarSenha} onChange={(e) => setConfirmarSenha(e.target.value)} /></EditRow>
+          </div>
+        </div>
+        <div className="mx-f"><button type="button" className="btn ghost" onClick={fechar}>Cancelar</button><button type="submit" className="btn pri">Continuar</button></div>
+      </Modal>
+      <ConfirmDialog
+        open={tela === 'senhaOk'} onCancel={() => setTela('senha')} onConfirm={alterarSenha} busy={enviando}
+        title="Alterar senha?" message="Você sairá da conta e usará a nova senha no próximo login."
+        confirmLabel="Sim, alterar" icon={KeyRound} tone="info"
+      />
+
+      <Modal open={tela === 'bug'} onClose={fechar} as="form" onSubmit={enviarBug} title="Relatar bug" subtitle="Conte o que aconteceu. Isso ajuda a corrigir mais rápido.">
+        <div className="mx-b">
+          <div className="ed-f"><span className="ed-l" id="bg-m-l">Motivo</span>
+            <div className="chips" role="radiogroup" aria-labelledby="bg-m-l">
+              {MOTIVOS.map((m) => <label key={m}><input type="radio" name="bg-m" value={m} checked={motivo === m} onChange={() => setMotivo(m)} />{m}</label>)}
+            </div>
+          </div>
+          <div className="ed-f"><label className="ed-l" htmlFor="bg-d">O que aconteceu?</label><textarea id="bg-d" className="ed-in" maxLength={2000} placeholder="Ex.: ao salvar um membro, a tela ficou em branco..." value={descricao} onChange={(e) => setDescricao(e.target.value)} /></div>
+        </div>
+        <div className="mx-f"><button type="button" className="btn ghost" onClick={fechar}>Cancelar</button><button type="submit" className="btn pri" disabled={enviando}>Enviar relatório</button></div>
+      </Modal>
+
+      <Modal open={tela === 'termos'} onClose={fechar} title="Termos de privacidade" subtitle="Como seus dados são usados no Obreiro Digital.">
+        <div className="mx-b term">
+          <TermosConteudo />
+        </div>
+        <div className="mx-f"><button type="button" className="btn pri" onClick={fechar}>Entendi</button></div>
+      </Modal>
+
+      <ConfirmDialog
+        open={tela === 'apagar'} onCancel={fechar} onConfirm={() => setTela('apagarOk')}
+        title="Apagar conta?" message="Todos os dados da sua conta serão removidos. Essa ação não pode ser desfeita."
+        confirmLabel="Continuar" icon={UserRoundX}
+      />
+      <Modal open={tela === 'apagarOk'} onClose={fechar} size="sm" role="alertdialog" as="form" onSubmit={apagarConta}>
+        <div className="mx-cf">
+          <span className="mx-ico"><Mail className="i" aria-hidden="true" /></span>
+          <h2>Confirme seu email</h2>
+          <p>Digite o email da conta para confirmar a exclusão.</p>
+          <div className="ed-f"><label htmlFor="ap-e" className="sr">Email</label><input id="ap-e" className="ed-in" type="email" autoComplete="off" placeholder="nome@exemplo.com" value={emailConfirmacao} onChange={(e) => setEmailConfirmacao(e.target.value)} /></div>
+        </div>
+        <div className="mx-f"><button type="button" className="btn" onClick={fechar}>Cancelar</button><button type="submit" className="btn dng" disabled={enviando}>Apagar conta</button></div>
+      </Modal>
+    </PageShell>
+  );
 }

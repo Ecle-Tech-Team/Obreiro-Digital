@@ -1,39 +1,36 @@
 'use client'
-import React from 'react'
-import { Eye, EyeOff } from 'lucide-react'
-import Image from 'next/image'
-import api from '../../api/api';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import logo from '@/public/images/icon-white.png';
-import axios from 'axios';
+import { ArrowRight, CircleAlert, CircleCheck, Info, Lock, Mail } from 'lucide-react';
 
-interface Igreja {
-  id_igreja: number;
-  nome: string;
-};
+import { AuthInput, AuthShell, AuthSteps, EMAIL_RE, FieldError, PasswordInput, SENHA_MIN } from '@/app/components/auth/AuthParts';
+import { TermosConteudo } from '@/app/components/auth/Termos';
+import { Modal } from '@/app/components/ui/Modal';
+import { apiMessage } from '@/app/components/ui/PageParts';
+import api from '../../api/api';
 
-export default function cadastroPastor() {
-  const [cod_membro, setCodMembro] = useState<string>('');
-  const [nome, setNome] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
-  const [senha, setSenha] = useState<string>('');
-  const [birth, setBirth] = useState<string>('');
-  const [cargo, setCargo] = useState<string>('Pastor Matriz');
-  const [nomeIgreja, setNomeIgreja] = useState<number>(0)
+const vazio = { nome: '', cod_membro: '', birth: '', email: '', senha: '' };
+type Campo = keyof typeof vazio | 'termos';
+const hoje = () => new Date().toISOString().slice(0, 10);
 
-  const [showPassword, setShowPassword] = useState(false);
+export default function CadastroPastor() {
+  const [dados, setDados] = useState(vazio);
+  const [erros, setErros] = useState<Partial<Record<Campo, string>>>({});
+  const [enviando, setEnviando] = useState(false);
+  const [pronto, setPronto] = useState(false);
+  const [carregado, setCarregado] = useState(false);
 
-  const router = useRouter();
-
-  const [igreja, setIgreja] = useState<Igreja[]>([]);
+  // Cadastro normal: a igreja acabou de ser criada na etapa anterior.
+  const [igreja, setIgreja] = useState<{ id: number; nome: string } | null>(null);
 
   // Convite de filial: o código chega depois do "#" no link enviado pela matriz.
-  const [conviteToken, setConviteToken] = useState<string>('');
+  const [conviteToken, setConviteToken] = useState('');
   const [convite, setConvite] = useState<{ igreja: string; matriz: string | null } | null>(null);
-  const [conviteErro, setConviteErro] = useState<string>('');
+  const [conviteErro, setConviteErro] = useState('');
+  const [aceito, setAceito] = useState(false);
+  const [verTermos, setVerTermos] = useState(false);
 
   useEffect(() => {
     let token = '';
@@ -47,262 +44,126 @@ export default function cadastroPastor() {
       } else {
         token = sessionStorage.getItem('conviteToken') || '';
       }
+      const id = Number(sessionStorage.getItem('igrejaCadastroId'));
+      if (!token && id) setIgreja({ id, nome: sessionStorage.getItem('igrejaCadastroNome') || 'Igreja cadastrada' });
     } catch { /* armazenamento indisponível */ }
+    setCarregado(true);
     if (!token) return;
     setConviteToken(token);
-    setCargo('Pastor');
     api.post('/convite/validar', { token })
       .then(({ data }) => setConvite(data))
       .catch(() => setConviteErro('Este convite é inválido, expirou ou já foi utilizado. Peça um novo link à sua igreja matriz.'));
   }, []);
 
-  useEffect(() => {
-    const fetchIgrejas = async () => {
-      try {
-        const igrejaCadastroId = Number(sessionStorage.getItem('igrejaCadastroId'));
-        if (igrejaCadastroId) {
-          setIgreja([{ id_igreja: igrejaCadastroId, nome: sessionStorage.getItem('igrejaCadastroNome') || 'Igreja cadastrada' }]);
-          setNomeIgreja(igrejaCadastroId);
-        }
-      } catch (error) {
-        console.error('Error fetching igrejas:', error);
-      }
-    };
+  const set = (k: keyof typeof vazio, v: string) => { setDados((d) => ({ ...d, [k]: v })); setErros((e) => ({ ...e, [k]: undefined })); };
+  const campo = (k: keyof typeof vazio) => ({ value: dados[k], error: erros[k], onChange: (e: React.ChangeEvent<HTMLInputElement>) => set(k, e.target.value) });
 
-    fetchIgrejas()
-  }, []);
+  async function cadastrar(event: React.FormEvent) {
+    event.preventDefault();
+    const novos: Partial<Record<Campo, string>> = {};
+    if (!dados.nome.trim()) novos.nome = 'Informe o nome completo.';
+    if (!dados.cod_membro.trim()) novos.cod_membro = 'Informe o código de membro.';
+    if (!dados.birth) novos.birth = 'Informe a data de nascimento.';
+    else if (dados.birth > hoje()) novos.birth = 'A data de nascimento não pode estar no futuro.';
+    if (!dados.email.trim()) novos.email = 'Informe o email.';
+    else if (!EMAIL_RE.test(dados.email.trim())) novos.email = 'Insira um email válido, como nome@igreja.com.br.';
+    if (dados.senha.length < SENHA_MIN) novos.senha = `A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`;
+    if (conviteToken && !aceito) novos.termos = 'Aceite os termos de uso para continuar.';
+    setErros(novos);
+    const primeiro = (['nome', 'cod_membro', 'birth', 'email', 'senha', 'termos'] as Campo[]).find((k) => novos[k]);
+    if (primeiro) return void document.getElementById(`cp-${primeiro}`)?.focus();
 
-  async function handleRegister(event: React.FormEvent) {
-    event.preventDefault();        
-
-    const specialCharactersRegex = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/;
-    const invalidCharactersRegex = /[^a-zA-Z\s]/;
-
-    const notifySuccess = () => {
-      toast.success('Pastor cadastrado com sucesso!', {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-        });
-    }
-
-    const notifyWarn = () => {
-      toast.warn('Todos os campos devem ser preenchidos!', {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-        });
-    }
-
-    const notifyError = () => {
-      toast.error('Erro no cadastro, Tente novamente.', {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    }
-    
-    try{
-      if(cod_membro === "" || nome === "" || email === "" || senha === "" ||  birth === "" || cargo === "" || (!conviteToken && nomeIgreja === 0)) {
-          notifyWarn();
-          return;
-      } else if (senha.length < 10) {
-        toast.warn('A senha deve ter pelo menos 10 caracteres.', { position: "top-center", autoClose: 3000 });
-        return;
-      } else if (conviteToken) {
-        if (!convite) { toast.error(conviteErro || 'Convite inválido.', { position: "top-center" }); return; }
-        await api.post('/cadastro', { cod_membro, nome, email, senha, birth, convite_token: conviteToken });
+    const base = { cod_membro: dados.cod_membro.trim(), nome: dados.nome.trim(), email: dados.email.trim(), senha: dados.senha, birth: dados.birth };
+    setEnviando(true);
+    try {
+      if (conviteToken) {
+        if (!convite) throw new Error(conviteErro || 'Convite inválido.');
+        await api.post('/cadastro', { ...base, convite_token: conviteToken });
         try { sessionStorage.removeItem('conviteToken'); } catch { /* armazenamento indisponível */ }
-        notifySuccess();
-        setTimeout(() => { router.push('/pages/login', { scroll: false }); }, 1500);
       } else {
-        const data = {              
-          cod_membro,
-          nome,
-          email,
-          senha,
-          birth,
-          cargo,
-          id_igreja: nomeIgreja,
-          registration_token: sessionStorage.getItem('igrejaCadastroToken')
-        }           
-       
-        await api.post('/cadastro', data)
+        if (!igreja) throw new Error('Cadastre a igreja antes do pastor.');
+        await api.post('/cadastro', { ...base, cargo: 'Pastor Matriz', id_igreja: igreja.id, registration_token: sessionStorage.getItem('igrejaCadastroToken') });
         sessionStorage.removeItem('igrejaCadastroId');
         sessionStorage.removeItem('igrejaCadastroToken');
         sessionStorage.removeItem('igrejaCadastroNome');
-        
-        notifySuccess();
-
-        setTimeout(() => {
-          router.push('/pages/login', { scroll: false });
-      }, 1500);
       }
+      setPronto(true);
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.data?.message) {
-        toast.error(String(error.response.data.message), { position: "top-center", autoClose: 4000 });
-      } else {
-        notifyError();
-      }
+      toast.error(error instanceof Error && !('isAxiosError' in error) ? error.message : apiMessage(error, 'Não foi possível concluir o cadastro. Tente novamente.'), { position: 'top-center', autoClose: 4000 });
+    } finally {
+      setEnviando(false);
     }
-  }  
+  }
+
+  const semOrigem = carregado && !conviteToken && !igreja && !pronto;
+
   return (
-    <main className='registration-page'>
-        <div className='bg-azul min-h-screen flex justify-center px-4 py-8'>
-            <div className='flex justify-center items-center w-full'>
-              <div className='w-full max-w-xl'>
-                <div className='flex justify-center'>
-                  <Image src={logo} width={75} height={10} alt=''/>
-                  <h2 className='ml-3 font-extrabold text-4xl text-white text1'>OBREIRO<br/>DIGITAL</h2>
+    <AuthShell wide after={<ToastContainer />}>
+      {!conviteToken && <AuthSteps steps={['Igreja', 'Termos', 'Pastor']} current={pronto ? 3 : 2} />}
+
+      {pronto ? (
+        <div className="au-done" role="status">
+          <span className="au-done-ico" aria-hidden="true"><CircleCheck className="i" /></span>
+          <h1 className="au-h1" style={{ marginTop: 0 }}>Tudo pronto!</h1>
+          <p className="au-sub">{conviteToken ? 'Sua conta de pastor foi criada.' : 'A igreja e o pastor foram cadastrados.'} Use o email e a senha que você acabou de criar para entrar.</p>
+          <Link href="/pages/login" className="au-btn" style={{ marginTop: 24 }}>Ir para o login<ArrowRight className="i" aria-hidden="true" /></Link>
+        </div>
+      ) : semOrigem ? (
+        <div className="au-done">
+          <h1 className="au-h1" style={{ marginTop: 0 }}>Comece pelo cadastro da igreja</h1>
+          <p className="au-sub">O pastor é cadastrado logo depois da igreja. Se você recebeu um convite de filial, abra o link que a matriz enviou.</p>
+          <Link href="/pages/cadastroIgreja" className="au-btn" style={{ marginTop: 24 }}>Cadastrar igreja<ArrowRight className="i" aria-hidden="true" /></Link>
+        </div>
+      ) : (
+        <>
+          <h1 className="au-h1">{conviteToken ? 'Crie sua conta de pastor' : 'Cadastre o pastor responsável'}</h1>
+          <p className="au-sub">{conviteToken ? 'Você vai administrar a filial no Obreiro Digital.' : 'Ele será o primeiro a acessar o painel da igreja e poderá cadastrar os obreiros depois.'}</p>
+          {conviteToken && (
+            <p className={conviteErro ? 'au-note' : 'au-note ok'} role="status" style={conviteErro ? { background: '#fef2f2', color: '#991b1b' } : undefined}>
+              {conviteErro ? <CircleAlert className="i" aria-hidden="true" /> : <Info className="i" aria-hidden="true" />}
+              <span>{conviteErro || (convite ? `Você foi convidado para ser pastor da ${convite.igreja}${convite.matriz ? ` (filial de ${convite.matriz})` : ''}.` : 'Verificando convite…')}</span>
+            </p>
+          )}
+          <form className="au-form" onSubmit={cadastrar} noValidate>
+            <div className="au-sec">
+              <p className="au-sec-t">Dados pessoais</p>
+              <div className="au-grid">
+                <div className="au-f full"><label htmlFor="cp-nome">Nome completo</label><AuthInput id="cp-nome" type="text" autoComplete="name" maxLength={150} {...campo('nome')} /></div>
+                <div className="au-f"><label htmlFor="cp-cod_membro">Código de membro</label><AuthInput id="cp-cod_membro" type="text" maxLength={50} placeholder="Ex.: M-0001" {...campo('cod_membro')} /></div>
+                <div className="au-f"><label htmlFor="cp-birth">Data de nascimento</label><AuthInput id="cp-birth" type="date" max={hoje()} autoComplete="bday" {...campo('birth')} /></div>
+                <div className="au-f full">
+                  <label htmlFor="cp-igreja">Igreja</label>
+                  <input id="cp-igreja" className="au-in" readOnly value={conviteToken ? convite?.igreja || '—' : igreja?.nome || ''} style={{ background: '#f8fafc', color: '#475569' }} />
                 </div>
-
-                <div className='flex flex-col'>
-                        <div>
-                            <h1 className='text-white text-4xl mt-10 text1 flex justify-center'>Cadastro de Pastor</h1>
-                            {conviteToken ? (
-                              <p className='text-white text-xl text2 mt-2 flex justify-center text-center mb-6'>
-                                {conviteErro || (convite
-                                  ? `Você foi convidado para ser pastor da ${convite.igreja}${convite.matriz ? ` (filial de ${convite.matriz})` : ''}. Crie sua conta abaixo.`
-                                  : 'Verificando convite...')}
-                              </p>
-                            ) : (
-                              <p className='text-white text-xl text2 mt-2 flex justify-center mb-6'>Agora, cadastre o Pastor da sua igreja para acessar o sistema</p>
-                            )}
-                        </div>
-                        <div className='registration-fields'>
-                            <div className='flex flex-col'>
-                                <label className='text-white text1 text-xl mt-2 mb-1'>Código de Membro</label>
-
-                                <input 
-                                  className='px-4 py-3.5 mb-1 text2 rounded-lg text-black' 
-                                  type="text" 
-                                  placeholder='Digite o Código...'
-                                  value={cod_membro}
-                                  onChange={e => setCodMembro(e.target.value)}
-                                  maxLength={16}                                    
-                                />
-                            </div>
-                            
-                            
-                            <div className='flex flex-col'>
-                              <label className='text-white text1 text-xl mt-2 mb-1'>Nome</label>
-
-                              <input 
-                                className='px-4 py-3 mb-1 text2 rounded-lg text-black' 
-                                type="text" 
-                                placeholder='Digite o Nome...'
-                                value={nome}
-                                onChange={e => setNome(e.target.value)}
-                                maxLength={150}
-                                required
-                              />
-                            </div>
-
-                            <div className='flex flex-col'>
-                              <label className='text-white text1 text-xl mt-2 mb-1'>Email</label>
-
-                              <input 
-                                className='px-4 py-3 mb-1 text2 rounded-lg text-black' 
-                                type="email" 
-                                placeholder='Digite o Email'
-                                value={email}
-                                onChange={e => setEmail(e.target.value)}
-                                maxLength={150}
-                                required
-                              />
-                            </div>
-                            
-
-                                <div className='flex flex-col'>
-                                    <label className='text-white text1 text-xl mt-2 mb-1'>Senha</label>
-
-                                    <div className='flex'>
-                                      <input 
-                                        className='px-4 py-3 mb-1 w-[30vh] text2 rounded-lg text-black' 
-                                        type={showPassword ? 'text' : 'password'}
-                                        placeholder='Mínimo de 10 caracteres'
-                                        value={senha}
-                                        onChange={e => setSenha(e.target.value)}
-                                        minLength={10}
-                                        maxLength={64}
-                                        autoComplete='new-password'
-                                        required
-                                      />
-
-                                      <button 
-                                        type='button'
-                                        className='ml-[1vh]'
-                                        onClick={() => setShowPassword(!showPassword)}
-                                      >
-                                        {showPassword ? <Eye size={28} aria-hidden="true" /> : <EyeOff size={28} aria-hidden="true" />}
-                                      </button>
-                                    </div>                                
-                                </div>                            
-
-                            <div className='flex'>
-                              <div className='flex flex-col'>
-                                <label className='text-white text1 text-xl mt-2 mb-1'>Data de Nascimento</label>
-
-                                <input 
-                                  className='px-4 py-3 mb-1 w-[30vh] text2 rounded-lg text-black' 
-                                  type="date" 
-                                  value={birth}
-                                  onChange={e => setBirth(e.target.value)}
-                                  required
-                                />
-                              </div>
-
-                              {conviteToken ? (
-                              <div className='flex flex-col ml-5'>
-                                <label className='text-white text1 text-xl mt-2 mb-1'>Igreja</label>
-                                <p className='bg-white px-4 py-3 mb-1 w-[32vh] text2 rounded-lg text-black'>{convite?.igreja || '—'}</p>
-                              </div>
-                              ) : (
-                              <div className='flex flex-col ml-5'>
-                                <label className='text-white text1 text-xl mt-2 mb-1'>Endereço</label>
-
-                                <select 
-                                  className='bg-white px-4 py-3 mb-1 w-[32vh] text2 rounded-lg text-black'
-                                  value={nomeIgreja}
-                                  onChange={e => setNomeIgreja(Number(e.target.value))}                                      
-                                  required
-                                >
-                                  <option value={0} disabled>Selecione uma Igreja</option>
-                                  {igreja.map((igreja) => (
-                                    <option
-                                      key={igreja.id_igreja}
-                                      value={igreja.id_igreja}
-                                    >
-                                      {igreja.nome}
-                                    </option>                      
-                                  ))}       
-                                </select>
-                              </div>
-                              )}
-                            </div>                           
-                            
-                            <button type='submit' className='border-2 rounded-lg h-12 w-full mt-3 border-white text2 text-white active:bg-white active:text-azul' onClick={handleRegister}>Cadastrar</button>
-                            <ToastContainer />
-                        </div>
-                    </div>
               </div>
             </div>
-        </div>
-    </main>
-  )
+            <div className="au-sec">
+              <p className="au-sec-t">Acesso ao sistema</p>
+              <div className="au-f"><label htmlFor="cp-email">Email</label><AuthInput id="cp-email" icon={Mail} type="email" inputMode="email" autoComplete="email" maxLength={254} placeholder="nome@igreja.com.br" {...campo('email')} /></div>
+              <div className="au-f">
+                <label htmlFor="cp-senha">Senha</label>
+                <PasswordInput id="cp-senha" icon={Lock} autoComplete="new-password" maxLength={1024} aria-describedby="cp-hint" {...campo('senha')} />
+                <p className="au-hint" id="cp-hint">Mínimo de {SENHA_MIN} caracteres.</p>
+              </div>
+            </div>
+            {conviteToken && (
+              <div className="au-f">
+                <label className="au-check">
+                  <input id="cp-termos" type="checkbox" checked={aceito} aria-describedby={erros.termos ? 'cp-termos-err' : undefined} onChange={(e) => { setAceito(e.target.checked); setErros((x) => ({ ...x, termos: undefined })); }} />
+                  <span>Li e concordo com os <button type="button" className="au-link" style={{ border: 0, background: 'none', padding: 0, fontSize: 15 }} onClick={() => setVerTermos(true)}>termos de uso</button>.</span>
+                </label>
+                <FieldError id="cp-termos-err">{erros.termos}</FieldError>
+              </div>
+            )}
+            <button type="submit" className="au-btn" disabled={enviando || (!!conviteToken && !convite)}>{enviando ? 'Cadastrando…' : 'Concluir cadastro'}</button>
+          </form>
+        </>
+      )}
+
+      <Modal open={verTermos} onClose={() => setVerTermos(false)} title="Termos de uso" subtitle="Como seus dados são usados no Obreiro Digital.">
+        <div className="mx-b term"><TermosConteudo /></div>
+        <div className="mx-f"><button type="button" className="btn pri" onClick={() => { setAceito(true); setVerTermos(false); }}>Aceitar</button></div>
+      </Modal>
+    </AuthShell>
+  );
 }

@@ -34,7 +34,8 @@ export function Modal({ open, onClose, title, subtitle, size = 'md', sheet = fal
     document.addEventListener('keydown', onKey);
     // Leva o foco para o primeiro campo (ou botão) do modal.
     const first = boxRef.current?.querySelector<HTMLElement>('input:not([type=hidden]):not([disabled]), textarea, select, button:not(.mx-x)');
-    (first ?? boxRef.current)?.focus();
+    // Sem rolar: em textos longos (termos) o conteúdo continua aparecendo do começo.
+    (first ?? boxRef.current)?.focus({ preventScroll: true });
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = overflow;

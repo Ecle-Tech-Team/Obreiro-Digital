@@ -1,243 +1,102 @@
 "use client";
-import React from "react";
-import { Eye, EyeOff } from "lucide-react";
-import Image from "next/image";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import api from "../../api/api";
-import axios from "axios";
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import logo from "@/public/images/icon-white.png";
+import { ArrowRight, Info, Lock, Mail } from "lucide-react";
+
+import { AuthInput, AuthShell, EMAIL_RE, PasswordInput } from "@/app/components/auth/AuthParts";
+import api from "../../api/api";
+
+type Erros = { email?: string; senha?: string };
 
 export default function Login() {
-  const [email, setEmail] = useState<string>("");
-  const [senha, setSenha] = useState<string>("");
-  const [showPassword, setShowPassword] = useState(false);
-
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [erros, setErros] = useState<Erros>({});
+  const [enviando, setEnviando] = useState(false);
+  const [expirou, setExpirou] = useState(false);
 
   // Aviso quando o usuário foi trazido ao login porque a sessão expirou.
   useEffect(() => {
     try {
       if (sessionStorage.getItem("sessaoExpirada")) {
         sessionStorage.removeItem("sessaoExpirada");
-        toast.info("Sua sessão expirou. Entre novamente.", { position: "top-center", autoClose: 3000 });
+        setExpirou(true);
       }
     } catch { /* armazenamento indisponível */ }
   }, []);
 
-  async function handleLogin(event: React.FormEvent) {
+  async function entrar(event: React.FormEvent) {
     event.preventDefault();
+    const e = email.trim();
+    const novos: Erros = {};
+    if (!e) novos.email = "Informe seu email.";
+    else if (!EMAIL_RE.test(e)) novos.email = "Insira um email válido, como nome@igreja.com.br.";
+    if (!senha) novos.senha = "Informe sua senha.";
+    setErros(novos);
+    if (novos.email || novos.senha) {
+      document.getElementById(novos.email ? "email" : "password")?.focus();
+      return;
+    }
 
-    const notifySuccess = () => {
-      toast.success("Login realizado com sucesso!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyWarn = () => {
-      toast.warn("Preencha os campos!", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyError = () => {
-      toast.error("Erro no login, Tente novamente.", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
-    const notifyInvalidEmail = () => {
-      toast.error("Por favor, insira um email válido.", {
-        position: "top-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "colored",
-      });
-    };
-
+    setEnviando(true);
     try {
-      if (!email || !senha) {
-        notifyWarn();
-        return;
-      }
+      const { data } = await api.post("/login", { email: e, senha });
+      const user = data.user;
+      sessionStorage.setItem("id_user", user.id_user);
+      sessionStorage.setItem("nome", user.nome);
+      sessionStorage.setItem("cargo", user.cargo);
+      sessionStorage.setItem("id_igreja", user.id_igreja);
+      sessionStorage.setItem("email", e);
+      sessionStorage.setItem("id_matriz", user.id_matriz);
 
-      // Validação de formato de email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        notifyInvalidEmail();
-        return;
-      } else {
-        const dataLogin = {
-          email,
-          senha,
-        };
-
-        const response = await api.post("/login", dataLogin);
-        const userData = response.data.user;
-
-        sessionStorage.setItem("id_user", userData.id_user);
-        sessionStorage.setItem("nome", userData.nome);
-        sessionStorage.setItem("cargo", userData.cargo);
-        sessionStorage.setItem("id_igreja", userData.id_igreja);
-        sessionStorage.setItem("email", email);
-        sessionStorage.setItem("id_matriz", userData.id_matriz);
-
-        notifySuccess();
-
-        if (userData.cargo === "Pastor" || userData.cargo === "Pastor Matriz") {
-          setTimeout(() => {
-            router.push("/pages/inicio", { scroll: false });
-          }, 1500);
-        } else if (
-          userData.cargo === "Obreiro" || userData.cargo === "Obreiro Matriz"
-        ) {
-          setTimeout(() => {
-            router.push("/pages/inicioMobile", { scroll: false });
-          }, 1500);
-        }
-      }
+      toast.success("Login realizado com sucesso!", { position: "top-center", autoClose: 1200 });
+      const destino = user.cargo === "Pastor" || user.cargo === "Pastor Matriz" ? "/pages/inicio" : "/pages/inicioMobile";
+      setTimeout(() => router.push(destino, { scroll: false }), 1200);
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
-        toast.error("Email ou senha incorretos.", { position: "top-center" });
+      setEnviando(false);
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      if (status === 401) {
+        setErros({ senha: "Email ou senha incorretos." });
+        document.getElementById("password")?.focus();
+      } else if (status === 429) {
+        toast.error("Muitas tentativas. Aguarde alguns minutos e tente de novo.", { position: "top-center", autoClose: 5000 });
       } else {
-        notifyError();
+        toast.error("Não foi possível entrar agora. Tente novamente.", { position: "top-center", autoClose: 4000 });
       }
     }
   }
+
   return (
-    <main className="min-h-screen bg-azul flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo e título */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center items-center mb-4">
-            <Image
-              src={logo}
-              width={64}
-              height={64}
-              alt="Obreiro Digital"
-              className="drop-shadow-lg"
-              priority
-            />
-            <h1 className="ml-4 font-extrabold text-3xl xs:text-4xl sm:text-5xl text-white text1">
-              OBREIRO<br />DIGITAL
-            </h1>
-          </div>
-
-          <h2 className="text-white text-2xl xs:text-3xl sm:text-4xl text1 mb-2">
-            Login
-          </h2>
-          <p className="text-white text-lg text2 opacity-90">
-            Bem-vindo(a) de volta!
-          </p>
+    <AuthShell after={<ToastContainer />}>
+      <p className="au-eyebrow">Acesso</p>
+      <h1 className="au-h1">Bem-vindo de volta</h1>
+      <p className="au-sub">Entre com seu email e senha para acessar o Obreiro Digital.</p>
+      {expirou && <p className="au-note" role="status"><Info className="i" aria-hidden="true" /><span>Sua sessão expirou. Entre novamente.</span></p>}
+      <form className="au-form" onSubmit={entrar} noValidate>
+        <div className="au-f">
+          <label htmlFor="email">Email</label>
+          <AuthInput
+            id="email" icon={Mail} type="email" inputMode="email" autoComplete="email" placeholder="nome@igreja.com.br" maxLength={254}
+            value={email} error={erros.email}
+            onChange={(ev) => { setEmail(ev.target.value); setErros((x) => ({ ...x, email: undefined })); }}
+          />
         </div>
-
-        {/* Formulário */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 xs:p-8 shadow-2xl">
-
-          {/* Campo Email */}
-          <div className="mb-6">
-            <label htmlFor="email" className="block text-white text1 text-lg mb-2">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              placeholder="Digite seu email..."
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3.5 rounded-xl text2 text-gray-800 bg-white/95 border border-white/30 focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 focus:outline-none transition-all duration-200"
-              required
-              autoComplete="email"
-              inputMode="email"
-            />
-          </div>
-
-          {/* Campo Senha */}
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <label htmlFor="password" className="block text-white text1 text-lg">
-                Senha
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="text-white text2 text-sm hover:text-blue-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 rounded p-1"
-                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-              >
-                {showPassword ? <Eye size={24} aria-hidden="true" /> : <EyeOff size={24} aria-hidden="true" />}
-              </button>
-            </div>
-            <input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              placeholder="Digite sua senha..."
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              className="w-full px-4 py-3.5 rounded-xl text2 text-gray-800 bg-white/95 border border-white/30 focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 focus:outline-none transition-all duration-200"
-              required
-              autoComplete="current-password"
-            />
-          </div>
-
-          {/* Botão de Login */}
-          <button
-            type="submit"
-            onClick={handleLogin}
-            className="w-full py-3.5 px-4 bg-white text-azul text1 text-lg rounded-xl hover:bg-blue-50 active:bg-blue-100 border-2 border-white hover:border-blue-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 font-semibold shadow-lg hover:shadow-xl active:shadow-md"
-          >
-            Entrar
-          </button>
-
-          <ToastContainer />
-
-          {/* Links adicionais */}
-          <div className="mt-8 pt-6 border-t border-white/20">
-            <Link href="/pages/recuperarSenha" className="block w-full text-center text-white text2 text-sm hover:text-blue-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 rounded py-2">
-              Esqueci a senha
-            </Link>
-
-            <div className="text-center mt-4">
-              <p className="text-white text2 text-sm">
-                Novo por aqui?{' '}
-                <Link
-                  href={"/../../pages/cadastroIgreja"}
-                  className="text1 text-white hover:text-blue-200 font-semibold transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 rounded"
-                >
-                  Cadastre-se
-                </Link>
-              </p>
-            </div>
-          </div>
+        <div className="au-f">
+          <div className="au-lrow"><label htmlFor="password">Senha</label><Link href="/pages/recuperarSenha" className="au-link">Esqueci a senha</Link></div>
+          <PasswordInput
+            id="password" icon={Lock} autoComplete="current-password" placeholder="Sua senha" maxLength={1024}
+            value={senha} error={erros.senha}
+            onChange={(ev) => { setSenha(ev.target.value); setErros((x) => ({ ...x, senha: undefined })); }}
+          />
         </div>
-      </div>
-    </main>
+        <button type="submit" className="au-btn" disabled={enviando}>{enviando ? "Entrando…" : "Entrar"}<ArrowRight className="i" aria-hidden="true" /></button>
+      </form>
+      <p className="au-foot">Novo por aqui? <Link href="/pages/cadastroIgreja" className="au-link" style={{ fontSize: 15 }}>Cadastre sua igreja</Link></p>
+    </AuthShell>
   );
 }

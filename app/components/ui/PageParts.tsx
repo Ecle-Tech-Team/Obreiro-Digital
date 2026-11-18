@@ -16,12 +16,26 @@ export function useClickOutside(ref: React.RefObject<HTMLElement | null>, onOuts
 type Crumb = { label: string; href?: string };
 
 // Estrutura das telas do Pastor: menu lateral, trilha, título (com menu opcional) e conteúdo.
-export function PageShell({ crumbs, title, titleLinks, titleExtra, children, after }: {
-  crumbs: Crumb[]; title: string; titleLinks?: Crumb[]; titleExtra?: React.ReactNode; children: React.ReactNode; after?: React.ReactNode;
+export function PageShell({ crumbs, title, titleLinks, titleExtra, titleAside, children, after }: {
+  crumbs: Crumb[]; title: string; titleLinks?: Crumb[]; titleExtra?: React.ReactNode; titleAside?: React.ReactNode; children: React.ReactNode; after?: React.ReactNode;
 }) {
   const [aberto, setAberto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, useCallback(() => setAberto(false), []));
+  const titleRow = (
+    <div className="ttl-row" ref={ref}>
+      <h1 className="ptitle">{title}</h1>
+      {titleExtra}
+      {titleLinks && titleLinks.length > 0 && (
+        <>
+          <button type="button" className="ttl-btn" aria-label="Menu de navegação" aria-expanded={aberto} onClick={() => setAberto((v) => !v)}>
+            <ChevronDown className="i s32" aria-hidden="true" />
+          </button>
+          {aberto && <div className="menu left">{titleLinks.map((l) => <Link key={l.label} href={l.href || '#'}>{l.label}</Link>)}</div>}
+        </>
+      )}
+    </div>
+  );
   return (
     <div className="min-h-screen bg-fundo">
       <div className="flex flex-col lg:flex-row">
@@ -36,18 +50,12 @@ export function PageShell({ crumbs, title, titleLinks, titleExtra, children, aft
                 </React.Fragment>
               ))}
             </nav>
-            <div className="ttl-row" ref={ref}>
-              <h1 className="ptitle">{title}</h1>
-              {titleExtra}
-              {titleLinks && titleLinks.length > 0 && (
-                <>
-                  <button type="button" className="ttl-btn" aria-label="Menu de navegação" aria-expanded={aberto} onClick={() => setAberto((v) => !v)}>
-                    <ChevronDown className="i s32" aria-hidden="true" />
-                  </button>
-                  {aberto && <div className="menu left">{titleLinks.map((l) => <Link key={l.label} href={l.href || '#'}>{l.label}</Link>)}</div>}
-                </>
-              )}
-            </div>
+            {titleAside ? (
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+                {titleRow}
+                {titleAside}
+              </div>
+            ) : titleRow}
             {children}
           </div>
         </div>
